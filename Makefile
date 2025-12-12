@@ -7,7 +7,7 @@ INCLUDE_DIR = includes
 
 INCLUDES = -I $(INCLUDE_DIR)
 
-NAME    =
+NAME    = ft_nmap
 
 SRC_DIR = src
 OBJ_DIR = obj
