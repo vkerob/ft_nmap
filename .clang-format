@@ -1,0 +1,11 @@
+BasedOnStyle: GNU
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 80
+BreakBeforeBraces: Allman
+AlignConsecutiveDeclarations: Consecutive
+AllowShortIfStatementsOnASingleLine: false
+BreakAfterReturnType: Automatic
+AllowShortFunctionsOnASingleLine: None
+SpaceBeforeParens: ControlStatements
