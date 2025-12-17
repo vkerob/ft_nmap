@@ -7,3 +7,4 @@ compile_commands.json
 .vscode
 ft_nmap
 obj
+test.txt
