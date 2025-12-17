@@ -1,29 +1,47 @@
+NAME        := ft_nmap
 
-CC      = clang
+SRC_DIR     := src
+OBJ_DIR     := obj
+INCLUDE_DIR := includes
 
-CFLAGS  = -Wall -Wextra -Werror -g
+SRCS        := $(wildcard $(SRC_DIR)/*.c)
+OBJS        := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-INCLUDE_DIR = includes
+CPPFLAGS    := -I $(INCLUDE_DIR)
 
-INCLUDES = -I $(INCLUDE_DIR)
+# Release (gcc)
+CC          := gcc
+CFLAGS      := -Wall -Wextra -Werror
 
-NAME    = ft_nmap
+# Clang
+CLANG       := clang
 
-SRC_DIR = src
-OBJ_DIR = obj
+# ASan + UBSan (mémoire + UB)
+ASANFLAGS   := -Wall -Wextra -Werror -O0 -g \
+               -fsanitize=address,undefined \
+               -fno-omit-frame-pointer
 
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-
-OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+# TSan (threads / data races)
+TSANFLAGS   := -Wall -Wextra -Werror -O0 -g \
+               -fsanitize=thread \
+               -fno-omit-frame-pointer
 
 all: $(NAME)
 
-$(NAME): $(LIBFT) $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) $(OBJS) $(LIBFT) -o $(NAME)
+$(NAME): $(OBJS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(OBJS) -o $(NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+# Build with clang + ASan/UBSan
+asan: fclean
+	$(MAKE) CC=$(CLANG) CFLAGS="$(ASANFLAGS)" all
+
+# Build with clang + TSan
+tsan: fclean
+	$(MAKE) CC=$(CLANG) CFLAGS="$(TSANFLAGS)" all
 
 clean:
 	rm -f $(OBJS)
@@ -34,4 +52,4 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all asan tsan clean fclean re
