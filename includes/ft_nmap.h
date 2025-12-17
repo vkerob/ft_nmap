@@ -31,34 +31,38 @@ enum e_scan_type
 	SCAN_UDP
 };
 
+typedef struct s_target
+{
+	char			  *input;
+	char			   ip[INET_ADDRSTRLEN];
+	struct sockaddr_in addr;
+} t_target;
+
 typedef struct s_args
 {
 	uint8_t flags;
 
-	struct sockaddr_in *targets_addr;
-	char			  **targets_input;
-	char			  **targets_ip;
-	size_t				target_count;
+	char **targets_input;
+	size_t target_count;
 
 	uint16_t ports[1024];
 	size_t	 port_count;
 
 	uint8_t	 scan_type;
 	uint16_t speed;
-
 } t_args;
 
 typedef struct s_ctx
 {
-	int sockfd;
+	int		  sockfd;
+	t_target *targets;
+	size_t	  target_count;
 } t_ctx;
 
 bool   parse_args(int argc, char **argv, t_args *args);
 char **get_targets_input(const char *arg, size_t *args_count, int mode);
-bool   resolve_hosts(char **hosts, size_t host_count,
-					 struct sockaddr_in **targets_addr, char ***targets_ip);
-bool   resolve_host(const char *host, struct sockaddr_in *dst,
-					char ipbuf[INET_ADDRSTRLEN]);
-void   free_tabp(void ***ptab, size_t n);
+bool   resolve_targets(char **inputs, size_t count, t_target **out);
+void   free_targets(t_target **pt, size_t count);
+void   free_tabp(void ***ptab, size_t count);
 
 #endif /* FT_NMAP_H */

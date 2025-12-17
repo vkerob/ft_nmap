@@ -1,7 +1,8 @@
 #include "ft_nmap.h"
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
 int main(int argc, char **argv)
 {
@@ -12,26 +13,27 @@ int main(int argc, char **argv)
 	}
 
 	t_args args;
-	if (parse_args(argc, argv, &args))
-		return 1;
+	memset(&args, 0, sizeof(args));
+    if (parse_args(argc, argv, &args))
+        return 1;
 
-	if (resolve_hosts(args.targets_input, args.target_count, &args.targets_addr,
-					  &args.targets_ip)
-		== false)
-	{
-		free_tabp((void ***)&args.targets_input, args.target_count);
-		return 1;
-	}
-	for (size_t i = 0; i < args.target_count; i++)
-	{
-		printf("Resolved target %zu: %s\n", i, args.targets_ip[i]); // debug
-	}
+    t_ctx ctx;
+	memset(&ctx, 0, sizeof(ctx));
+    ctx.target_count = args.target_count;
 
-	free_tabp((void ***)&args.targets_input, args.target_count);
-	free_tabp((void ***)&args.targets_ip, args.target_count);
-	free(args.targets_addr);
-	args.targets_addr = NULL;
+    if (!resolve_targets(args.targets_input, args.target_count, &ctx.targets))
+    {
+        free_tabp((void ***)&args.targets_input, args.target_count);
+        return 1;
+    }
 
+    free_tabp((void ***)&args.targets_input, args.target_count);
+
+    for (size_t i = 0; i < ctx.target_count; i++)
+        printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input, ctx.targets[i].ip);
+
+    free_targets(&ctx.targets, ctx.target_count);
+    return 0;
 	// if (init_socket() != 0)
 	// 	return 1;
 
@@ -40,8 +42,6 @@ int main(int argc, char **argv)
 
 	// if (run_nmap() != 0)
 	// 	goto error;
-
-	return 0;
 
 	// error:
 	// 	return 1;

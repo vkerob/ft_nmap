@@ -9,65 +9,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void free_tab(void **tab, size_t n)
+void free_tabp(void ***ptab, size_t count)
 {
-	if (!tab)
-		return;
-	for (size_t i = 0; i < n; i++)
-		free(tab[i]);
-	free(tab);
-}
-
-void free_tabp(void ***ptab, size_t n)
-{
-	if (!ptab || !*ptab)
-		return;
-	free_tab(*ptab, n);
+	for (size_t i = 0; i < count; i++)
+		free((*ptab)[i]);
+	free(*ptab);
 	*ptab = NULL;
 }
 
-// if we don't need the numeric IP strings, we can remove targets_ip
-// parameter later
-bool resolve_hosts(char **hosts, size_t host_count,
-				   struct sockaddr_in **targets_addr, char ***targets_ip)
+void free_targets(t_target **targets, size_t count)
 {
-	*targets_addr = malloc(sizeof(struct sockaddr_in) * host_count);
-	if (*targets_addr == NULL)
-		return false;
-
-	*targets_ip = malloc(sizeof(char *) * host_count);
-	if (*targets_ip == NULL)
-	{
-		free(*targets_addr);
-		*targets_addr = NULL;
-		return false;
-	}
-
-	for (size_t i = 0; i < host_count; i++)
-	{
-		(*targets_ip)[i] = malloc(INET_ADDRSTRLEN);
-		if ((*targets_ip)[i] == NULL)
-		{
-			free_tabp((void ***)(targets_ip), i);
-			free(*targets_addr);
-			*targets_addr = NULL;
-			return false;
-		}
-
-		if (resolve_host(hosts[i], &(*targets_addr)[i], (*targets_ip)[i]) == false)
-		{
-			free_tabp((void ***)(targets_ip), i + 1);
-			free(*targets_addr);
-			*targets_addr = NULL;
-			return false;
-		}
-	}
-	return true;
+	for (size_t i = 0; i < count; i++)
+		free((*targets)[i].input);
+	free(*targets);
+	*targets = NULL;
 }
 
 // Resolve hostname/IP to IPv4 sockaddr and numeric string; no reverse DNS
-bool resolve_host(const char *host, struct sockaddr_in *dst,
-				  char ipbuf[INET_ADDRSTRLEN])
+static bool resolve_host(const char *host, struct sockaddr_in *dst,
+						 char ipbuf[INET_ADDRSTRLEN])
 {
 	struct addrinfo	 hints;
 	struct addrinfo *res = NULL;
@@ -93,6 +53,31 @@ bool resolve_host(const char *host, struct sockaddr_in *dst,
 		return false;
 	}
 
+	return true;
+}
+
+bool resolve_targets(char **inputs, size_t count, t_target **targets)
+{
+	t_target *targets_tmp = calloc(count, sizeof(*targets_tmp));
+	if (!targets_tmp)
+		return false;
+
+	for (size_t i = 0; i < count; i++)
+	{
+		targets_tmp[i].input = strdup(inputs[i]);
+		if (!targets_tmp[i].input)
+		{
+			free_targets(&targets_tmp, i);
+			return false;
+		}
+
+		if (!resolve_host(inputs[i], &targets_tmp[i].addr, targets_tmp[i].ip))
+		{
+			free_targets(&targets_tmp, i + 1);
+			return false;
+		}
+	}
+	*targets = targets_tmp;
 	return true;
 }
 
