@@ -42,7 +42,6 @@ typedef struct s_args
 {
 	uint8_t flags;
 
-	char **targets_input;
 	size_t target_count;
 
 	uint16_t ports[1024];
@@ -56,10 +55,11 @@ typedef struct s_ctx
 {
 	int		  sockfd;
 	t_target *targets;
+	t_args	  args;
 	size_t	  target_count;
 } t_ctx;
 
-bool   parse_args(int argc, char **argv, t_args *args);
+bool   parse_args(int argc, char **argv, t_args *args, char ***targets_input);
 char **get_targets_input(const char *arg, size_t *args_count, int mode);
 bool   resolve_targets(char **inputs, size_t count, t_target **out);
 void   free_targets(t_target **pt, size_t count);
