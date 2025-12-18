@@ -50,15 +50,6 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 	return 0;
 }
 
-static void free_targets_input(char **targets, size_t count)
-{
-	if (!targets)
-		return;
-	for (size_t i = 0; i < count; i++)
-		free(targets[i]);
-	free(targets);
-}
-
 char **get_targets_input(const char *arg, size_t *args_count, int mode)
 {
 	char **targets = NULL;
@@ -103,7 +94,7 @@ char **get_targets_input(const char *arg, size_t *args_count, int mode)
 			if (push_target(&targets, &count, &cap, target) != 0)
 			{
 				fclose(file);
-				free_targets_input(targets, count);
+				free_tabp((void ***)&targets, count);
 				return NULL;
 			}
 		}
@@ -113,7 +104,7 @@ char **get_targets_input(const char *arg, size_t *args_count, int mode)
 		if (count == 0)
 		{
 			fprintf(stderr, "ft_nmap: No targets found in file %s\n", arg);
-			free_targets_input(targets, count);
+			free_tabp((void ***)&targets, count);
 			return NULL;
 		}
 
@@ -123,7 +114,7 @@ char **get_targets_input(const char *arg, size_t *args_count, int mode)
 		if (tmp == NULL)
 		{
 			fprintf(stderr, "ft_nmap: memory allocation failed\n");
-			free_targets_input(targets, count);
+			free_tabp((void ***)&targets, count);
 			return NULL;
 		}
 		targets = tmp;
