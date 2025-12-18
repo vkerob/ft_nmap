@@ -50,27 +50,32 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 	return 0;
 }
 
-char **get_targets_input(const char *arg, size_t *args_count, int mode)
+bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
+					   int mode)
 {
-	char **targets = NULL;
 	size_t count = 0, cap = 0;
+
+	if (!arg || !args_count || !targets)
+		return true;
 
 	*args_count = 0;
 
 	if (mode == IP_MODE)
 	{
-		targets = malloc(sizeof(char *));
-		if (!targets)
-			return NULL;
-		targets[0] = strdup(arg);
-		if (!targets[0])
-		{
-			free(targets);
-			return NULL;
-		}
-		*args_count = 1;
+		*targets = malloc(sizeof(char *));
+		if (!*targets)
+			return true;
 
-		return targets;
+		(*targets)[0] = strdup(arg);
+		if (!(*targets)[0])
+		{
+			free(*targets);
+			*targets = NULL;
+			return true;
+		}
+
+		*args_count = 1;
+		return false;
 	}
 	else if (mode == FILE_MODE)
 	{
@@ -78,7 +83,7 @@ char **get_targets_input(const char *arg, size_t *args_count, int mode)
 		if (!file)
 		{
 			fprintf(stderr, "ft_nmap: Could not open file %s\n", arg);
-			return NULL;
+			return true;
 		}
 
 		char line[1024];
@@ -86,42 +91,38 @@ char **get_targets_input(const char *arg, size_t *args_count, int mode)
 		{
 			char *target = trim_inplace(line);
 
-			if (*target == '\0')
-				continue;
-			if (*target == '#')
+			if (*target == '\0' || *target == '#')
 				continue;
 
-			if (push_target(&targets, &count, &cap, target) != 0)
+			if (push_target(targets, &count, &cap, target) != 0)
 			{
 				fclose(file);
-				free_tabp((void ***)&targets, count);
-				return NULL;
+				free_tabp((void ***)targets, count);
+				return true;
 			}
 		}
-
 		fclose(file);
 
 		if (count == 0)
 		{
 			fprintf(stderr, "ft_nmap: No targets found in file %s\n", arg);
-			free_tabp((void ***)&targets, count);
-			return NULL;
+			free_tabp((void ***)targets, 0);
+			return true;
 		}
 
 		// resize to fit exactly
-		char **tmp;
-		tmp = realloc(targets, count * sizeof(char *));
-		if (tmp == NULL)
+		char **tmp = realloc(*targets, count * sizeof(char *)); 
+		if (!tmp)
 		{
 			fprintf(stderr, "ft_nmap: memory allocation failed\n");
-			free_tabp((void ***)&targets, count);
-			return NULL;
+			free_tabp((void ***)targets, count);
+			return true;
 		}
-		targets = tmp;
-		*args_count = count;
 
-		return targets;
+		*targets = tmp;
+		*args_count = count;
+		return false;
 	}
 
-	return NULL;
+	return true;
 }

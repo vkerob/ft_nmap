@@ -47,8 +47,8 @@ typedef struct s_args
 	uint16_t ports[1024];
 	size_t	 port_count;
 
-	uint8_t	 scan_type;
-	uint16_t speed;
+	uint8_t scan_type;
+	uint8_t speed;
 } t_args;
 
 typedef struct s_ctx
@@ -59,10 +59,11 @@ typedef struct s_ctx
 	size_t	  target_count;
 } t_ctx;
 
-bool   parse_args(int argc, char **argv, t_args *args, char ***targets_input);
-char **get_targets_input(const char *arg, size_t *args_count, int mode);
-bool   resolve_targets(char **inputs, size_t count, t_target **out);
-void   free_targets(t_target **pt, size_t count);
-void   free_tabp(void ***ptab, size_t count);
+bool parse_args(int argc, char **argv, t_args *args, char ***targets_input);
+bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
+					   int mode);
+bool resolve_targets(char **inputs, size_t count, t_target **out);
+void free_targets(t_target **pt, size_t count);
+void free_tabp(void ***ptab, size_t count);
 
 #endif /* FT_NMAP_H */

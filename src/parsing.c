@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <limits.h>
 #include <netdb.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -24,6 +25,8 @@ void free_tabp(void ***ptab, size_t count)
 
 void free_targets(t_target **targets, size_t count)
 {
+	if (!targets || !*targets)
+		return;
 	for (size_t i = 0; i < count; i++)
 		free((*targets)[i].input);
 	free(*targets);
@@ -63,27 +66,28 @@ static bool resolve_target(const char *host, struct sockaddr_in *dst,
 
 bool resolve_targets(char **inputs, size_t count, t_target **targets)
 {
-	t_target *targets_tmp = calloc(count, sizeof(*targets_tmp));
-	if (!targets_tmp)
-		return false;
+	t_target *tmp = calloc(count, sizeof(*tmp));
+	if (!tmp)
+		return true;
 
 	for (size_t i = 0; i < count; i++)
 	{
-		targets_tmp[i].input = strdup(inputs[i]);
-		if (!targets_tmp[i].input)
+		tmp[i].input = strdup(inputs[i]);
+		if (!tmp[i].input)
 		{
-			free_targets(&targets_tmp, i);
-			return false;
+			free_targets(&tmp, i);
+			return true;
 		}
 
-		if (!resolve_target(inputs[i], &targets_tmp[i].addr, targets_tmp[i].ip))
+		if (!resolve_target(inputs[i], &tmp[i].addr, tmp[i].ip))
 		{
-			free_targets(&targets_tmp, i + 1);
-			return false;
+			free_targets(&tmp, i + 1);
+			return true;
 		}
 	}
-	*targets = targets_tmp;
-	return true;
+
+	*targets = tmp;
+	return false;
 }
 
 static char *trim_inplace(char *str)
@@ -203,14 +207,15 @@ static bool parse_token_and_push(char *token, uint16_t *ports, size_t *count)
 	return true;
 }
 
-ssize_t parse_ports(const char *port_str, uint16_t *ports)
+bool parse_ports(const char *port_str, uint16_t *ports, size_t *port_count)
 {
+	*port_count = 0;
+
 	char *copy = strdup(port_str);
 	if (!copy)
-		return -1;
+		return true;
 
-	size_t count = 0;
-	bool   ok = true;
+	bool error = false;
 
 	char *tok = strtok(copy, ",");
 	while (tok != NULL)
@@ -221,13 +226,13 @@ ssize_t parse_ports(const char *port_str, uint16_t *ports)
 		{
 			fprintf(stderr, "ft_nmap: invalid empty port token in: '%s'\n",
 					port_str);
-			ok = false;
+			error = true;
 			break;
 		}
 
-		if (!parse_token_and_push(trim_str, ports, &count))
+		if (!parse_token_and_push(trim_str, ports, port_count))
 		{
-			ok = false;
+			error = true;
 			break;
 		}
 
@@ -235,9 +240,94 @@ ssize_t parse_ports(const char *port_str, uint16_t *ports)
 	}
 
 	free(copy);
-	if (!ok)
-		return -1;
-	return (ssize_t)count;
+	return error;
+}
+
+bool parse_scan_type(const char *scan_str, uint8_t *out)
+{
+	char upper_scan_str[strlen(scan_str) + 1];
+	strcpy(upper_scan_str, scan_str);
+
+	for (size_t i = 0; upper_scan_str[i]; i++)
+		upper_scan_str[i] = (char)toupper((unsigned char)upper_scan_str[i]);
+
+	if (strcmp(upper_scan_str, "SYN") == 0)
+	{
+		*out = SCAN_SYN;
+		return false;
+	}
+	else if (strcmp(upper_scan_str, "NULL") == 0)
+	{
+		*out = SCAN_NULL;
+		return false;
+	}
+	else if (strcmp(upper_scan_str, "ACK") == 0)
+	{
+		*out = SCAN_ACK;
+		return false;
+	}
+	else if (strcmp(upper_scan_str, "FIN") == 0)
+	{
+		*out = SCAN_FIN;
+		return false;
+	}
+	else if (strcmp(upper_scan_str, "XMAS") == 0)
+	{
+		*out = SCAN_XMAS;
+		return false;
+	}
+	else if (strcmp(upper_scan_str, "UDP") == 0)
+	{
+		*out = SCAN_UDP;
+		return false;
+	}
+	else
+	{
+		fprintf(stderr, "ft_nmap: invalid scan type: '%s'\n", scan_str);
+		return true;
+	}
+}
+
+static bool parse_speed_strict(const char *str, uint8_t *out)
+{
+	while (isspace((unsigned char)*str))
+		str++;
+
+	if (*str == '\0' || *str == '-' || *str == '+')
+	{
+		fprintf(stderr, "ft_nmap: invalid speed value: '%s'\n", str);
+		return true;
+	}
+
+	errno = 0;
+	char		 *end = NULL;
+	unsigned long value = strtoul(str, &end, 10);
+
+	if (errno != 0 || end == str)
+	{
+		fprintf(stderr, "ft_nmap: invalid speed value: '%s'\n", str);
+		return true;
+	}
+
+	while (isspace((unsigned char)*end))
+		end++;
+
+	if (*end != '\0')
+	{
+		fprintf(stderr, "ft_nmap: invalid characters in speed value: '%s'\n",
+				str);
+		return true;
+	}
+
+	if (value < SPEED_MIN || value > SPEED_MAX)
+	{
+		fprintf(stderr, "ft_nmap: speed must be between %d and %d\n", SPEED_MIN,
+				SPEED_MAX);
+		return true;
+	}
+
+	*out = (uint8_t)value;
+	return false;
 }
 
 bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
@@ -251,7 +341,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 		{ "file", required_argument, 0, FILE_MODE },
 		{ "ports", required_argument, 0, PORTS },
 		{ "scan", required_argument, 0, SCAN },
-		{ "speed", required_argument, 0, SPEED },
+		{ "speedup", required_argument, 0, SPEED },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -263,37 +353,52 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 		case HELP:
 			SET(args->flags, F_HELP);
 			break;
+
 		case IP_MODE:
+			if (HAS(args->flags, F_FILE_MODE))
+			{
+				fprintf(
+					stderr,
+					"ft_nmap: cannot use --ip and --file options together\n");
+				return true;
+			}
 			SET(args->flags, F_IP_MODE);
-			*targets_input
-				= get_targets_input(optarg, &args->target_count, IP_MODE);
-			if (*targets_input == NULL)
+			if (get_targets_input(optarg, &args->target_count, targets_input,
+								  IP_MODE))
 				return true;
 			break;
+
 		case FILE_MODE:
+			if (HAS(args->flags, F_IP_MODE))
+			{
+				fprintf(
+					stderr,
+					"ft_nmap: cannot use --ip and --file options together\n");
+				return true;
+			}
 			SET(args->flags, F_FILE_MODE);
-			*targets_input
-				= get_targets_input(optarg, &args->target_count, FILE_MODE);
-			if (*targets_input == NULL)
+			if (get_targets_input(optarg, &args->target_count, targets_input,
+								  FILE_MODE))
 				return true;
 			break;
+
 		case PORTS:
 			SET(args->flags, F_PORTS);
-			ssize_t port_count = parse_ports(optarg, args->ports);
-			if (port_count == -1)
+			if (parse_ports(optarg, args->ports, &args->port_count))
 				return true;
-			args->port_count = port_count;
 			break;
-		// case SCAN:
-		// 	SET(args->flags, F_SCAN_TYPE);
-		// 	if (parse_scan_type(optarg) != 0)
-		// 		return true;
-		// 	break;
-		// case SPEED:
-		// 	SET(args->flags, F_SPEED);
-		// 	if (parse_speed(optarg) != 0)
-		// 		return true;
-		// 	break;
+
+		case SCAN:
+			SET(args->flags, F_SCAN_TYPE);
+			if (parse_scan_type(optarg, &args->scan_type))
+				return true;
+			break;
+
+		case SPEED:
+			SET(args->flags, F_SPEED);
+			if (parse_speed_strict(optarg, &args->speed))
+				return true;
+			break;
 		case '?':
 		case ':':
 			fprintf(stderr, "ft_nmap: Invalid arguments. Use --help for usage "

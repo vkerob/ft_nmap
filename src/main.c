@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 	ctx.target_count = args.target_count;
 	ctx.args = args;
 
-	if (!resolve_targets(targets_input, args.target_count, &ctx.targets))
+	if (resolve_targets(targets_input, args.target_count, &ctx.targets))
 	{
 		free_tabp((void ***)&targets_input, args.target_count);
 		return 1;
@@ -40,6 +40,9 @@ int main(int argc, char **argv)
 
 	for (size_t i = 0; i < ctx.args.port_count; i++)
 		printf("Port %zu: %u\n", i, ctx.args.ports[i]);
+
+	printf("Scan type: %u\n", ctx.args.scan_type);
+	printf("Speed: %u\n", ctx.args.speed);
 
 	free_targets(&ctx.targets, ctx.target_count);
 	return 0;
