@@ -26,8 +26,8 @@ void free_targets(t_target **targets, size_t count)
 }
 
 // Resolve hostname/IP to IPv4 sockaddr and numeric string; no reverse DNS
-static bool resolve_host(const char *host, struct sockaddr_in *dst,
-						 char ipbuf[INET_ADDRSTRLEN])
+static bool resolve_target(const char *host, struct sockaddr_in *dst,
+						   char ipbuf[INET_ADDRSTRLEN])
 {
 	struct addrinfo	 hints;
 	struct addrinfo *res = NULL;
@@ -71,7 +71,7 @@ bool resolve_targets(char **inputs, size_t count, t_target **targets)
 			return false;
 		}
 
-		if (!resolve_host(inputs[i], &targets_tmp[i].addr, targets_tmp[i].ip))
+		if (!resolve_target(inputs[i], &targets_tmp[i].addr, targets_tmp[i].ip))
 		{
 			free_targets(&targets_tmp, i + 1);
 			return false;
