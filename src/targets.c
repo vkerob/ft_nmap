@@ -51,8 +51,15 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 }
 
 bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
-					   int mode)
+					   int mode, uint8_t flags)
 {
+	if (HAS(flags, F_IP_MODE) && HAS(flags, F_FILE_MODE))
+	{
+		fprintf(stderr,
+				"ft_nmap: cannot use --ip and --file options together\n");
+		return true;
+	}
+
 	size_t count = 0, cap = 0;
 
 	if (!arg || !args_count || !targets)
@@ -111,7 +118,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		}
 
 		// resize to fit exactly
-		char **tmp = realloc(*targets, count * sizeof(char *)); 
+		char **tmp = realloc(*targets, count * sizeof(char *));
 		if (!tmp)
 		{
 			fprintf(stderr, "ft_nmap: memory allocation failed\n");

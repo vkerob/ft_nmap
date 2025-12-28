@@ -355,30 +355,16 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 			break;
 
 		case IP_MODE:
-			if (HAS(args->flags, F_FILE_MODE))
-			{
-				fprintf(
-					stderr,
-					"ft_nmap: cannot use --ip and --file options together\n");
-				return true;
-			}
 			SET(args->flags, F_IP_MODE);
 			if (get_targets_input(optarg, &args->target_count, targets_input,
-								  IP_MODE))
+								  IP_MODE, args->flags))
 				return true;
 			break;
 
 		case FILE_MODE:
-			if (HAS(args->flags, F_IP_MODE))
-			{
-				fprintf(
-					stderr,
-					"ft_nmap: cannot use --ip and --file options together\n");
-				return true;
-			}
 			SET(args->flags, F_FILE_MODE);
 			if (get_targets_input(optarg, &args->target_count, targets_input,
-								  FILE_MODE))
+								  FILE_MODE, args->flags))
 				return true;
 			break;
 
