@@ -65,5 +65,6 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 bool resolve_targets(char **inputs, size_t count, t_target **out);
 void free_targets(t_target **pt, size_t count);
 void free_tabp(void ***ptab, size_t count);
+bool setup_signal_handlers(void);
 
 #endif /* FT_NMAP_H */

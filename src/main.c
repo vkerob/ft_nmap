@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+sig_atomic_t volatile g_stop = 0;
+
 int main(int argc, char **argv)
 {
 	if (geteuid() != 0)
@@ -33,6 +35,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	free_tabp((void ***)&targets_input, args.target_count);
+
+	if (setup_signal_handlers())
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		return 1;
+	}
 
 	for (size_t i = 0; i < ctx.target_count; i++)
 		printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input,
