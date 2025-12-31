@@ -12,6 +12,6 @@
 #define MIN_PORT_NUMBER 1
 #define SCAN_INVALID 255
 #define SPEED_MAX 250
-#define SPEED_MIN 1
+#define SPEED_MIN 0
 
 #endif // PARSING_H
