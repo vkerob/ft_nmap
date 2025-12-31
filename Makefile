@@ -26,10 +26,12 @@ TSANFLAGS   := -Wall -Wextra -Werror -O0 -g \
                -fsanitize=thread \
                -fno-omit-frame-pointer
 
+LDFLAGS     := -lpcap -lpthread
+
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(OBJS) -o $(NAME)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	mkdir -p $(@D)
