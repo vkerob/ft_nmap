@@ -88,13 +88,13 @@ typedef struct	s_ctx
 
 /* Socket */
 int				init_socket(t_socket *sock);
-void			close_socket(t_socket *socket);
+void			close_socket(t_socket socket);
 void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* TCP / IP */
 void			fill_ip_header(struct ip *ip_hdr);
 void			fill_tcp_header(struct tcphdr *tcp_hdr);
-uint16_t		calculate_checksum(char *buffer, int len);
+uint16_t	calculate_checksum(char *buffer, int len);
 void			set_default_headers(char *buffer);
 void			print_tcp_header(struct tcphdr *tcp_hdr);
 void			print_ip_header(struct ip *ip_hdr);

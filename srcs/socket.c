@@ -38,7 +38,7 @@ int	init_socket(t_socket *sock)
 	return EXIT_SUCCESS;
 }
 
-void	close_socket(t_socket *socket)
+void	close_socket(t_socket socket)
 {
-	close(socket->sfd);
+	close(socket.sfd);
 }

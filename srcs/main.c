@@ -49,22 +49,32 @@ int main(int argc, char **argv)
 	// 	return 1;
 	// }
 
+	socket.sin.sin_family = AF_INET;
 	init_socket(&socket);
 
+		/* Tell the TCP kernel stack to not insert a IP header */
+	int on = 1;
+	if (setsockopt(socket.sfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0){
+		fprintf(stderr, "Failed to set IP header %s\n", strerror(errno));
+		close_socket(socket);
+		return EXIT_FAILURE;
+	}
+
 	struct ip			*ip_hdr = (struct ip *)dataframe;
-	struct tcphdr	*tcp_hdr = (struct tcphdr *)dataframe;
+	struct tcphdr	*tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
 
 	set_default_headers(dataframe);
 	for (size_t i = 0; i < ctx.target_count; i++)
 	{
-		printf("Scan %s\n", ctx.targets[i].input);
+		// printf("Scan %s\n", ctx.targets[i].input);
 		update_ip_header_dst_addr(ip_hdr, ctx.targets[i].addr);
+		// printf("port count %zu\n", args.port_count);
 		for (size_t j = 0; j < args.port_count; j++)
 		{
 			update_socket(&socket.sin, ctx.targets[i], args.ports[j]);
-			printf("Port number %hu\n", args.ports[j]);
+			// printf("Port number %hu\n", args.ports[j]);
 			update_port_tcp(tcp_hdr, args.ports[j]);
-			update_ip_checksum(dataframe);
+			// update_ip_checksum(dataframe);
 			if (send_packet(socket, dataframe) == EXIT_FAILURE)
 			{
 				free_targets(&ctx.targets, ctx.target_count);
@@ -73,6 +83,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	close_socket(socket);
 	return EXIT_SUCCESS;
 	// port = ft_atoi(argv[2]);
 
@@ -92,13 +103,7 @@ int main(int argc, char **argv)
 
 // 	fill_headers(buffer, argv[1], port);
 
-// 	/* Tell the TCP kernel stack to not insert a IP header */
-// 	int on = 1;
-// 	if (setsockopt(socket.sfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0){
-// 		fprintf(stderr, "Failed to set IP header %s\n", strerror(errno));
-// 		close_socket(&socket);
-// 		return EXIT_FAILURE;
-// 	}
+
 
 // 	if (sendto(socket.sfd, buffer, sizeof(struct ip) + sizeof(struct tcphdr), 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
 // 		fprintf(stderr, "Failed to send TCP packet %s\n", strerror(errno));
@@ -107,7 +112,6 @@ int main(int argc, char **argv)
 // 	}
 
 // 	close_socket(&socket);
-	return EXIT_SUCCESS;
 	// if (capture_traffic(&ctx.my_ip) != 0)
 	// {
 	// 	free_targets(&ctx.targets, ctx.target_count);

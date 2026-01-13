@@ -9,14 +9,14 @@ void print_ip_header(struct ip *ip_hdr)
 	printf("type of service: %d\n", ip_hdr->ip_tos);
 	printf("total length %d\n", ip_hdr->ip_len);
 	printf("checksum %d\n", ip_hdr->ip_sum);
-	printf("id %d\n", ip_hdr->ip_id);
+	printf("id %d\n", ntohs(ip_hdr->ip_id));
 	printf("protocol: %d\n", ip_hdr->ip_p);
 }
 
 void print_tcp_header(struct tcphdr *tcp_hdr)
 {
 	printf("\nTCP HEADER: \n");
-	printf("Flag: %d\n", tcp_hdr->th_flags);
+	// printf("Flag: %d\n", tcp_hdr->th_flags);
 	printf("Source port %d\n", ntohs(tcp_hdr->th_sport));
 	printf("Destination port %d\n", ntohs(tcp_hdr->th_dport));
 	printf("TCP sequence %d\n", tcp_hdr->th_seq);
