@@ -5,6 +5,16 @@ void	update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port)
 	tcp_hdr->th_dport = htons(port);
 }
 
+void calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr)
+{
+	char buffer[1014] = { 0 };
+
+	memcpy((void *)buffer, ip_pseudo_hdr, sizeof(t_ip_pseudo_hdr));
+	memcpy((void *)buffer + sizeof(t_ip_pseudo_hdr), tcp_hdr, sizeof(struct tcphdr));
+	tcp_hdr->th_sum = calculate_checksum(buffer, sizeof(struct tcphdr));
+	
+}
+
 void	fill_tcp_header(struct tcphdr *tcp_hdr)
 {
 	/* Source port */
@@ -26,3 +36,4 @@ void	fill_tcp_header(struct tcphdr *tcp_hdr)
 	/* Set with URG flag to indicate the index where the urgent data is located */
 	tcp_hdr->th_urp = 0;
 }
+

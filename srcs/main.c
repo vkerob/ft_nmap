@@ -1,22 +1,13 @@
 #include "ft_nmap.h"
-#include "libft.h"
 
 // sig_atomic_t volatile g_stop = 0;
 
 int main(int argc, char **argv)
 {
-	// if (geteuid() != 0)
-	// {
-	// 	fprintf(stderr, "ft_nmap: You must be root to run this program.\n");
-	// 	return 1;
-	// }
-
 	char								**targets_input = NULL;
 	t_args							args;
 	t_socket						socket;
 	char								dataframe[4096];
-	// struct sockaddr_in	sin;
-	// int									port = 0;
 
 	memset(&args, 0, sizeof(args));
 	if (parse_args(argc, argv, &args, &targets_input))
@@ -62,19 +53,20 @@ int main(int argc, char **argv)
 
 	struct ip			*ip_hdr = (struct ip *)dataframe;
 	struct tcphdr	*tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
+	t_ip_pseudo_hdr ip_pseudo_hdr = { 0 };
 
-	set_default_headers(dataframe);
+	set_default_headers(dataframe, &ip_pseudo_hdr);
 	for (size_t i = 0; i < ctx.target_count; i++)
 	{
 		// printf("Scan %s\n", ctx.targets[i].input);
-		update_ip_header_dst_addr(ip_hdr, ctx.targets[i].addr);
-		// printf("port count %zu\n", args.port_count);
+		update_ip_headers_dst_addr(ip_hdr, &ip_pseudo_hdr, ctx.targets[i].addr);
 		for (size_t j = 0; j < args.port_count; j++)
 		{
 			update_socket(&socket.sin, ctx.targets[i], args.ports[j]);
 			// printf("Port number %hu\n", args.ports[j]);
 			update_port_tcp(tcp_hdr, args.ports[j]);
-			// update_ip_checksum(dataframe);
+			calculate_tcp_checksum(&ip_pseudo_hdr, tcp_hdr);
+			//update_ip_checksum(ip_hdr, dataframe);
 			if (send_packet(socket, dataframe) == EXIT_FAILURE)
 			{
 				free_targets(&ctx.targets, ctx.target_count);
@@ -85,33 +77,7 @@ int main(int argc, char **argv)
 
 	close_socket(socket);
 	return EXIT_SUCCESS;
-	// port = ft_atoi(argv[2]);
 
-	// sin.sin_family = AF_INET;
-	// sin.sin_port = htons(port);
-	// sin.sin_addr.s_addr = inet_addr(argv[1]);
-
-	// memset(buffer, 0, 4096);
-	// if (init_socket(&socket) == EXIT_FAILURE){
-	// 	return EXIT_FAILURE;
-	// }
-
-// #ifdef DEBUG
-// 	printf("Socket initiated with fd %d\n", socket.sfd);
-// 	printf("Scan %s on port %d\n", argv[1], port);
-// #endif
-
-// 	fill_headers(buffer, argv[1], port);
-
-
-
-// 	if (sendto(socket.sfd, buffer, sizeof(struct ip) + sizeof(struct tcphdr), 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-// 		fprintf(stderr, "Failed to send TCP packet %s\n", strerror(errno));
-// 		close_socket(&socket);
-// 		return EXIT_FAILURE;
-// 	}
-
-// 	close_socket(&socket);
 	// if (capture_traffic(&ctx.my_ip) != 0)
 	// {
 	// 	free_targets(&ctx.targets, ctx.target_count);

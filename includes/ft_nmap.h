@@ -85,6 +85,14 @@ typedef struct	s_ctx
 	t_args						args;
 }	t_ctx;
 
+typedef struct	s_ip_pseudo_hdr
+{
+	struct  in_addr ip_src, ip_dst;  /* source and dest address */
+	uint8_t					zero;
+	uint8_t					protocol;
+	uint16_t				tcp_length;
+}	t_ip_pseudo_hdr;
+
 
 /* Socket */
 int				init_socket(t_socket *sock);
@@ -92,15 +100,19 @@ void			close_socket(t_socket socket);
 void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* TCP / IP */
-void			fill_ip_header(struct ip *ip_hdr);
+void			fill_ip_headers(struct ip *ip_hdr, t_ip_pseudo_hdr *ip_pseudo_hdr);
 void			fill_tcp_header(struct tcphdr *tcp_hdr);
 uint16_t	calculate_checksum(char *buffer, int len);
-void			set_default_headers(char *buffer);
+void			calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
+void			set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
 void			print_tcp_header(struct tcphdr *tcp_hdr);
 void			print_ip_header(struct ip *ip_hdr);
 void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
-void			update_ip_header_dst_addr(struct ip *ip_hdr, struct in_addr dst_addr);
-void			update_ip_checksum(char *buffer);
+void			update_ip_headers_dst_addr(
+		struct ip *ip_hdr,
+		t_ip_pseudo_hdr *ip_pseudo_hdr,
+		struct in_addr dst_addr);
+void			update_ip_checksum(struct ip *ip_hdr, char *buffer);
 int				send_packet(t_socket socket, char *dataframe);
 
 

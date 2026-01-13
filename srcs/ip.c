@@ -1,17 +1,19 @@
 #include "ft_nmap.h"
 
-void	update_ip_header_dst_addr(struct ip *ip_hdr, struct in_addr dst_addr)
+void	update_ip_headers_dst_addr(struct ip *ip_hdr, t_ip_pseudo_hdr *ip_pseudo_hdr, struct in_addr dst_addr)
 {
 	ip_hdr->ip_dst = dst_addr;
+	ip_pseudo_hdr->ip_dst = dst_addr;
 }
 
-void update_ip_checksum(char *buffer)
-{
-	struct ip	*ip_hdr = (struct ip *)buffer;
-	ip_hdr->ip_sum = calculate_checksum(buffer, ip_hdr->ip_len >> 1);
-}
+//void update_ip_checksum(struct ip *ip_hdr, char *buffer)
+//{
+//	(void)ip_hdr;
+//	(void)buffer;
+//	//ip_hdr->ip_sum = calculate_checksum(buffer, ip_hdr->ip_len >> 1);
+//}
 
-void	fill_ip_header(struct ip *ip_hdr)
+void	fill_ip_headers(struct ip *ip_hdr, t_ip_pseudo_hdr *ip_pseudo_hdr)
 {
 	struct in_addr	src_addr;
 
@@ -35,6 +37,11 @@ void	fill_ip_header(struct ip *ip_hdr)
 		fprintf(stderr, "Invalid source address\n");
 		exit(EXIT_FAILURE);
 	}
-
 	ip_hdr->ip_src = src_addr;
+
+	ip_pseudo_hdr->ip_src = src_addr;
+	ip_pseudo_hdr->tcp_length = sizeof(struct tcphdr);
+	ip_pseudo_hdr->protocol = IPPROTO_TCP;
+	printf("pseudo header size: %zu\n", sizeof(t_ip_pseudo_hdr));
 }
+

@@ -2,6 +2,7 @@
 
 int	send_packet(t_socket socket, char *dataframe)
 {
+
 	if (sendto(
 			socket.sfd,
 			dataframe,

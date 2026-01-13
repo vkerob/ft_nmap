@@ -40,11 +40,11 @@ void print_tcp_header(struct tcphdr *tcp_hdr)
 
 }
 
-void	set_default_headers(char *dataframe)
+void	set_default_headers(char *dataframe, t_ip_pseudo_hdr *ip_pseudo_hdr)
 {
 	struct ip	*ip_hdr = (struct ip *)(dataframe);
 
-	fill_ip_header(ip_hdr);
+	fill_ip_headers(ip_hdr, ip_pseudo_hdr);
 	fill_tcp_header((struct tcphdr *)(dataframe + sizeof(struct ip)));
 #ifdef DEBUG
 	struct tcphdr *tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
