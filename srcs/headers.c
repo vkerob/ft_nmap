@@ -4,7 +4,7 @@
 void print_ip_header(struct ip *ip_hdr)
 {
 	printf("\nIP HEADER: \n");
-	printf("version: %hu\n", ip_hdr->ip_v);
+	printf("version: %d\n", ip_hdr->ip_v);
 	printf("ihl: %d\n", ip_hdr->ip_hl);
 	printf("type of service: %d\n", ip_hdr->ip_tos);
 	printf("total length %d\n", ip_hdr->ip_len);
@@ -22,6 +22,7 @@ void print_tcp_header(struct tcphdr *tcp_hdr)
 	printf("TCP sequence %d\n", tcp_hdr->th_seq);
 	printf("Acknowlegdement number %d\n", ntohl(tcp_hdr->th_ack));
 	printf("Header length %d\n", tcp_hdr->th_off);
+	
 	if (tcp_hdr->th_flags & TH_SYN){
 		printf("SYN request");
 	}
@@ -39,14 +40,14 @@ void print_tcp_header(struct tcphdr *tcp_hdr)
 
 }
 
-void	set_default_headers(char *buffer)
+void	set_default_headers(char *dataframe)
 {
-	struct ip	*ip_hdr = (struct ip *)(buffer);
+	struct ip	*ip_hdr = (struct ip *)(dataframe);
 
 	fill_ip_header(ip_hdr);
-	fill_tcp_header((struct tcphdr *)(buffer + sizeof(struct ip)));
+	fill_tcp_header((struct tcphdr *)(dataframe + sizeof(struct ip)));
 #ifdef DEBUG
-	struct tcphdr *tcp_hdr = (struct tcphdr *)(buffer + sizeof(struct ip));
+	struct tcphdr *tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
 	print_ip_header(ip_hdr);
 	print_tcp_header(tcp_hdr);
 #endif

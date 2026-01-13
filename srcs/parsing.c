@@ -407,8 +407,8 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 	if (!HAS(args->flags, F_PORTS))
 	{
 		// fill 1..1024
-		args->port_count = 1024;
-		for (size_t i = 0; i < 1024; i++)
+		args->port_count = MAX_PORTS_COUNT;
+		for (size_t i = 0; i < args->port_count; i++)
 			args->ports[i] = (uint16_t)(i + 1);
 	}
 

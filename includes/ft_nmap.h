@@ -1,6 +1,8 @@
 #ifndef FT_NMAP_H
 #define FT_NMAP_H
 
+#include "parsing.h"
+
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -47,55 +49,60 @@ enum e_scan_type
 	SCAN_UDP
 };
 
-typedef struct s_target
+typedef struct	s_target
 {
 	char						*input;
 	char						ip[INET_ADDRSTRLEN];
 	struct in_addr	addr;
-} t_target;
+}	t_target;
 
 typedef struct	s_args
 {
 	uint8_t		flags;
 	size_t		target_count;
 
-	uint16_t	ports[1024];
+	uint16_t	ports[MAX_PORTS_COUNT];
 	size_t		port_count;
 
 	uint8_t		scan_type;
 	uint8_t		speed;
 }	t_args;
 
-typedef struct	s_socket {
-	int	sfd;
-	int	source_port;
+typedef struct	s_socket
+{
+	int									sfd;
+	int									source_port;
+	struct sockaddr_in	sin;
 }	t_socket;
 
 typedef struct	s_ctx
 {
-	t_socket	socket;
-	t_target	*targets;
-	size_t		target_count;
-	struct		in_addr my_ip;
-	char			*dev_name;
-	t_args		args;
+	t_socket					socket;
+	t_target					*targets;
+	size_t						target_count;
+	struct in_addr		my_ip;
+	char							*dev_name;
+	t_args						args;
 }	t_ctx;
 
 
 /* Socket */
 int				init_socket(t_socket *sock);
 void			close_socket(t_socket *socket);
+void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* TCP / IP */
 void			fill_ip_header(struct ip *ip_hdr);
 void			fill_tcp_header(struct tcphdr *tcp_hdr);
-uint16_t	calculate_checksum(char *buffer, int len);
+uint16_t		calculate_checksum(char *buffer, int len);
 void			set_default_headers(char *buffer);
 void			print_tcp_header(struct tcphdr *tcp_hdr);
 void			print_ip_header(struct ip *ip_hdr);
 void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
 void			update_ip_header_dst_addr(struct ip *ip_hdr, struct in_addr dst_addr);
 void			update_ip_checksum(char *buffer);
+int				send_packet(t_socket socket, char *dataframe);
+
 
 /* Parsing */
 bool			parse_args(int argc, char **argv, t_args *args, char ***targets_input);

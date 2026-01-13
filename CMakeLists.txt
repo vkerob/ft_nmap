@@ -28,7 +28,7 @@ target_include_directories(ft_nmap PRIVATE ${INCLUDE_DIRS})
 target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS})
 
 target_compile_options(ft_nmap PRIVATE
-        -Wall -Wextra -Werror -DDEBUG -g
+        -Wall -Wextra -Werror -g
 )
 
 target_compile_options(tests_ft_nmap PRIVATE
