@@ -28,11 +28,11 @@ int main(int argc, char **argv)
 	}
 	free_tabp((void ***)&targets_input, args.target_count);
 
-	if (setup_signal_handlers())
-	{
-		free_targets(&ctx.targets, ctx.target_count);
-		return 1;
-	}
+	// if (setup_signal_handlers())
+	// {
+	// 	free_targets(&ctx.targets, ctx.target_count);
+	// 	return 1;
+	// }
 
 	// if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
 	// {

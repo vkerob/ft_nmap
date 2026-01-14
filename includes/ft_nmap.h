@@ -3,6 +3,7 @@
 
 #include "parsing.h"
 
+#include <pcap/pcap.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -100,18 +101,18 @@ void			close_socket(t_socket socket);
 void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* TCP / IP */
-void						fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
-void						fill_tcp_header(struct tcphdr *tcp_hdr);
-unsigned short	calculate_checksum(uint16_t *buffer, int len);
-void						calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
-void						set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
-void						print_tcp_header(struct tcphdr *tcp_hdr);
-void						print_ip_header(struct ip *ip_hdr);
-void						update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
-void						update_ip_headers_dst_addr(
-					t_ip_pseudo_hdr *ip_pseudo_hdr,
-					struct in_addr dst_addr);
-int							send_packet(t_socket socket, char *datagram);
+void			fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
+void			fill_tcp_header(struct tcphdr *tcp_hdr);
+uint16_t	calculate_checksum(uint16_t *buffer, int len);
+void			calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
+void			set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
+void			print_tcp_header(struct tcphdr *tcp_hdr);
+void			print_ip_header(struct ip *ip_hdr);
+void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
+void			update_ip_headers_dst_addr(
+		t_ip_pseudo_hdr *ip_pseudo_hdr,
+		struct in_addr dst_addr);
+int				send_packet(t_socket socket, char *datagram);
 
 /* Scan */
 int				run_scan(t_ctx ctx, t_socket socket, char *datagram);
@@ -129,5 +130,7 @@ bool			setup_signal_handlers(void);
 
 /* Pcap wrapper */
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
+int				set_pcap_filter(pcap_t *interface);
+
 
 #endif /* FT_NMAP_H */
