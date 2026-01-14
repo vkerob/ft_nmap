@@ -100,21 +100,21 @@ void			close_socket(t_socket socket);
 void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* TCP / IP */
-void			fill_ip_headers(struct ip *ip_hdr, t_ip_pseudo_hdr *ip_pseudo_hdr);
-void			fill_tcp_header(struct tcphdr *tcp_hdr);
-uint16_t	calculate_checksum(char *buffer, int len);
-void			calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
-void			set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
-void			print_tcp_header(struct tcphdr *tcp_hdr);
-void			print_ip_header(struct ip *ip_hdr);
-void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
-void			update_ip_headers_dst_addr(
-		struct ip *ip_hdr,
-		t_ip_pseudo_hdr *ip_pseudo_hdr,
-		struct in_addr dst_addr);
-void			update_ip_checksum(struct ip *ip_hdr, char *buffer);
-int				send_packet(t_socket socket, char *dataframe);
+void						fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
+void						fill_tcp_header(struct tcphdr *tcp_hdr);
+unsigned short	calculate_checksum(uint16_t *buffer, int len);
+void						calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
+void						set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
+void						print_tcp_header(struct tcphdr *tcp_hdr);
+void						print_ip_header(struct ip *ip_hdr);
+void						update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
+void						update_ip_headers_dst_addr(
+					t_ip_pseudo_hdr *ip_pseudo_hdr,
+					struct in_addr dst_addr);
+int							send_packet(t_socket socket, char *datagram);
 
+/* Scan */
+int				run_scan(t_ctx ctx, t_socket socket, char *datagram);
 
 /* Parsing */
 bool			parse_args(int argc, char **argv, t_args *args, char ***targets_input);

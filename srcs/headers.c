@@ -1,18 +1,6 @@
 
 #include "ft_nmap.h"
 
-void print_ip_header(struct ip *ip_hdr)
-{
-	printf("\nIP HEADER: \n");
-	printf("version: %d\n", ip_hdr->ip_v);
-	printf("ihl: %d\n", ip_hdr->ip_hl);
-	printf("type of service: %d\n", ip_hdr->ip_tos);
-	printf("total length %d\n", ip_hdr->ip_len);
-	printf("checksum %d\n", ip_hdr->ip_sum);
-	printf("id %d\n", ntohs(ip_hdr->ip_id));
-	printf("protocol: %d\n", ip_hdr->ip_p);
-}
-
 void print_tcp_header(struct tcphdr *tcp_hdr)
 {
 	printf("\nTCP HEADER: \n");
@@ -40,15 +28,12 @@ void print_tcp_header(struct tcphdr *tcp_hdr)
 
 }
 
-void	set_default_headers(char *dataframe, t_ip_pseudo_hdr *ip_pseudo_hdr)
+void	set_default_headers(char *datagram, t_ip_pseudo_hdr *ip_pseudo_hdr)
 {
-	struct ip	*ip_hdr = (struct ip *)(dataframe);
-
-	fill_ip_headers(ip_hdr, ip_pseudo_hdr);
-	fill_tcp_header((struct tcphdr *)(dataframe + sizeof(struct ip)));
+	fill_pseudo_ip_header(ip_pseudo_hdr);
+	fill_tcp_header((struct tcphdr *)(datagram));
 #ifdef DEBUG
-	struct tcphdr *tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
-	print_ip_header(ip_hdr);
+	struct tcphdr *tcp_hdr = (struct tcphdr *)(datagram);
 	print_tcp_header(tcp_hdr);
 #endif
 }

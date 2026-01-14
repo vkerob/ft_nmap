@@ -1,12 +1,11 @@
 #include "ft_nmap.h"
 
-int	send_packet(t_socket socket, char *dataframe)
+int	send_packet(t_socket socket, char *datagram)
 {
-
 	if (sendto(
 			socket.sfd,
-			dataframe,
-			sizeof(struct ip) + sizeof(struct tcphdr),
+			datagram,
+			sizeof(struct tcphdr),
 			0,
 			(struct sockaddr *)&socket.sin,
 			sizeof(struct sockaddr)

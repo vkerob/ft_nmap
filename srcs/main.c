@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 	char								**targets_input = NULL;
 	t_args							args;
 	t_socket						socket;
-	char								dataframe[4096];
+	char								datagram[4096];
 
 	memset(&args, 0, sizeof(args));
 	if (parse_args(argc, argv, &args, &targets_input))
@@ -44,37 +44,14 @@ int main(int argc, char **argv)
 	init_socket(&socket);
 
 		/* Tell the TCP kernel stack to not insert a IP header */
-	int on = 1;
-	if (setsockopt(socket.sfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0){
-		fprintf(stderr, "Failed to set IP header %s\n", strerror(errno));
-		close_socket(socket);
-		return EXIT_FAILURE;
-	}
+	// int on = 1;
+	// if (setsockopt(socket.sfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0){
+	// 	fprintf(stderr, "Failed to set IP header %s\n", strerror(errno));
+	// 	close_socket(socket);
+	// 	return EXIT_FAILURE;
+	// }
 
-	struct ip			*ip_hdr = (struct ip *)dataframe;
-	struct tcphdr	*tcp_hdr = (struct tcphdr *)(dataframe + sizeof(struct ip));
-	t_ip_pseudo_hdr ip_pseudo_hdr = { 0 };
-
-	set_default_headers(dataframe, &ip_pseudo_hdr);
-	for (size_t i = 0; i < ctx.target_count; i++)
-	{
-		// printf("Scan %s\n", ctx.targets[i].input);
-		update_ip_headers_dst_addr(ip_hdr, &ip_pseudo_hdr, ctx.targets[i].addr);
-		for (size_t j = 0; j < args.port_count; j++)
-		{
-			update_socket(&socket.sin, ctx.targets[i], args.ports[j]);
-			// printf("Port number %hu\n", args.ports[j]);
-			update_port_tcp(tcp_hdr, args.ports[j]);
-			calculate_tcp_checksum(&ip_pseudo_hdr, tcp_hdr);
-			//update_ip_checksum(ip_hdr, dataframe);
-			if (send_packet(socket, dataframe) == EXIT_FAILURE)
-			{
-				free_targets(&ctx.targets, ctx.target_count);
-				return EXIT_FAILURE;
-			}
-		}
-	}
-
+	run_scan(ctx, socket, datagram);
 	close_socket(socket);
 	return EXIT_SUCCESS;
 

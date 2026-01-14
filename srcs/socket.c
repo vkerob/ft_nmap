@@ -11,7 +11,6 @@ static void	update_socket_addr(struct sockaddr_in *socket_addr, struct in_addr a
 	socket_addr->sin_addr = addr;
 }
 
-
 void	update_socket(struct sockaddr_in *socket, t_target target, uint16_t port)
 {
 	update_socket_port(socket, port);

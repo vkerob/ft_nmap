@@ -9,14 +9,18 @@ void calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_h
 {
 	char buffer[1014] = { 0 };
 
-	memcpy((void *)buffer, ip_pseudo_hdr, sizeof(t_ip_pseudo_hdr));
-	memcpy((void *)buffer + sizeof(t_ip_pseudo_hdr), tcp_hdr, sizeof(struct tcphdr));
-	tcp_hdr->th_sum = calculate_checksum(buffer, sizeof(struct tcphdr));
-	
+	memcpy(buffer, ip_pseudo_hdr, sizeof(t_ip_pseudo_hdr));
+	memcpy(buffer + sizeof(t_ip_pseudo_hdr), tcp_hdr, sizeof(struct tcphdr));
+
+	tcp_hdr->th_sum = calculate_checksum(
+		(uint16_t *)buffer,
+		(sizeof(struct tcphdr) + sizeof(t_ip_pseudo_hdr)) 
+	);
 }
 
 void	fill_tcp_header(struct tcphdr *tcp_hdr)
 {
+	memset(tcp_hdr, 0, sizeof(struct tcphdr));
 	/* Source port */
 	tcp_hdr->th_sport = htons(31999);
 	/* Destination port */
@@ -36,4 +40,3 @@ void	fill_tcp_header(struct tcphdr *tcp_hdr)
 	/* Set with URG flag to indicate the index where the urgent data is located */
 	tcp_hdr->th_urp = 0;
 }
-
