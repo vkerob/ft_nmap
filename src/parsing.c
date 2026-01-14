@@ -319,7 +319,7 @@ static bool parse_speed_strict(const char *str, uint8_t *out)
 		return true;
 	}
 
-	if (value < SPEED_MIN || value > SPEED_MAX)
+	if (value > SPEED_MAX)
 	{
 		fprintf(stderr, "ft_nmap: speed must be between %d and %d\n", SPEED_MIN,
 				SPEED_MAX);
