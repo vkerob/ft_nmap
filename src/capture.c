@@ -154,13 +154,14 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 		if (rc == -2)
 			break; // EOF offline
 
-		printf("received a packet with len: %d\n", hdr->len);
-	for (size_t i = 0; i < hdr->len; i++){
-		printf("%2x", pkt[i]);
-	}
-	printf("\n");
+	// 	printf("received a packet with len: %d\n", hdr->len);
+	// for (size_t i = 0; i < hdr->len; i++){
+	// 	printf("%2x", pkt[i]);
+	// }
+	// printf("\n");
 		struct ip	ip_hdr;
-		decode_ip_packet((uint8_t *)(pkt + 14), &ip_hdr);
+		// printf("eth hdr size: %lu\n", sizeof(t_ethernet_hdr));
+		decode_ip_packet((uint8_t *)&pkt[sizeof(t_ethernet_hdr)], &ip_hdr);
 		t_ethernet_hdr	eth_hdr;
 		decode_ethernet_packet((uint8_t *)pkt, &eth_hdr);
 		print_ip_header(&ip_hdr);
@@ -179,13 +180,17 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 }
 
 bool capture_traffic(
-	const char *dev_name,
-	struct in_addr my_ip,
-	t_target *targets,
-	size_t target_count)
+	t_ctx *ctx,
+	t_socket *socket,
+	char *datagram
+)
 {
 	pcap_t *handle;
 	char	errbuf[PCAP_ERRBUF_SIZE];
+	const char *dev_name = ctx->dev_name;
+	struct in_addr my_ip = ctx->my_ip;
+	t_target *targets = ctx->targets;
+size_t target_count = ctx->target_count;
 
 	handle = pcap_create(dev_name, errbuf);
 	if (!handle)
@@ -216,14 +221,16 @@ bool capture_traffic(
 	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
 
 	char filter_expr[128];
-	snprintf(filter_expr, sizeof(filter_expr), "src host 192.168.64.11");
+	snprintf(filter_expr, sizeof(filter_expr), "tcp and src host 192.168.64.11");
 
 	if (pcap_apply_filter(handle, filter_expr))
 	{
+		printf("failed\n");
 		pcap_close(handle);
 		return true;
 	}
 
+	run_scan(*ctx, *socket, datagram);
 	if (handle_captured_packet(handle, targets, target_count))
 		return true;
 

@@ -43,7 +43,6 @@ int main(int argc, char **argv)
 	socket.sin.sin_family = AF_INET;
 	init_socket(&socket);
 
-	run_scan(ctx, socket, datagram);
 
 	if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
 	{
@@ -54,12 +53,13 @@ int main(int argc, char **argv)
 	}
 
 	ctx.dev_name = strdup("bridge100");
-	if (capture_traffic(ctx.dev_name, ctx.my_ip, ctx.targets, ctx.target_count))
+	if (capture_traffic(&ctx, &socket, datagram))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
 		free(ctx.dev_name);
 		return 1;
 	}
+
 
 
 

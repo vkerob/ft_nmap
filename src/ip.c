@@ -51,12 +51,14 @@ void	decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr)
 {
 	*ip_hdr = *(struct ip *)datagram;
 
-	ip_hdr->ip_len = ntohs(ip_hdr->ip_len);
+	ip_hdr->ip_len = ip_hdr->ip_len;
 	ip_hdr->ip_id  = ntohs(ip_hdr->ip_id);
 	ip_hdr->ip_sum  = ntohs(ip_hdr->ip_sum);
 	ip_hdr->ip_src.s_addr = ntohl(ip_hdr->ip_src.s_addr);
 	ip_hdr->ip_dst.s_addr = ntohl(ip_hdr->ip_dst.s_addr);
 	ip_hdr->ip_len = ntohs(ip_hdr->ip_len);
+	ip_hdr->ip_src.s_addr = ntohl((uint32_t)ip_hdr->ip_src.s_addr);
+	ip_hdr->ip_dst.s_addr = ntohl((uint32_t)ip_hdr->ip_dst.s_addr);
 }
 
 void	fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr)
