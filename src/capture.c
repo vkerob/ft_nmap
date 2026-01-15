@@ -1,6 +1,5 @@
 #include "compat_pcap.h"
 #include "ft_nmap.h"
-#include <pcap/pcap.h>
 #include <string.h>
 
 static bool has_ipv4_addr(const pcap_if_t *dev, struct in_addr *my_ip)
