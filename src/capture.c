@@ -216,7 +216,7 @@ bool capture_traffic(
 	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
 
 	char filter_expr[128];
-	snprintf(filter_expr, sizeof(filter_expr), "tcp and dst host %s", ipbuf);
+	snprintf(filter_expr, sizeof(filter_expr), "src host 192.168.64.11");
 
 	if (pcap_apply_filter(handle, filter_expr))
 	{
