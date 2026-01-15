@@ -109,6 +109,7 @@ void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port)
 
 /* Debug */
 void			print_ip_header(struct ip *ip_hdr);
+void			print_eth_header(t_ethernet_hdr *eth_hdr);
 
 /* TCP / IP */
 void			fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
@@ -141,16 +142,11 @@ bool			setup_signal_handlers(void);
 /* Pcap wrapper */
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
 int				set_pcap_filter(pcap_t *interface);
-struct ip	decode_ip_packet(uint8_t *datagram);
+bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
+bool			capture_traffic(const char *dev_name, struct in_addr my_ip);
 
-bool parse_args(int argc, char **argv, t_args *args, char ***targets_input);
-bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
-					   int mode, uint8_t flags);
-bool resolve_targets(char **inputs, size_t count, t_target **out);
-void free_targets(t_target **pt, size_t count);
-void free_tabp(void ***ptab, size_t count);
-bool setup_signal_handlers(void);
-bool pcap_select_interface(char **dev_name, struct in_addr *my_ip);
-bool capture_traffic(const char *dev_name, struct in_addr my_ip);
+/* Decoding */
+void			decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr);
+void			decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
 
 #endif /* FT_NMAP_H */

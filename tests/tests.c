@@ -1,5 +1,3 @@
-#include <libft.h>
-
 #include "greatest.h"
 
 GREATEST_MAIN_DEFS();

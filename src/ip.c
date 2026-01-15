@@ -1,7 +1,6 @@
 #include "ft_nmap.h"
 
-
-void print_ip_header(struct ip *ip_hdr)
+void	print_ip_header(struct ip *ip_hdr)
 {
 	printf("\nIP HEADER: \n");
 	printf("version: %d\n", ip_hdr->ip_v);
@@ -15,16 +14,41 @@ void print_ip_header(struct ip *ip_hdr)
 	printf("checksum %02x\n", ip_hdr->ip_sum );
 }
 
-// t_ethernet_hdr	decode_ethernet_packet(uint8_t *datagram)
-// {
-	
-// }
-
-struct ip	decode_ip_packet(uint8_t *datagram)
+void	print_eth_header(t_ethernet_hdr *eth_hdr)
 {
-	struct ip	ip_hdr = *(struct ip *)datagram;
-	ip_hdr.ip_len = htons(ip_hdr.ip_len);
-	return ip_hdr;
+	printf("\nETHERNET HEADER: \n");
+	printf("Source MAC address\n");
+	for (int i = 0; i < 6; i++)
+	{
+		printf("%02x", eth_hdr->src_mac_addr[i]);
+		if (i != 5)
+		{
+			printf(":");
+		}
+	}
+	printf("\n");
+	printf("Destination MAC address\n");
+	for (int i = 0; i < 6; i++)
+	{
+		printf("%02x", eth_hdr->dst_mac_addr[i]);
+		if (i != 5)
+		{
+			printf(":");
+		}
+	}
+	printf("\n");
+}
+
+void	decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr)
+{
+	*eth_hdr = *(t_ethernet_hdr *)datagram;
+	(void)eth_hdr;
+}
+
+void	decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr)
+{
+	*ip_hdr = *(struct ip *)datagram;
+	ip_hdr->ip_len = htons(ip_hdr->ip_len);
 }
 
 void	fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr)

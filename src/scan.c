@@ -8,6 +8,13 @@ void read_packets(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes
 		printf("%2x", bytes[i]);
 	}
 	printf("\n");
+	struct ip	ip_hdr;
+	
+	decode_ip_packet((uint8_t *)&bytes[14], &ip_hdr);
+	t_ethernet_hdr	eth_hdr;
+	decode_ethernet_packet((uint8_t *)bytes, &eth_hdr);
+	print_ip_header(&ip_hdr);
+	print_eth_header(&eth_hdr);
 	fflush(stdout);
 }
 
@@ -65,7 +72,8 @@ int	run_scan(t_ctx ctx, t_socket socket, char *datagram)
 	}
 
 	int nb_packets_recv = pcap_loop(capture, 2, read_packets, NULL);
-	printf("Number of packets received: %d\n", nb_packets_recv);
+	(void)nb_packets_recv;
+	// printf("Number of packets received: %d\n", nb_packets_recv);
 
 	pcap_close(capture);
 	return EXIT_SUCCESS;
