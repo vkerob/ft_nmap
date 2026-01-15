@@ -1,5 +1,6 @@
 #include "compat_pcap.h"
 #include "ft_nmap.h"
+#include <pcap/pcap.h>
 #include <string.h>
 
 static bool has_ipv4_addr(const pcap_if_t *dev, struct in_addr *my_ip)
@@ -48,19 +49,145 @@ bool pcap_select_interface(char **dev_name, struct in_addr *my_ip)
 	if (!chosen)
 	{
 		fprintf(stderr, "ft_nmap: no suitable network interface found\n");
-		my_ip = NULL;
 		pcap_freealldevs(alldevs);
 		return true;
 	}
 
 	*dev_name = strdup(chosen->name);
+	if (!*dev_name)
+	{
+		fprintf(stderr, "ft_nmap: strdup failed\n");
+		pcap_freealldevs(alldevs);
+		return true;
+	}
 
 	pcap_freealldevs(alldevs);
 	return false;
 }
 
-// bool capture_traffic(struct in_addr *my_ip)
-// {
+bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
+					int buffer_size_bytes, bool immediate_mode, int direction)
+{
+	if (pcap_set_snaplen(handle, snaplen) != 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_set_snaplen failed\n");
+		return true;
+	}
+	if (pcap_set_promisc(handle, promisc) != 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_set_promisc failed\n");
+		return true;
+	}
+	if (pcap_set_timeout(handle, timeout_ms) != 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_set_timeout failed\n");
+		return true;
+	}
+	if (pcap_set_buffer_size(handle, buffer_size_bytes) != 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_set_buffer_size failed\n");
+		return true;
+	}
+	if (pcap_set_immediate_mode(handle, immediate_mode) != 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_set_immediate_mode failed\n");
+		return true;
+	}
+	(void)direction;
+	// if (pcap_setdirection(handle, direction) != 0)
+	// {
+	// 	fprintf(stderr, "ft_nmap: pcap_setdirection failed\n");
+	// 	return true;
+	// }
+	return false;
+}
 
-// 	return false;
-// }
+static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
+{
+	struct bpf_program fp;
+	if (pcap_compile(handle, &fp, filter_expr, 1, PCAP_NETMASK_UNKNOWN) == -1)
+	{
+		fprintf(stderr, "pcap_compile failed: %s\n", pcap_geterr(handle));
+		return true;
+	}
+	if (pcap_setfilter(handle, &fp) == -1)
+	{
+		fprintf(stderr, "pcap_setfilter failed: %s\n", pcap_geterr(handle));
+		pcap_freecode(&fp);
+		return true;
+	}
+	pcap_freecode(&fp);
+	return false;
+}
+
+bool handle_captured_packet(pcap_t *handle)
+{
+	while (!g_stop)
+	{
+		struct pcap_pkthdr *hdr;
+		const u_char	   *pkt;
+		int					rc = pcap_next_ex(handle, &hdr, &pkt);
+
+		if (rc == 0)
+			continue; // timeout
+		if (rc == -1)
+		{ // error
+			fprintf(stderr, "pcap_next_ex error: %s\n", pcap_geterr(handle));
+			break;
+		}
+		if (rc == -2)
+			break; // EOF offline
+
+		printf("Captured packet of length %u\n", hdr->len);
+	}
+	pcap_close(handle);
+	return false;
+}
+
+bool capture_traffic(const char *dev_name, struct in_addr my_ip)
+{
+	pcap_t *handle;
+	char	errbuf[PCAP_ERRBUF_SIZE];
+
+	handle = pcap_create(dev_name, errbuf);
+	if (!handle)
+	{
+		fprintf(stderr, "ft_nmap: pcap_create failed: %s\n", errbuf);
+		return true;
+	}
+	if (pcap_configure(handle, 65535, 0, 100, 4 * 1024 * 1024, true, PCAP_D_IN))
+	{
+		pcap_close(handle);
+		return true;
+	}
+	int rc = pcap_activate(handle);
+	if (rc < 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_activate failed: %s\n",
+				pcap_geterr(handle));
+		pcap_close(handle);
+		return true;
+	}
+	else if (rc > 0)
+	{
+		fprintf(stderr, "ft_nmap: pcap_activate warning: %s\n",
+				pcap_geterr(handle));
+	}
+	// Apply a filter to capture only packets destined to my_ip
+	char ipbuf[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
+
+	char filter_expr[128];
+	snprintf(filter_expr, sizeof(filter_expr), "tcp and dst host %s", ipbuf);
+
+	if (pcap_apply_filter(handle, filter_expr))
+	{
+		pcap_close(handle);
+		return true;
+	}
+
+	if (handle_captured_packet(handle))
+		return true;
+
+	return false;
+}

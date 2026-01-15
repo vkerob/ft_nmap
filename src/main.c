@@ -45,21 +45,24 @@ int main(int argc, char **argv)
 	if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
+		if (ctx.dev_name)
+			free(ctx.dev_name);
 		return 1;
 	}
 
-	// if (capture_traffic(&ctx.my_ip) != 0)
-	// {
-	// 	free_targets(&ctx.targets, ctx.target_count);
-	// 	return 1;
-	// }
+	if (capture_traffic(ctx.dev_name, ctx.my_ip))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		free(ctx.dev_name);
+		return 1;
+	}
 
 	for (size_t i = 0; i < ctx.target_count; i++)
 		printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input,
 			   ctx.targets[i].ip);
 
-	for (size_t i = 0; i < ctx.args.port_count; i++)
-		printf("Port %zu: %u\n", i, ctx.args.ports[i]);
+	// for (size_t i = 0; i < ctx.args.port_count; i++)
+	// 	printf("Port %zu: %u\n", i, ctx.args.ports[i]);
 
 	printf("Scan type: %u\n", ctx.args.scan_type);
 	printf("Speed: %u\n", ctx.args.speed);
@@ -67,16 +70,6 @@ int main(int argc, char **argv)
 	printf("Using device: %s\n", ctx.dev_name);
 
 	free_targets(&ctx.targets, ctx.target_count);
+	free(ctx.dev_name);
 	return 0;
-	// if (init_socket() != 0)
-	// 	return 1;
-
-	// if (setup_signal_handlers() != 0)
-	// 	goto error;
-
-	// if (run_nmap() != 0)
-	// 	goto error;
-
-	// error:
-	// 	return 1;
 }

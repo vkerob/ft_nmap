@@ -73,5 +73,6 @@ void free_targets(t_target **pt, size_t count);
 void free_tabp(void ***ptab, size_t count);
 bool setup_signal_handlers(void);
 bool pcap_select_interface(char **dev_name, struct in_addr *my_ip);
+bool capture_traffic(const char *dev_name, struct in_addr my_ip);
 
 #endif /* FT_NMAP_H */
