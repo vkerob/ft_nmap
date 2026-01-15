@@ -11,7 +11,9 @@ void	print_ip_header(struct ip *ip_hdr)
 	printf("fragment offset ? %d\n", ip_hdr->ip_off);
 	printf("ttl %d\n", ip_hdr->ip_ttl);
 	printf("protocol: %d\n", ip_hdr->ip_p);
-	printf("checksum %02x\n", ip_hdr->ip_sum );
+	printf("checksum 0x%04x\n", (uint16_t)ip_hdr->ip_sum );
+	printf("source: %s\n", inet_ntoa(ip_hdr->ip_src));
+	printf("dest: %s\n", inet_ntoa(ip_hdr->ip_dst));
 }
 
 void	print_eth_header(t_ethernet_hdr *eth_hdr)
@@ -47,8 +49,18 @@ void	decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr)
 
 void	decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr)
 {
-	*ip_hdr = *(struct ip *)datagram;
-	ip_hdr->ip_len = htons(ip_hdr->ip_len);
+	ip_hdr = (struct ip *)datagram;
+
+	ip_hdr->ip_len = ntohs(ip_hdr->ip_len);
+ip_hdr->ip_id           = ntohs(ip_hdr->ip_id);
+// ip_hdr->flags_fo     = ntohs(ip_hdr->flags_fo);
+ip_hdr->ip_sum     = ntohs(ip_hdr->ip_sum);
+ip_hdr->ip_src.s_addr     = ntohl(ip_hdr->ip_src.s_addr);
+ip_hdr->ip_dst.s_addr     = ntohl(ip_hdr->ip_dst.s_addr);
+// int ip_size = 4 * (ip_header.ver_ihl & 0x0F);
+// 	ip_hdr->ip_len = ntohs(raw->ip_len);
+
+
 }
 
 void	fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr)

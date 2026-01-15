@@ -89,7 +89,7 @@ typedef struct	s_ctx
 
 typedef struct	s_ip_pseudo_hdr
 {
-	struct  in_addr ip_src, ip_dst;  /* source and dest address */
+	struct in_addr	ip_src, ip_dst;  /* source and dest address */
 	uint8_t					zero;
 	uint8_t					protocol;
 	uint16_t				tcp_length;
@@ -143,7 +143,11 @@ bool			setup_signal_handlers(void);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
 int				set_pcap_filter(pcap_t *interface);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
-bool			capture_traffic(const char *dev_name, struct in_addr my_ip);
+bool			capture_traffic(
+			const char *dev_name,
+			struct in_addr my_ip,
+			t_target *targets,
+			size_t target_count);
 
 /* Decoding */
 void			decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr);

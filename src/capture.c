@@ -119,7 +119,24 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-bool handle_captured_packet(pcap_t *handle)
+t_target *find_corresponding_target(
+	struct ip *ip_hdr, t_target *targets, size_t target_count
+)
+{
+	for (size_t i = 0; i < target_count; i++)
+	{
+		printf("decoded: %d target: %d\n", ip_hdr->ip_src.s_addr, targets[i].addr.s_addr);
+		if (ip_hdr->ip_src.s_addr == targets[i].addr.s_addr)
+		{
+			printf("%s host responded\n", targets->ip);
+			return &targets[i];
+		}
+	}
+	printf("target not found\n");
+	return NULL;
+}
+
+bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_count)
 {
 	while (!g_stop)
 	{
@@ -137,13 +154,35 @@ bool handle_captured_packet(pcap_t *handle)
 		if (rc == -2)
 			break; // EOF offline
 
-		printf("Captured packet of length %u\n", hdr->len);
+		printf("received a packet with len: %d\n", hdr->len);
+	for (size_t i = 0; i < hdr->len; i++){
+		printf("%2x", pkt[i]);
+	}
+	printf("\n");
+		struct ip	ip_hdr;
+		decode_ip_packet((uint8_t *)(pkt + 14), &ip_hdr);
+		t_ethernet_hdr	eth_hdr;
+		decode_ethernet_packet((uint8_t *)pkt, &eth_hdr);
+		print_ip_header(&ip_hdr);
+		print_eth_header(&eth_hdr);
+		fflush(stdout);
+		(void)target_count;
+		(void)targets;
+		// t_target *target = find_corresponding_target(&ip_hdr, targets, target_count);
+		// (void)target;
+		// pkt = NULL;
+		// printf("Captured packet of length %u\n", hdr->len);
+		break ;
 	}
 	pcap_close(handle);
 	return false;
 }
 
-bool capture_traffic(const char *dev_name, struct in_addr my_ip)
+bool capture_traffic(
+	const char *dev_name,
+	struct in_addr my_ip,
+	t_target *targets,
+	size_t target_count)
 {
 	pcap_t *handle;
 	char	errbuf[PCAP_ERRBUF_SIZE];
@@ -185,7 +224,7 @@ bool capture_traffic(const char *dev_name, struct in_addr my_ip)
 		return true;
 	}
 
-	if (handle_captured_packet(handle))
+	if (handle_captured_packet(handle, targets, target_count))
 		return true;
 
 	return false;

@@ -45,20 +45,23 @@ int main(int argc, char **argv)
 
 	run_scan(ctx, socket, datagram);
 
-	// if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
-	// {
-	// 	free_targets(&ctx.targets, ctx.target_count);
-	// 	if (ctx.dev_name)
-	// 		free(ctx.dev_name);
-	// 	return 1;
-	// }
+	if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		if (ctx.dev_name)
+			free(ctx.dev_name);
+		return 1;
+	}
 
-	// if (capture_traffic(ctx.dev_name, ctx.my_ip))
-	// {
-	// 	free_targets(&ctx.targets, ctx.target_count);
-	// 	free(ctx.dev_name);
-	// 	return 1;
-	// }
+	ctx.dev_name = strdup("bridge100");
+	if (capture_traffic(ctx.dev_name, ctx.my_ip, ctx.targets, ctx.target_count))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		free(ctx.dev_name);
+		return 1;
+	}
+
+
 
 	// for (size_t i = 0; i < ctx.target_count; i++)
 	// 	printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input,
