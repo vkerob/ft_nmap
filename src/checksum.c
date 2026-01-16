@@ -1,9 +1,9 @@
 #include "ft_nmap.h"
 
-uint16_t	calculate_checksum(uint16_t *buffer, int len)
+u16	calculate_checksum(u16 *buffer, int len)
 {
-	uint32_t	checksum = 0;
-	uint16_t	*ptr = (uint16_t *)buffer;
+	u32	checksum = 0;
+	u16	*ptr = (u16 *)buffer;
 	int				odd = (len % 2) != 0;
 
 	for (int i = 0; i < len - odd; i++){
@@ -11,11 +11,11 @@ uint16_t	calculate_checksum(uint16_t *buffer, int len)
 	}
 	if (odd != 0)
 	{
-		uint8_t b = (uint8_t)*ptr;
+		u8 b = (u8)*ptr;
 		checksum += b;
 	}
 	checksum = (checksum >> 16) + (checksum & 0x0000FFFF);
 	checksum += (checksum >> 16);
 
-	return (uint16_t)~checksum;
+	return (u16)~checksum;
 }

@@ -1,6 +1,6 @@
 #include "ft_nmap.h"
 
-void	decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr)
+void	decode_ip_packet(u8 *datagram, struct ip	*ip_hdr)
 {
 	*ip_hdr = *(struct ip *)datagram;
 
@@ -10,8 +10,8 @@ void	decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr)
 	ip_hdr->ip_src.s_addr = ntohl(ip_hdr->ip_src.s_addr);
 	ip_hdr->ip_dst.s_addr = ntohl(ip_hdr->ip_dst.s_addr);
 	ip_hdr->ip_len = ntohs(ip_hdr->ip_len);
-	ip_hdr->ip_src.s_addr = ntohl((uint32_t)ip_hdr->ip_src.s_addr);
-	ip_hdr->ip_dst.s_addr = ntohl((uint32_t)ip_hdr->ip_dst.s_addr);
+	ip_hdr->ip_src.s_addr = ntohl((u32)ip_hdr->ip_src.s_addr);
+	ip_hdr->ip_dst.s_addr = ntohl((u32)ip_hdr->ip_dst.s_addr);
 }
 
 

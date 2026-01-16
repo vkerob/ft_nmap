@@ -110,7 +110,7 @@ static char *trim_inplace(char *str)
 	return str;
 }
 
-static bool parse_port_strict(const char *s, uint16_t *out)
+static bool parse_port_strict(const char *s, u16 *out)
 {
 	if (!s || !*s)
 		return false;
@@ -129,11 +129,11 @@ static bool parse_port_strict(const char *s, uint16_t *out)
 	if (value < MIN_PORT_NUMBER || value > MAX_PORT_NUMBER)
 		return false;
 
-	*out = (uint16_t)value;
+	*out = (u16)value;
 	return true;
 }
 
-static bool contains_port(const uint16_t *ports, size_t count, uint16_t port)
+static bool contains_port(const u16 *ports, size_t count, u16 port)
 {
 	for (size_t i = 0; i < count; i++)
 		if (ports[i] == port)
@@ -141,7 +141,7 @@ static bool contains_port(const uint16_t *ports, size_t count, uint16_t port)
 	return false;
 }
 
-static bool push_port(uint16_t *ports, size_t *count, uint16_t port)
+static bool push_port(u16 *ports, size_t *count, u16 port)
 {
 	if (contains_port(ports, *count, port))
 		return true;
@@ -154,13 +154,13 @@ static bool push_port(uint16_t *ports, size_t *count, uint16_t port)
 	return true;
 }
 
-static bool parse_token_and_push(char *token, uint16_t *ports, size_t *count)
+static bool parse_token_and_push(char *token, u16 *ports, size_t *count)
 {
 	char *dash = strchr(token, '-');
 
 	if (!dash)
 	{
-		uint16_t port;
+		u16 port;
 		if (!parse_port_strict(token, &port))
 		{
 			fprintf(stderr, "ft_nmap: invalid port: '%s'\n", token);
@@ -191,7 +191,7 @@ static bool parse_token_and_push(char *token, uint16_t *ports, size_t *count)
 		return false;
 	}
 
-	uint16_t port_left, port_right;
+	u16 port_left, port_right;
 	if (!parse_port_strict(left, &port_left)
 		|| !parse_port_strict(right, &port_right) || port_left > port_right)
 	{
@@ -199,9 +199,9 @@ static bool parse_token_and_push(char *token, uint16_t *ports, size_t *count)
 		return false;
 	}
 
-	for (uint32_t port = port_left; port <= port_right; port++)
+	for (u32 port = port_left; port <= port_right; port++)
 	{
-		if (!push_port(ports, count, (uint16_t)port))
+		if (!push_port(ports, count, (u16)port))
 		{
 			fprintf(stderr, "ft_nmap: too many ports (max %d)\n",
 					MAX_PORTS_COUNT);
@@ -212,7 +212,7 @@ static bool parse_token_and_push(char *token, uint16_t *ports, size_t *count)
 	return true;
 }
 
-bool parse_ports(const char *port_str, uint16_t *ports, size_t *port_count)
+bool parse_ports(const char *port_str, u16 *ports, size_t *port_count)
 {
 	*port_count = 0;
 
@@ -248,7 +248,7 @@ bool parse_ports(const char *port_str, uint16_t *ports, size_t *port_count)
 	return error;
 }
 
-bool parse_scan_type(const char *scan_str, uint8_t *out)
+bool parse_scan_type(const char *scan_str, u8 *out)
 {
 	char upper_scan_str[strlen(scan_str) + 1];
 	strcpy(upper_scan_str, scan_str);
@@ -293,7 +293,7 @@ bool parse_scan_type(const char *scan_str, uint8_t *out)
 	}
 }
 
-static bool parse_speed_strict(const char *str, uint8_t *out)
+static bool parse_speed_strict(const char *str, u8 *out)
 {
 	while (isspace((unsigned char)*str))
 		str++;
@@ -331,7 +331,7 @@ static bool parse_speed_strict(const char *str, uint8_t *out)
 		return true;
 	}
 
-	*out = (uint8_t)value;
+	*out = (u8)value;
 	return false;
 }
 
@@ -409,7 +409,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 		// fill 1..1024
 		args->port_count = MAX_PORTS_COUNT;
 		for (size_t i = 0; i < args->port_count; i++)
-			args->ports[i] = (uint16_t)(i + 1);
+			args->ports[i] = (u16)(i + 1);
 	}
 
 	return false;

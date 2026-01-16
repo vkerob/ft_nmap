@@ -125,14 +125,13 @@ t_target *find_corresponding_target(
 {
 	for (size_t i = 0; i < target_count; i++)
 	{
-		printf("decoded: %d target: %d\n", ip_hdr->ip_src.s_addr, targets[i].addr.s_addr);
 		if (ip_hdr->ip_src.s_addr == targets[i].addr.s_addr)
 		{
-			printf("%s host responded\n", targets->ip);
+			printf("%s host responded\n", inet_ntoa(targets[i].addr));
 			return &targets[i];
 		}
 	}
-	printf("target not found\n");
+	// printf("target not found\n");
 	return NULL;
 }
 
@@ -158,15 +157,21 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 		struct ip				ip_hdr;
 		struct tcphdr		tcp_hdr;
 
-		decode_datagram((uint8_t *)pkt, &eth_hdr, &ip_hdr, &tcp_hdr);
+		decode_datagram((u8 *)pkt, &eth_hdr, &ip_hdr, &tcp_hdr);
+
+		t_target *target = find_corresponding_target(&ip_hdr, targets, target_count);
 
 		print_headers(&eth_hdr, &ip_hdr, &tcp_hdr);
 
 		fflush(stdout);
+
+
 		(void)target_count;
 		(void)targets;
-		// t_target *target = find_corresponding_target(&ip_hdr, targets, target_count);
-		// (void)target;
+		if (target == NULL){
+			printf("Target not found\n");
+		}
+		 (void)target;
 		// pkt = NULL;
 		// printf("Captured packet of length %u\n", hdr->len);
 		break ;

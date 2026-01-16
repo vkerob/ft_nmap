@@ -31,6 +31,12 @@ extern volatile sig_atomic_t g_stop;
 #define SET(flags, flag) ((flags) |= (flag))
 #define HAS(flags, flag) (((flags) & (flag)) != 0)
 
+typedef uint32_t			u32;
+typedef uint16_t			u16;
+typedef uint8_t				u8;
+typedef struct ip			t_ip;
+typedef struct iphdr	t_ip_hdr;
+
 enum e_flags
 {
 	F_HELP = 1u << 0,
@@ -41,7 +47,7 @@ enum e_flags
 	F_SPEED = 1u << 5
 };
 
-enum e_scan_type
+typedef enum e_scan_type
 {
 	SCAN_SYN,
 	SCAN_NULL,
@@ -49,25 +55,49 @@ enum e_scan_type
 	SCAN_FIN,
 	SCAN_XMAS,
 	SCAN_UDP
-};
+}	t_scan_type;
+
+// t_scan_type	tcp_connection_steps[][] = {
+// 	{ SYN }, { ACK, SYN }, { ACK }
+// };
+
+typedef struct	s_packet
+{
+	struct in_addr	target_ip;
+	u8							connection_step;
+	size_t					target_port;
+}	t_packet;
+
+typedef struct	s_task
+{
+	t_packet			packet;
+	struct s_task	*next;
+}	t_task;
+
+typedef struct	s_port_state
+{
+	u32		port_nb;
+	bool	close;
+}	t_port_state;
 
 typedef struct	s_target
 {
 	char						*input;
 	char						ip[INET_ADDRSTRLEN];
 	struct in_addr	addr;
+	t_port_state		port_state[MAX_PORTS_COUNT];
 }	t_target;
 
 typedef struct	s_args
 {
-	uint8_t		flags;
-	size_t		target_count;
+	u8			flags;
+	size_t	target_count;
 
-	uint16_t	ports[MAX_PORTS_COUNT];
+	u16	ports[MAX_PORTS_COUNT];
 	size_t		port_count;
 
-	uint8_t		scan_type;
-	uint8_t		speed;
+	u8		scan_type;
+	u8		speed;
 }	t_args;
 
 typedef struct	s_socket
@@ -90,22 +120,22 @@ typedef struct	s_ctx
 typedef struct	s_ip_pseudo_hdr
 {
 	struct in_addr	ip_src, ip_dst;  /* source and dest address */
-	uint8_t					zero;
-	uint8_t					protocol;
-	uint16_t				tcp_length;
+	u8					zero;
+	u8					protocol;
+	u16				tcp_length;
 }	t_ip_pseudo_hdr;
 
 typedef struct	s_ethernet_hdr
 {
-	uint8_t		dst_mac_addr[6];
-	uint8_t		src_mac_addr[6];
-	uint16_t	protocol;
+	u8		dst_mac_addr[6];
+	u8		src_mac_addr[6];
+	u16	protocol;
 }	t_ethernet_hdr;
 
 /* Socket */
 int				init_socket(t_socket *sock);
 void			close_socket(t_socket socket);
-void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
+void			update_socket(struct sockaddr_in *socket, t_target target, u16 port);
 
 /* Debug */
 void			print_eth_header(t_ethernet_hdr *eth_hdr);
@@ -124,7 +154,7 @@ void			update_ip_headers_dst_addr(
 /* TCP */
 
 void			fill_tcp_header(struct tcphdr *tcp_hdr);
-void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
+void			update_port_tcp(struct tcphdr *tcp_hdr, u16 port);
 int				send_packet(t_socket socket, char *datagram);
 
 /* Scan */
@@ -133,7 +163,7 @@ int				run_scan(t_ctx ctx, t_socket socket, char *datagram);
 /* Parsing */
 bool			parse_args(int argc, char **argv, t_args *args, char ***targets_input);
 bool			get_targets_input(const char *arg, size_t *args_count, char ***targets,
-						int mode, uint8_t flags);
+						int mode, u8 flags);
 bool			resolve_targets(char **inputs, size_t count, t_target **out);
 void			free_targets(t_target **pt, size_t count);
 void			free_tabp(void ***ptab, size_t count);
@@ -151,7 +181,7 @@ bool			capture_traffic(t_ctx *ctx, t_socket *socket, char *datagram);
 void			set_default_headers(char *datagram, t_ip_pseudo_hdr *ip_pseudo_hdr);
 
 /* Checksum */
-uint16_t	calculate_checksum(uint16_t *buffer, int len);
+u16	calculate_checksum(u16 *buffer, int len);
 void			calculate_tcp_checksum(
 	t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr
 );
@@ -159,13 +189,13 @@ void			calculate_tcp_checksum(
 /* Decoding */
 
 int				decode_datagram(
-	uint8_t *datagram,
+	u8 *datagram,
 	t_ethernet_hdr *eth_hdr,
 	struct ip *ip_hdr,
 	struct tcphdr *tcp_hdr
 );
-void			decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr);
-void			decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
-void			decode_tcp_packet(uint8_t *datagram, struct tcphdr *tcp_hdr);
+void			decode_ip_packet(u8 *datagram, struct ip	*ip_hdr);
+void			decode_ethernet_packet(u8 *datagram, t_ethernet_hdr *eth_hdr);
+void			decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr);
 
 #endif /* FT_NMAP_H */

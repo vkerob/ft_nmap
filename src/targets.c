@@ -51,7 +51,7 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 }
 
 bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
-					   int mode, uint8_t flags)
+					   int mode, u8 flags)
 {
 	if (HAS(flags, F_IP_MODE) && HAS(flags, F_FILE_MODE))
 	{

@@ -1,6 +1,6 @@
 #include "ft_nmap.h"
 
-void	decode_tcp_packet(uint8_t *datagram, struct tcphdr *tcp_hdr)
+void	decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr)
 {
 	*tcp_hdr = *(struct tcphdr *)datagram;
 	tcp_hdr->th_sport = ntohs(tcp_hdr->th_sport);
@@ -10,7 +10,7 @@ void	decode_tcp_packet(uint8_t *datagram, struct tcphdr *tcp_hdr)
 	tcp_hdr->th_sum = ntohs(tcp_hdr->th_sum);
 };
 
-void	update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port)
+void	update_port_tcp(struct tcphdr *tcp_hdr, u16 port)
 {
 	tcp_hdr->th_dport = htons(port);
 }
@@ -25,7 +25,7 @@ void	calculate_tcp_checksum(
 	memcpy(buffer + sizeof(t_ip_pseudo_hdr), tcp_hdr, sizeof(struct tcphdr));
 
 	tcp_hdr->th_sum = calculate_checksum(
-		(uint16_t *)buffer,
+		(u16 *)buffer,
 		(sizeof(struct tcphdr) + sizeof(t_ip_pseudo_hdr)) 
 	);
 }

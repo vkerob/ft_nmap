@@ -1,6 +1,6 @@
 #include "ft_nmap.h"
 
-static void	update_socket_port(struct sockaddr_in *socket_addr, uint16_t port)
+static void	update_socket_port(struct sockaddr_in *socket_addr, u16 port)
 {
 	socket_addr->sin_port = htons(port);
 }
@@ -11,7 +11,7 @@ static void	update_socket_addr(struct sockaddr_in *socket_addr, struct in_addr a
 	socket_addr->sin_addr = addr;
 }
 
-void	update_socket(struct sockaddr_in *socket, t_target target, uint16_t port)
+void	update_socket(struct sockaddr_in *socket, t_target target, u16 port)
 {
 	update_socket_port(socket, port);
 	update_socket_addr(socket, target.addr);
