@@ -108,21 +108,23 @@ void			close_socket(t_socket socket);
 void			update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* Debug */
-void			print_ip_header(struct ip *ip_hdr);
 void			print_eth_header(t_ethernet_hdr *eth_hdr);
-
-/* TCP / IP */
-void			fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
-void			fill_tcp_header(struct tcphdr *tcp_hdr);
-uint16_t	calculate_checksum(uint16_t *buffer, int len);
-void			calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr);
-void			set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
-void			print_tcp_header(struct tcphdr *tcp_hdr);
 void			print_ip_header(struct ip *ip_hdr);
-void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
+void			print_tcp_header(struct tcphdr *tcp_hdr);
+void			print_headers(
+	t_ethernet_hdr *eth_hdr, struct ip *ip_hdr, struct tcphdr *tcp_hdr
+);
+
+/* IP */
+void			fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
 void			update_ip_headers_dst_addr(
 		t_ip_pseudo_hdr *ip_pseudo_hdr,
-		struct in_addr dst_addr);
+		struct in_addr dst_addr
+);
+/* TCP */
+
+void			fill_tcp_header(struct tcphdr *tcp_hdr);
+void			update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
 int				send_packet(t_socket socket, char *datagram);
 
 /* Scan */
@@ -143,13 +145,27 @@ bool			setup_signal_handlers(void);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
 int				set_pcap_filter(pcap_t *interface);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
-bool			capture_traffic(
-	t_ctx *ctx,
-	t_socket *socket,
-	char *datagram
+bool			capture_traffic(t_ctx *ctx, t_socket *socket, char *datagram);
+
+/* Encoding */
+void			set_default_headers(char *datagram, t_ip_pseudo_hdr *ip_pseudo_hdr);
+
+/* Checksum */
+uint16_t	calculate_checksum(uint16_t *buffer, int len);
+void			calculate_tcp_checksum(
+	t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr *tcp_hdr
 );
+
 /* Decoding */
+
+int				decode_datagram(
+	uint8_t *datagram,
+	t_ethernet_hdr *eth_hdr,
+	struct ip *ip_hdr,
+	struct tcphdr *tcp_hdr
+);
 void			decode_ip_packet(uint8_t *datagram, struct ip	*ip_hdr);
 void			decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
+void			decode_tcp_packet(uint8_t *datagram, struct tcphdr *tcp_hdr);
 
 #endif /* FT_NMAP_H */

@@ -60,9 +60,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-
-
-
 	// for (size_t i = 0; i < ctx.target_count; i++)
 	// 	printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input,
 	// 		   ctx.targets[i].ip);

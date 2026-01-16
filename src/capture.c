@@ -154,18 +154,14 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 		if (rc == -2)
 			break; // EOF offline
 
-	// 	printf("received a packet with len: %d\n", hdr->len);
-	// for (size_t i = 0; i < hdr->len; i++){
-	// 	printf("%2x", pkt[i]);
-	// }
-	// printf("\n");
-		struct ip	ip_hdr;
-		// printf("eth hdr size: %lu\n", sizeof(t_ethernet_hdr));
-		decode_ip_packet((uint8_t *)&pkt[sizeof(t_ethernet_hdr)], &ip_hdr);
 		t_ethernet_hdr	eth_hdr;
-		decode_ethernet_packet((uint8_t *)pkt, &eth_hdr);
-		print_ip_header(&ip_hdr);
-		print_eth_header(&eth_hdr);
+		struct ip				ip_hdr;
+		struct tcphdr		tcp_hdr;
+
+		decode_datagram((uint8_t *)pkt, &eth_hdr, &ip_hdr, &tcp_hdr);
+
+		print_headers(&eth_hdr, &ip_hdr, &tcp_hdr);
+
 		fflush(stdout);
 		(void)target_count;
 		(void)targets;
@@ -179,11 +175,7 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 	return false;
 }
 
-bool capture_traffic(
-	t_ctx *ctx,
-	t_socket *socket,
-	char *datagram
-)
+bool	capture_traffic(t_ctx *ctx, t_socket *socket, char *datagram)
 {
 	pcap_t *handle;
 	char	errbuf[PCAP_ERRBUF_SIZE];
