@@ -1,5 +1,6 @@
-#include "compat_pcap.h"
 #include "ft_nmap.h"
+#include <pcap/pcap.h>
+#include <stdbool.h>
 #include <string.h>
 
 static bool has_ipv4_addr(const pcap_if_t *dev, struct in_addr *my_ip)
@@ -77,6 +78,7 @@ bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
 		fprintf(stderr, "ft_nmap: pcap_set_promisc failed\n");
 		return true;
 	}
+	printf("timeout ms: %d\n", timeout_ms);
 	if (pcap_set_timeout(handle, timeout_ms) != 0)
 	{
 		fprintf(stderr, "ft_nmap: pcap_set_timeout failed\n");
@@ -119,13 +121,13 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-t_target *find_corresponding_target(
-	struct ip *ip_hdr, t_target *targets, size_t target_count
-)
+t_target *find_corresponding_target(struct ip *ip_hdr, t_target *targets,
+									size_t target_count)
 {
 	for (size_t i = 0; i < target_count; i++)
 	{
-		printf("decoded: %d target: %d\n", ip_hdr->ip_src.s_addr, targets[i].addr.s_addr);
+		printf("decoded: %d target: %d\n", ip_hdr->ip_src.s_addr,
+			   targets[i].addr.s_addr);
 		if (ip_hdr->ip_src.s_addr == targets[i].addr.s_addr)
 		{
 			printf("%s host responded\n", targets->ip);
@@ -136,103 +138,52 @@ t_target *find_corresponding_target(
 	return NULL;
 }
 
-bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_count)
+
+bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
+				char *errbuf)
 {
-	while (!g_stop)
-	{
-		struct pcap_pkthdr *hdr;
-		const u_char	   *pkt;
-		int					rc = pcap_next_ex(handle, &hdr, &pkt);
-
-		if (rc == 0)
-			continue; // timeout
-		if (rc == -1)
-		{ // error
-			fprintf(stderr, "pcap_next_ex error: %s\n", pcap_geterr(handle));
-			break;
-		}
-		if (rc == -2)
-			break; // EOF offline
-
-	// 	printf("received a packet with len: %d\n", hdr->len);
-	// for (size_t i = 0; i < hdr->len; i++){
-	// 	printf("%2x", pkt[i]);
-	// }
-	// printf("\n");
-		struct ip	ip_hdr;
-		// printf("eth hdr size: %lu\n", sizeof(t_ethernet_hdr));
-		decode_ip_packet((uint8_t *)&pkt[sizeof(t_ethernet_hdr)], &ip_hdr);
-		t_ethernet_hdr	eth_hdr;
-		decode_ethernet_packet((uint8_t *)pkt, &eth_hdr);
-		print_ip_header(&ip_hdr);
-		print_eth_header(&eth_hdr);
-		fflush(stdout);
-		(void)target_count;
-		(void)targets;
-		// t_target *target = find_corresponding_target(&ip_hdr, targets, target_count);
-		// (void)target;
-		// pkt = NULL;
-		// printf("Captured packet of length %u\n", hdr->len);
-		break ;
-	}
-	pcap_close(handle);
-	return false;
-}
-
-bool capture_traffic(
-	t_ctx *ctx,
-	t_socket *socket,
-	char *datagram
-)
-{
-	pcap_t *handle;
-	char	errbuf[PCAP_ERRBUF_SIZE];
-	const char *dev_name = ctx->dev_name;
-	struct in_addr my_ip = ctx->my_ip;
-	t_target *targets = ctx->targets;
-size_t target_count = ctx->target_count;
-
-	handle = pcap_create(dev_name, errbuf);
-	if (!handle)
+	*handle = pcap_create(dev_name, errbuf);
+	if (!*handle)
 	{
 		fprintf(stderr, "ft_nmap: pcap_create failed: %s\n", errbuf);
 		return true;
 	}
-	if (pcap_configure(handle, 65535, 0, 100, 4 * 1024 * 1024, true, PCAP_D_IN))
+	// Configure the handle
+	if (pcap_configure(*handle, 65535, 0, 100, 4 * 1024 * 1024, true,
+					   PCAP_D_IN))
 	{
-		pcap_close(handle);
+		pcap_close(*handle);
 		return true;
 	}
-	int rc = pcap_activate(handle);
+	// Activate the handle
+	int rc = pcap_activate(*handle);
 	if (rc < 0)
 	{
 		fprintf(stderr, "ft_nmap: pcap_activate failed: %s\n",
-				pcap_geterr(handle));
-		pcap_close(handle);
+				pcap_geterr(*handle));
+		pcap_close(*handle);
 		return true;
 	}
 	else if (rc > 0)
 	{
 		fprintf(stderr, "ft_nmap: pcap_activate warning: %s\n",
-				pcap_geterr(handle));
+				pcap_geterr(*handle));
 	}
+
 	// Apply a filter to capture only packets destined to my_ip
 	char ipbuf[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
-
 	char filter_expr[128];
-	snprintf(filter_expr, sizeof(filter_expr), "tcp and src host 192.168.64.11");
+	snprintf(filter_expr, sizeof(filter_expr),
+			 "tcp and src host 192.168.64.11");
 
-	if (pcap_apply_filter(handle, filter_expr))
+	if (pcap_apply_filter(*handle, filter_expr))
 	{
 		printf("failed\n");
-		pcap_close(handle);
+		pcap_close(*handle);
 		return true;
 	}
 
-	run_scan(*ctx, *socket, datagram);
-	if (handle_captured_packet(handle, targets, target_count))
-		return true;
-
 	return false;
 }
+
