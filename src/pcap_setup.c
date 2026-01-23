@@ -121,23 +121,6 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-t_target *find_corresponding_target(struct ip *ip_hdr, t_target *targets,
-									size_t target_count)
-{
-	for (size_t i = 0; i < target_count; i++)
-	{
-		printf("decoded: %d target: %d\n", ip_hdr->ip_src.s_addr,
-			   targets[i].addr.s_addr);
-		if (ip_hdr->ip_src.s_addr == targets[i].addr.s_addr)
-		{
-			printf("%s host responded\n", targets->ip);
-			return &targets[i];
-		}
-	}
-	printf("target not found\n");
-	return NULL;
-}
-
 
 bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 				char *errbuf)

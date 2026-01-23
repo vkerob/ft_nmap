@@ -51,9 +51,9 @@ enum e_scan_type
 
 typedef struct s_target
 {
-	char		  *input;
-	char		   ip[INET_ADDRSTRLEN];
-	struct in_addr addr;
+	char			  *input;
+	char			   ip[INET_ADDRSTRLEN];
+	struct sockaddr_in addr;
 } t_target;
 
 typedef struct s_args
@@ -84,6 +84,32 @@ typedef struct s_ctx
 	char		  *dev_name;
 	t_args		   args;
 } t_ctx;
+
+typedef struct s_target_probe
+{
+	char	 ip[INET_ADDRSTRLEN];
+	uint16_t port;
+
+} t_target_probe;
+
+typedef struct s_probe_request
+{
+	t_target_probe			target;
+	enum e_scan_type		type;
+	uint32_t				id;
+	time_t					timestamp;
+	uint8_t					retries;
+	uint8_t					status;
+	struct s_probe_request *next;
+} t_probe_request;
+
+typedef struct s_shared_data
+{
+	pcap_t			*handle;
+	t_probe_request *request_list_head;
+	t_probe_request *request_list_tail;
+
+} t_shared_data;
 
 typedef struct s_ip_pseudo_hdr
 {
@@ -121,10 +147,10 @@ void	 print_ip_header(struct ip *ip_hdr);
 void	 update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
 void	 update_ip_headers_dst_addr(t_ip_pseudo_hdr *ip_pseudo_hdr,
 									struct in_addr	 dst_addr);
-int		 send_packet(t_socket socket, char *datagram);
 
 /* Scan */
-bool run_scan(t_ctx *ctx);
+bool  run_scan(t_ctx *ctx);
+void *pcap_capture(void *arg);
 
 /* Parsing */
 bool parse_args(int argc, char **argv, t_args *args, char ***targets_input);

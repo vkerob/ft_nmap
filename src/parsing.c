@@ -34,33 +34,28 @@ void free_targets(t_target **targets, size_t count)
 }
 
 // Resolve hostname/IP to IPv4 sockaddr and numeric string; no reverse DNS
-static bool resolve_target(const char *host, struct in_addr *dst_addr,
+static bool resolve_target(const char *host, struct sockaddr_in *dst,
 						   char ipbuf[INET_ADDRSTRLEN])
 {
-	//struct addrinfo	 hints;
-	//struct addrinfo *res = NULL;
-
-	if (inet_pton(AF_INET, host, dst_addr) == 0) {
-		fprintf(stderr, "Invalid destination address\n");
+	struct addrinfo	 hints;
+	struct addrinfo *res = NULL;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET; // IPv4 only (c.f. subject)
+	int rc = getaddrinfo(host, NULL, &hints, &res);
+	if (rc != 0)
+	{
+		fprintf(stderr, "Error: Invalid/unknown host '%s': %s\n", host,
+				gai_strerror(rc));
 		return false;
 	}
-	//memset(&hints, 0, sizeof(hints));
-	//hints.ai_family = AF_INET; // IPv4 only (c.f. subject)
-	//int rc = getaddrinfo(host, NULL, &hints, &res);
-	//if (rc != 0)
-	//{
-	//	fprintf(stderr, "Error: Invalid/unknown host '%s': %s\n", host,
-	//			gai_strerror(rc));
-	//	return false;
-	//}
 
 	// Copy the first IPv4 result
-	//memset(dst, 0, sizeof(*dst));
-	//memcpy(dst, res->ai_addr, sizeof(*dst));
+	memset(dst, 0, sizeof(*dst));
+	memcpy(dst, res->ai_addr, sizeof(*dst));
 
-	//freeaddrinfo(res);
+	freeaddrinfo(res);
 	// Produce numeric IP string for display
-	if (inet_ntop(AF_INET, &dst_addr, ipbuf, INET_ADDRSTRLEN) == NULL)
+	if (inet_ntop(AF_INET, &dst->sin_addr, ipbuf, INET_ADDRSTRLEN) == NULL)
 	{
 		perror("inet_ntop");
 		return false;

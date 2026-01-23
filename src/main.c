@@ -28,7 +28,6 @@ int main(int argc, char **argv)
 	// 	fprintf(stderr, "ft_nmap: You must be root to run this program.\n");
 	// 	return 1;
 	// }
-	raise(SIGSTOP);
 
 	char **targets_input = NULL;
 	t_args args;
@@ -65,6 +64,7 @@ int main(int argc, char **argv)
 			free(ctx.dev_name);
 		return 1;
 	}
+	print_parsing_args(ctx);
 
 	if (run_scan(&ctx))
 	{
@@ -72,7 +72,8 @@ int main(int argc, char **argv)
 		free(ctx.dev_name);
 		return 1;
 	}
-	print_parsing_args(ctx);
+
+	
 
 	free(ctx.dev_name);
 	free_targets(&ctx.targets, ctx.target_count);
