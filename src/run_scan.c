@@ -1,6 +1,7 @@
 #include "ft_nmap.h"
 #include <pthread.h>
 
+
 bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 						  t_target target, uint16_t port,
 						  enum e_scan_type scan_type, uint32_t id)
@@ -80,14 +81,12 @@ bool run_scan(t_ctx *ctx)
 	t_shared_data shared_data;
 
 	shared_data.handle = handle;
+	pthread_mutex_init(&shared_data.mutex, NULL);
+
 	initial_probe_requests(ctx->targets, ctx->target_count, ctx->args.ports,
 						   ctx->args.port_count, ctx->args.scan_type,
 						   &shared_data.request_list_head,
 						   &shared_data.request_list_tail);
-
-	free_requests_list(&shared_data.request_list_head);
-	pcap_close(handle);
-	return false;
 
 	// launch thread to handle captured packets
 	pthread_create(&pcap_thread, NULL, pcap_capture, &shared_data);
@@ -99,7 +98,9 @@ bool run_scan(t_ctx *ctx)
 
 	pthread_join(pcap_thread, NULL);
 
-	// pcap_close(handle);
+	free_requests_list(&shared_data.request_list_head);
+	pthread_mutex_destroy(&shared_data.mutex);
+	pcap_close(handle);
 
 	return false;
 }

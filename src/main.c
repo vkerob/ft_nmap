@@ -1,6 +1,7 @@
 #include "ft_nmap.h"
 
 sig_atomic_t volatile g_stop = 0;
+int g_pipefd[2];
 
 void print_parsing_args(t_ctx ctx)
 {
@@ -28,6 +29,12 @@ int main(int argc, char **argv)
 	// 	fprintf(stderr, "ft_nmap: You must be root to run this program.\n");
 	// 	return 1;
 	// }
+
+	if (pipe(g_pipefd) == -1)
+	{
+		perror("pipe");
+		return 1;
+	}
 
 	char **targets_input = NULL;
 	t_args args;
@@ -72,8 +79,6 @@ int main(int argc, char **argv)
 		free(ctx.dev_name);
 		return 1;
 	}
-
-	
 
 	free(ctx.dev_name);
 	free_targets(&ctx.targets, ctx.target_count);

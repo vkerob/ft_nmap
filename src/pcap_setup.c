@@ -60,6 +60,8 @@ bool pcap_select_interface(char **dev_name, struct in_addr *my_ip)
 		pcap_freealldevs(alldevs);
 		return true;
 	}
+	free(*dev_name);
+	*dev_name = strdup("br-72bf2ed955a7"); // hardcoded for testing purpose
 
 	pcap_freealldevs(alldevs);
 	return false;
@@ -121,7 +123,6 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-
 bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 				char *errbuf)
 {
@@ -132,7 +133,7 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 		return true;
 	}
 	// Configure the handle
-	if (pcap_configure(*handle, 65535, 0, 100, 4 * 1024 * 1024, true,
+	if (pcap_configure(*handle, 65535, 0, 1000, 4 * 1024 * 1024, true,
 					   PCAP_D_IN))
 	{
 		pcap_close(*handle);
@@ -158,7 +159,7 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
 	char filter_expr[128];
 	snprintf(filter_expr, sizeof(filter_expr),
-			 "tcp and src host 192.168.64.11");
+			 "tcp and src host 192.168.1.202");
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{
@@ -169,4 +170,3 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 
 	return false;
 }
-

@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 extern volatile sig_atomic_t g_stop;
+extern int					 g_pipefd[2];
 
 #define SET(flags, flag) ((flags) |= (flag))
 #define HAS(flags, flag) (((flags) & (flag)) != 0)
@@ -106,6 +107,7 @@ typedef struct s_probe_request
 typedef struct s_shared_data
 {
 	pcap_t			*handle;
+	pthread_mutex_t	 mutex;
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
 
