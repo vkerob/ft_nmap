@@ -1,6 +1,9 @@
 #include "ft_nmap.h"
 #include <net/ethernet.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <pcap/pcap.h>
 
 #include <stdio.h>
@@ -42,18 +45,58 @@ static void print_debug_sll_header(struct sll_header *sll_hdr)
 	printf(" - Protocol: 0x%04x\n", ntohs(sll_hdr->sll_protocol));
 }
 
+static void print_debug_tcp_header(struct tcphdr *tcp_hdr)
+{
+	printf("TCP Header:\n");
+	printf(" - Source Port: %d\n", ntohs(tcp_hdr->th_sport));
+	printf(" - Destination Port: %d\n", ntohs(tcp_hdr->th_dport));
+	printf(" - Sequence Number: %u\n", ntohl(tcp_hdr->th_seq));
+	printf(" - Acknowledgment Number: %u\n", ntohl(tcp_hdr->th_ack));
+	printf(" - Header Length: %d bytes\n", tcp_hdr->th_off * 4);
+	printf(" - Flags: 0x%02x\n", tcp_hdr->th_flags);
+	printf(" - Window Size: %d\n", ntohs(tcp_hdr->th_win));
+	printf(" - Checksum: 0x%04x\n", ntohs(tcp_hdr->th_sum));
+	printf(" - Urgent Pointer: %d\n", ntohs(tcp_hdr->th_urp));
+}
+
+static void print_debug_icmp_header(struct icmphdr *icmp_hdr)
+{
+	printf("ICMP Header:\n");
+	printf(" - Type: %d\n", icmp_hdr->type);
+	printf(" - Code: %d\n", icmp_hdr->code);
+	printf(" - Checksum: 0x%04x\n", ntohs(icmp_hdr->checksum));
+}
+
+static void print_debug_udp_header(struct udphdr *udp_hdr)
+{
+	printf("UDP Header:\n");
+	printf(" - Source Port: %d\n", ntohs(udp_hdr->uh_sport));
+	printf(" - Destination Port: %d\n", ntohs(udp_hdr->uh_dport));
+	printf(" - Length: %d bytes\n", ntohs(udp_hdr->uh_ulen));
+	printf(" - Checksum: 0x%04x\n", ntohs(udp_hdr->uh_sum));
+}
+
 static void handle_ip_protocol(struct ip *ip_hdr)
 {
+	void *protocol_hdr;
+
+	protocol_hdr = (void *)((u_char *)ip_hdr + ip_hdr->ip_hl * 4);
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
 		printf(" - TCP Packet\n");
+		struct tcphdr *tcp_hdr = (struct tcphdr *)protocol_hdr;
+		print_debug_tcp_header(tcp_hdr);
 		break;
 	case IPPROTO_ICMP:
 		printf(" - ICMP Packet\n");
+		struct icmphdr *icmp_hdr = (struct icmphdr *)protocol_hdr;
+		print_debug_icmp_header(icmp_hdr);
 		break;
 	case IPPROTO_UDP:
 		printf(" - UDP Packet\n");
+		struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
+		print_debug_udp_header(udp_hdr);
 		break;
 	default:
 		printf(" - Other Protocol: %d\n", ip_hdr->ip_p);
