@@ -2,16 +2,6 @@
 #include <pthread.h>
 #include <sys/select.h>
 
-static void handle_packet(u_char *args, const struct pcap_pkthdr *header,
-						  const u_char *packet)
-{
-	(void)args;
-	(void)header;
-	(void)packet;
-	// Process the captured packet here
-	// For example, parse the packet and update the shared data structure
-}
-
 void *pcap_capture(void *arg)
 {
 	t_shared_data *shared_data = (t_shared_data *)arg;
@@ -20,6 +10,8 @@ void *pcap_capture(void *arg)
 	fd_set		   read_fds;
 
 	int max_fd = (pcap_fd > g_pipefd[0]) ? pcap_fd : g_pipefd[0];
+	int datalink_type = pcap_datalink(handle);
+	printf("Datalink type: %d\n", datalink_type);
 
 	while (!g_stop)
 	{
@@ -42,7 +34,10 @@ void *pcap_capture(void *arg)
 			}
 			if (FD_ISSET(pcap_fd, &read_fds))
 			{
-				pcap_dispatch(handle, 1, &handle_packet, NULL);
+				t_pcap_user_data user_data;
+				user_data.handle = handle;
+				printf("\n\nPacket captured:\n");
+				pcap_dispatch(handle, 1, handle_packet, (u_char *)&user_data);
 			}
 		}
 	}

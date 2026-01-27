@@ -1,7 +1,6 @@
 #include "ft_nmap.h"
 #include <pthread.h>
 
-
 bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 						  t_target target, uint16_t port,
 						  enum e_scan_type scan_type, uint32_t id)

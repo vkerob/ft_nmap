@@ -61,7 +61,7 @@ bool pcap_select_interface(char **dev_name, struct in_addr *my_ip)
 		return true;
 	}
 	free(*dev_name);
-	*dev_name = strdup("br-72bf2ed955a7"); // hardcoded for testing purpose
+	*dev_name = strdup("enp42s0"); // hardcoded for testing purpose
 
 	pcap_freealldevs(alldevs);
 	return false;

@@ -121,12 +121,35 @@ typedef struct s_ip_pseudo_hdr
 	uint16_t	   tcp_length;
 } t_ip_pseudo_hdr;
 
-typedef struct s_ethernet_hdr
+typedef struct s_pcap_user_data
 {
-	uint8_t	 dst_mac_addr[6];
-	uint8_t	 src_mac_addr[6];
-	uint16_t protocol;
-} t_ethernet_hdr;
+	pcap_t *handle;
+} t_pcap_user_data;
+
+/* Type of packet SLL */
+
+#define SLL_HOST		0x0000 /* To us */
+#define SLL_BROADCAST	0x0001 /* To all */
+#define SLL_MULTICAST	0x0002 /* To group */
+#define SLL_OTHERHOST	0x0003 /* To someone else */
+
+
+
+struct sll_header // (SLL = "Linux cooked capture" or "Socket Linux Layer")
+{
+	uint16_t sll_pkt_type; // packet type (SLL_HOST, SLL_BROADCAST, etc.)
+	uint16_t sll_hatype;   // link-layer address type (ARPHRD_ETHER, etc.)
+	uint16_t sll_halen; // link-layer address length (e.g., 6 for Ethernet)
+	uint8_t	 sll_addr[8];  // link-layer address (padded with zeros)
+	uint16_t sll_protocol; // protocol (e.g., ETH_P_IP in network byte order)
+};
+
+// typedef struct s_ethernet_hdr
+// {
+// 	uint8_t	 dst_mac_addr[6];
+// 	uint8_t	 src_mac_addr[6];
+// 	uint16_t protocol;
+// } t_ethernet_hdr;
 
 /* Socket */
 int	 init_socket(t_socket *sock);
@@ -135,7 +158,7 @@ void update_socket(struct sockaddr_in *socket, t_target target, uint16_t port);
 
 /* Debug */
 void print_ip_header(struct ip *ip_hdr);
-void print_eth_header(t_ethernet_hdr *eth_hdr);
+// void print_eth_header(t_ethernet_hdr *eth_hdr);
 
 /* TCP / IP */
 void	 fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
@@ -173,6 +196,9 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 
 /* Decoding */
 void decode_ip_packet(uint8_t *datagram, struct ip *ip_hdr);
-void decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
+// void decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
 
 #endif /* FT_NMAP_H */
+
+void handle_packet(u_char *args, const struct pcap_pkthdr *header,
+				   const u_char *packet);
