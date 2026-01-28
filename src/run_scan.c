@@ -71,8 +71,9 @@ bool run_scan(t_ctx *ctx)
 	char		   errbuf[PCAP_ERRBUF_SIZE];
 	const char	  *dev_name = ctx->dev_name;
 	struct in_addr my_ip = ctx->my_ip;
+	t_target	   first_target = ctx->targets[0];
 
-	if (pcap_setup(&handle, dev_name, my_ip, errbuf))
+	if (pcap_setup(&handle, dev_name, my_ip, errbuf, first_target))
 		return true;
 
 	pthread_t	  pcap_thread;

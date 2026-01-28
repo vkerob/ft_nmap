@@ -124,7 +124,7 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 }
 
 bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
-				char *errbuf)
+				char *errbuf, t_target first_target_ip)
 {
 	*handle = pcap_create(dev_name, errbuf);
 	if (!*handle)
@@ -155,11 +155,14 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 	}
 
 	// Apply a filter to capture only packets destined to my_ip
-	char ipbuf[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
+	// char ipbuf[INET_ADDRSTRLEN];
+	// inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
+	(void)my_ip;
+
 	char filter_expr[128];
-	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp and dst host %s",
-			 ipbuf);
+
+	snprintf(filter_expr, sizeof(filter_expr),
+			 "tcp or udp or icmp and dst host %s", first_target_ip.ip);
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{

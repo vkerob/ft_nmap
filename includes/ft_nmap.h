@@ -191,7 +191,7 @@ bool setup_signal_handlers(void);
 bool pcap_select_interface(char **dev_name, struct in_addr *my_ip);
 int	 set_pcap_filter(pcap_t *interface);
 bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
-				char *errbuf);
+				char *errbuf, t_target first_target_ip);
 
 /* Decoding */
 void decode_ip_packet(uint8_t *datagram, struct ip *ip_hdr);
