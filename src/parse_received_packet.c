@@ -25,6 +25,8 @@ static void print_debug_ethernet_header(struct ether_header *eth_header)
 static void print_debug_ip_header(struct ip *ip_hdr)
 {
 	printf("IP Header:\n");
+	printf(" - Source IP: %s\n", inet_ntoa(ip_hdr->ip_src));
+	printf(" - Destination IP: %s\n", inet_ntoa(ip_hdr->ip_dst));
 	printf(" - Version: %d\n", ip_hdr->ip_v);
 	printf(" - Header Length: %d bytes\n", ip_hdr->ip_hl * 4);
 	printf(" - Type of Service: %d\n", ip_hdr->ip_tos);

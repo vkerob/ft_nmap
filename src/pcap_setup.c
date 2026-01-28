@@ -61,7 +61,7 @@ bool pcap_select_interface(char **dev_name, struct in_addr *my_ip)
 		return true;
 	}
 	free(*dev_name);
-	*dev_name = strdup("enp42s0"); // hardcoded for testing purpose
+	*dev_name = strdup("br-632297f36309"); // hardcoded for testing purpose
 
 	pcap_freealldevs(alldevs);
 	return false;
@@ -158,8 +158,8 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 	char ipbuf[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
 	char filter_expr[128];
-	snprintf(filter_expr, sizeof(filter_expr),
-			 "tcp and src host 192.168.1.202");
+	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp and dst host %s",
+			 ipbuf);
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{

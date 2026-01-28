@@ -78,12 +78,13 @@ typedef struct s_socket
 
 typedef struct s_ctx
 {
-	t_socket	   socket;
-	t_target	  *targets;
-	size_t		   target_count;
-	struct in_addr my_ip;
-	char		  *dev_name;
-	t_args		   args;
+	t_socket  socket;
+	t_target *targets;
+	size_t	  target_count;
+	struct in_addr
+		   my_ip; // probably not needed (if needed, use for pcap filter)
+	char  *dev_name;
+	t_args args;
 } t_ctx;
 
 typedef struct s_target_probe
@@ -128,18 +129,16 @@ typedef struct s_pcap_user_data
 
 /* Type of packet SLL */
 
-#define SLL_HOST		0x0000 /* To us */
-#define SLL_BROADCAST	0x0001 /* To all */
-#define SLL_MULTICAST	0x0002 /* To group */
-#define SLL_OTHERHOST	0x0003 /* To someone else */
-
-
+#define SLL_HOST 0x0000		 /* To us */
+#define SLL_BROADCAST 0x0001 /* To all */
+#define SLL_MULTICAST 0x0002 /* To group */
+#define SLL_OTHERHOST 0x0003 /* To someone else */
 
 struct sll_header // (SLL = "Linux cooked capture" or "Socket Linux Layer")
 {
 	uint16_t sll_pkt_type; // packet type (SLL_HOST, SLL_BROADCAST, etc.)
 	uint16_t sll_hatype;   // link-layer address type (ARPHRD_ETHER, etc.)
-	uint16_t sll_halen; // link-layer address length (e.g., 6 for Ethernet)
+	uint16_t sll_halen;	   // link-layer address length (e.g., 6 for Ethernet)
 	uint8_t	 sll_addr[8];  // link-layer address (padded with zeros)
 	uint16_t sll_protocol; // protocol (e.g., ETH_P_IP in network byte order)
 };
