@@ -5,11 +5,14 @@
 
 #include <arpa/inet.h>
 #include <limits.h>
+#include <net/ethernet.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <pcap/pcap.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -23,6 +26,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define ANSI_COLOR_GREEN "\x1b[32m"
+#define ANSI_COLOR_BLUE "\x1b[34m"
+#define ANSI_COLOR_YELLOW "\x1b[33m"
+#define ANSI_COLOR_CYAN "\x1b[36m"
+#define ANSI_COLOR_RESET "\x1b[0m"
+#define ANSI_BOLD "\x1b[1m"
+#define ANSI_UNDERLINE "\x1b[4m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_RED "\x1b[31m"
 
 extern volatile sig_atomic_t g_stop;
 extern int					 g_pipefd[2];
@@ -197,7 +210,21 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 void decode_ip_packet(uint8_t *datagram, struct ip *ip_hdr);
 // void decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
 
-#endif /* FT_NMAP_H */
-
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet);
+
+/* Debug print */
+void print_debug_packet_start();
+void print_debug_packet_end();
+void print_debug_ethernet_header(struct ether_header *eth_header);
+void print_debug_ip_header(struct ip *ip_hdr);
+void print_debug_sll_header(struct sll_header *sll_hdr);
+void print_debug_tcp_header(struct tcphdr *tcp_hdr);
+void print_debug_udp_header(struct udphdr *udp_hdr);
+void print_debug_icmp_header(struct icmphdr *icmp_hdr);
+void print_debug_protocol(int protocol);
+void print_debug_ethernet_type(int ether_type);
+void print_debug_sll_protocol(int protocol);
+void print_debug_datalink_type(int datalink_type);
+
+#endif /* FT_NMAP_H */

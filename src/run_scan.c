@@ -1,6 +1,22 @@
 #include "ft_nmap.h"
 #include <pthread.h>
 
+static void print_debug_probe_request(t_probe_request *request)
+{
+
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN "New Probe Request:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
+		   request->target.ip, request->target.port);
+	printf(ANSI_COLOR_GREEN "  • Type: %d\n" ANSI_COLOR_RESET, request->type);
+	printf(ANSI_COLOR_GREEN "  • ID: %u\n" ANSI_COLOR_RESET, request->id);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+}
+
 bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 						  t_target target, uint16_t port,
 						  enum e_scan_type scan_type, uint32_t id)
@@ -25,9 +41,7 @@ bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 	// update tail to new request
 	*tail = new_request;
 
-	printf("Appended probe request: target=%s:%u, type=%d, id=%u\n",
-		   new_request->target.ip, new_request->target.port, new_request->type,
-		   new_request->id);
+	print_debug_probe_request(new_request);
 
 	return false;
 }

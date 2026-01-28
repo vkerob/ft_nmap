@@ -80,7 +80,6 @@ bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
 		fprintf(stderr, "ft_nmap: pcap_set_promisc failed\n");
 		return true;
 	}
-	printf("timeout ms: %d\n", timeout_ms);
 	if (pcap_set_timeout(handle, timeout_ms) != 0)
 	{
 		fprintf(stderr, "ft_nmap: pcap_set_timeout failed\n");

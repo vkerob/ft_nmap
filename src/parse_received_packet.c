@@ -6,102 +6,34 @@
 #include <netinet/udp.h>
 #include <pcap/pcap.h>
 
-#include <stdio.h>
-
-static void print_debug_ethernet_header(struct ether_header *eth_header)
-{
-	printf("Ethernet Header:\n");
-	printf(" - Source MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
-		   eth_header->ether_shost[0], eth_header->ether_shost[1],
-		   eth_header->ether_shost[2], eth_header->ether_shost[3],
-		   eth_header->ether_shost[4], eth_header->ether_shost[5]);
-	printf(" - Destination MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
-		   eth_header->ether_dhost[0], eth_header->ether_dhost[1],
-		   eth_header->ether_dhost[2], eth_header->ether_dhost[3],
-		   eth_header->ether_dhost[4], eth_header->ether_dhost[5]);
-	printf(" - EtherType: 0x%04x\n", ntohs(eth_header->ether_type));
-}
-
-static void print_debug_ip_header(struct ip *ip_hdr)
-{
-	printf("IP Header:\n");
-	printf(" - Source IP: %s\n", inet_ntoa(ip_hdr->ip_src));
-	printf(" - Destination IP: %s\n", inet_ntoa(ip_hdr->ip_dst));
-	printf(" - Version: %d\n", ip_hdr->ip_v);
-	printf(" - Header Length: %d bytes\n", ip_hdr->ip_hl * 4);
-	printf(" - Type of Service: %d\n", ip_hdr->ip_tos);
-	printf(" - Total Length: %d bytes\n", ntohs(ip_hdr->ip_len));
-	printf(" - Identification: %d\n", ntohs(ip_hdr->ip_id));
-	printf(" - Fragment Offset: %d\n", ntohs(ip_hdr->ip_off) & 0x1FFF);
-	printf(" - Time to Live: %d\n", ip_hdr->ip_ttl);
-	printf(" - Protocol: %d\n", ip_hdr->ip_p);
-	printf(" - Header Checksum: 0x%04x\n", ntohs(ip_hdr->ip_sum));
-}
-
-static void print_debug_sll_header(struct sll_header *sll_hdr)
-{
-	printf("SLL Header:\n");
-	printf(" - Packet Type: %d\n", ntohs(sll_hdr->sll_pkt_type));
-	printf(" - Hardware Type: %d\n", ntohs(sll_hdr->sll_hatype));
-	printf(" - Hardware Address Length: %d\n", ntohs(sll_hdr->sll_halen));
-	printf(" - Protocol: 0x%04x\n", ntohs(sll_hdr->sll_protocol));
-}
-
-static void print_debug_tcp_header(struct tcphdr *tcp_hdr)
-{
-	printf("TCP Header:\n");
-	printf(" - Source Port: %d\n", ntohs(tcp_hdr->th_sport));
-	printf(" - Destination Port: %d\n", ntohs(tcp_hdr->th_dport));
-	printf(" - Sequence Number: %u\n", ntohl(tcp_hdr->th_seq));
-	printf(" - Acknowledgment Number: %u\n", ntohl(tcp_hdr->th_ack));
-	printf(" - Header Length: %d bytes\n", tcp_hdr->th_off * 4);
-	printf(" - Flags: 0x%02x\n", tcp_hdr->th_flags);
-	printf(" - Window Size: %d\n", ntohs(tcp_hdr->th_win));
-	printf(" - Checksum: 0x%04x\n", ntohs(tcp_hdr->th_sum));
-	printf(" - Urgent Pointer: %d\n", ntohs(tcp_hdr->th_urp));
-}
-
-static void print_debug_icmp_header(struct icmphdr *icmp_hdr)
-{
-	printf("ICMP Header:\n");
-	printf(" - Type: %d\n", icmp_hdr->type);
-	printf(" - Code: %d\n", icmp_hdr->code);
-	printf(" - Checksum: 0x%04x\n", ntohs(icmp_hdr->checksum));
-}
-
-static void print_debug_udp_header(struct udphdr *udp_hdr)
-{
-	printf("UDP Header:\n");
-	printf(" - Source Port: %d\n", ntohs(udp_hdr->uh_sport));
-	printf(" - Destination Port: %d\n", ntohs(udp_hdr->uh_dport));
-	printf(" - Length: %d bytes\n", ntohs(udp_hdr->uh_ulen));
-	printf(" - Checksum: 0x%04x\n", ntohs(udp_hdr->uh_sum));
-}
-
 static void handle_ip_protocol(struct ip *ip_hdr)
 {
 	void *protocol_hdr;
 
 	protocol_hdr = (void *)((u_char *)ip_hdr + ip_hdr->ip_hl * 4);
+	print_debug_protocol(ip_hdr->ip_p);
+
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
-		printf(" - TCP Packet\n");
+	{
 		struct tcphdr *tcp_hdr = (struct tcphdr *)protocol_hdr;
 		print_debug_tcp_header(tcp_hdr);
 		break;
+	}
 	case IPPROTO_ICMP:
-		printf(" - ICMP Packet\n");
+	{
 		struct icmphdr *icmp_hdr = (struct icmphdr *)protocol_hdr;
 		print_debug_icmp_header(icmp_hdr);
 		break;
+	}
 	case IPPROTO_UDP:
-		printf(" - UDP Packet\n");
+	{
 		struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
 		print_debug_udp_header(udp_hdr);
 		break;
+	}
 	default:
-		printf(" - Other Protocol: %d\n", ip_hdr->ip_p);
 		break;
 	}
 }
@@ -109,17 +41,14 @@ static void handle_ip_protocol(struct ip *ip_hdr)
 static void handle_with_ethernet(const u_char *packet)
 {
 	struct ether_header *eth_header = (struct ether_header *)packet;
+	print_debug_ethernet_type(ntohs(eth_header->ether_type));
+
 	if (ntohs(eth_header->ether_type) == ETHERTYPE_IP)
 	{
 		struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
 		print_debug_ethernet_header(eth_header);
 		print_debug_ip_header(ip_hdr);
 		handle_ip_protocol(ip_hdr);
-	}
-	else
-	{
-		printf("Captured non-IP packet: EtherType=0x%04x\n",
-			   ntohs(eth_header->ether_type));
 	}
 }
 
@@ -140,6 +69,8 @@ static void handle_with_null_loopback(const u_char *packet)
 static void handle_with_linux_sll(const u_char *packet)
 {
 	struct sll_header *sll_hdr = (struct sll_header *)packet;
+	print_debug_sll_protocol(ntohs(sll_hdr->sll_protocol));
+
 	if (ntohs(sll_hdr->sll_protocol) == ETHERTYPE_IP)
 	{
 		struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct sll_header));
@@ -147,37 +78,28 @@ static void handle_with_linux_sll(const u_char *packet)
 		print_debug_ip_header(ip_hdr);
 		handle_ip_protocol(ip_hdr);
 	}
-	else
-	{
-		printf("Captured non-IP packet: Protocol=0x%04x\n",
-			   ntohs(sll_hdr->sll_protocol));
-	}
 }
 
 static void parse_datalink_layer(const u_char *packet, pcap_t *handle)
 {
 	int datalink_type = pcap_datalink(handle);
+	print_debug_datalink_type(datalink_type);
 
 	switch (datalink_type)
 	{
 	case DLT_EN10MB:
-		printf("Datalink Layer: Ethernet\n");
 		handle_with_ethernet(packet);
 		break;
 	case DLT_LINUX_SLL:
-		printf("Datalink Layer: Linux SLL\n");
 		handle_with_linux_sll(packet);
 		break;
 	case DLT_RAW:
-		printf("Datalink Layer: Raw IP\n");
 		handle_with_raw_ip(packet);
 		break;
 	case DLT_NULL:
-		printf("Datalink Layer: Null/Loopback\n");
 		handle_with_null_loopback(packet);
 		break;
 	default:
-		printf("Datalink Layer: Unknown (%d)\n", datalink_type);
 		break;
 	}
 }
