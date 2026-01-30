@@ -3,46 +3,6 @@
 sig_atomic_t volatile g_stop = 0;
 int g_pipefd[2];
 
-void print_parsing_args(t_ctx ctx)
-{
-	printf(ANSI_COLOR_CYAN
-		   "============================================\n" ANSI_COLOR_RESET);
-	printf(ANSI_BOLD ANSI_COLOR_CYAN
-		   "         SCAN PARAMETERS         \n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_CYAN
-		   "============================================\n" ANSI_COLOR_RESET);
-
-	printf(ANSI_BOLD ANSI_COLOR_GREEN "Targets:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_GREEN
-		   "--------------------------------------------\n" ANSI_COLOR_RESET);
-	for (size_t i = 0; i < ctx.target_count; i++)
-	{
-		printf(ANSI_COLOR_GREEN "  • %s (%s)\n" ANSI_COLOR_RESET,
-			   ctx.targets[i].input, ctx.targets[i].ip);
-	}
-
-	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nPorts:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_BLUE
-		   "--------------------------------------------\n" ANSI_COLOR_RESET);
-	for (size_t i = 0; i < ctx.args.port_count; i++)
-	{
-		printf(ANSI_COLOR_BLUE "  • %u\n" ANSI_COLOR_RESET, ctx.args.ports[i]);
-	}
-
-	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
-	printf("--------------------------------------------\n");
-	printf("Scan type: " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
-		   ctx.args.scan_type);
-	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
-		   ctx.args.speed);
-	printf("Device:    " ANSI_COLOR_YELLOW "%s\n" ANSI_COLOR_RESET,
-		   ctx.dev_name);
-
-	// Ligne de fin
-	printf(ANSI_COLOR_CYAN
-		   "============================================\n\n" ANSI_COLOR_RESET);
-}
-
 int main(int argc, char **argv)
 {
 	// if (geteuid() != 0)
@@ -58,26 +18,27 @@ int main(int argc, char **argv)
 	}
 
 	char **targets_input = NULL;
+	size_t target_count = 0;
 	t_args args;
 
 	memset(&args, 0, sizeof(args));
-	if (parse_args(argc, argv, &args, &targets_input))
+	if (parse_args(argc, argv, &args, &targets_input, &target_count))
 	{
-		free_tabp((void ***)&targets_input, args.target_count);
+		free_tabp((void ***)&targets_input, target_count);
 		return 1;
 	}
 
 	t_ctx ctx;
 	memset(&ctx, 0, sizeof(ctx));
-	ctx.target_count = args.target_count;
+	ctx.target_count = target_count;
 	ctx.args = args;
 
-	if (resolve_targets(targets_input, args.target_count, &ctx.targets))
+	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{
-		free_tabp((void ***)&targets_input, args.target_count);
+		free_tabp((void ***)&targets_input, ctx.target_count);
 		return 1;
 	}
-	free_tabp((void ***)&targets_input, args.target_count);
+	free_tabp((void ***)&targets_input, ctx.target_count);
 
 	if (setup_signal_handlers())
 	{
@@ -92,7 +53,7 @@ int main(int argc, char **argv)
 			free(ctx.dev_name);
 		return 1;
 	}
-	print_parsing_args(ctx);
+	print_debug_parsing_args(ctx);
 
 	if (run_scan(&ctx))
 	{

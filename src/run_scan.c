@@ -33,6 +33,8 @@ bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 	new_request->status = 0;
 
 	new_request->next = NULL;
+	new_request->prev = *tail;
+
 	// update next of current tail or head if list is empty
 	if (*tail)
 		(*tail)->next = new_request;
@@ -87,6 +89,13 @@ bool run_scan(t_ctx *ctx)
 	struct in_addr my_ip = ctx->my_ip;
 	t_target	   first_target = ctx->targets[0];
 
+	if (HAS(ctx->args.flags, F_SPOOF))
+	{
+		printf(ANSI_BOLD ANSI_COLOR_YELLOW
+			   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
+		// get gateway MAC address for ethernet header, arp request if needed
+	}
+
 	if (pcap_setup(&handle, dev_name, my_ip, errbuf, first_target))
 		return true;
 
@@ -95,6 +104,7 @@ bool run_scan(t_ctx *ctx)
 	t_shared_data shared_data;
 
 	shared_data.handle = handle;
+	memset(shared_data.gateway_mac, 0, ETH_ALEN);
 	pthread_mutex_init(&shared_data.mutex, NULL);
 
 	initial_probe_requests(ctx->targets, ctx->target_count, ctx->args.ports,
@@ -108,7 +118,7 @@ bool run_scan(t_ctx *ctx)
 	// launch thread to send packets
 
 	(void)send_thread;
-	// pthread_create(&send_thread, NULL, send_packet, &shared_data);
+	pthread_create(&send_thread, NULL, send_packet, &shared_data);
 
 	pthread_join(pcap_thread, NULL);
 

@@ -5,6 +5,7 @@
 
 #include <arpa/inet.h>
 #include <limits.h>
+#include <linux/if_ether.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <netdb.h>
@@ -50,12 +51,13 @@ enum e_flags
 	F_FILE_MODE = 1u << 2,
 	F_PORTS = 1u << 3,
 	F_SCAN_TYPE = 1u << 4,
-	F_SPEED = 1u << 5
+	F_SPEED = 1u << 5,
+	F_SPOOF = 1u << 6
 };
 
 enum e_scan_type
 {
-	SCAN_SYN,
+	SCAN_SYN = 0,
 	SCAN_NULL,
 	SCAN_ACK,
 	SCAN_FIN,
@@ -63,17 +65,9 @@ enum e_scan_type
 	SCAN_UDP
 };
 
-typedef struct s_target
-{
-	char			  *input;
-	char			   ip[INET_ADDRSTRLEN];
-	struct sockaddr_in addr;
-} t_target;
-
 typedef struct s_args
 {
 	uint8_t flags;
-	size_t	target_count;
 
 	uint16_t ports[MAX_PORTS_COUNT];
 	size_t	 port_count;
@@ -81,6 +75,13 @@ typedef struct s_args
 	uint8_t scan_type;
 	uint8_t speed;
 } t_args;
+
+typedef struct s_target
+{
+	char			  *input;
+	char			   ip[INET_ADDRSTRLEN];
+	struct sockaddr_in addr;
+} t_target;
 
 typedef struct s_socket
 {
@@ -91,7 +92,6 @@ typedef struct s_socket
 
 typedef struct s_ctx
 {
-	t_socket  socket;
 	t_target *targets;
 	size_t	  target_count;
 	struct in_addr
@@ -116,12 +116,15 @@ typedef struct s_probe_request
 	uint8_t					retries;
 	uint8_t					status;
 	struct s_probe_request *next;
+	struct s_probe_request *prev;
 } t_probe_request;
 
 typedef struct s_shared_data
 {
-	pcap_t			*handle;
-	pthread_mutex_t	 mutex;
+	pcap_t		   *handle;
+	pthread_mutex_t mutex;
+	uint8_t			gateway_mac[ETH_ALEN]; // for ethernet header (bonus
+										   // spoofing)
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
 
@@ -190,7 +193,8 @@ bool  run_scan(t_ctx *ctx);
 void *pcap_capture(void *arg);
 
 /* Parsing */
-bool parse_args(int argc, char **argv, t_args *args, char ***targets_input);
+bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
+				size_t *target_count);
 bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 					   int mode, uint8_t flags);
 bool resolve_targets(char **inputs, size_t count, t_target **out);
@@ -210,8 +214,9 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
 void decode_ip_packet(uint8_t *datagram, struct ip *ip_hdr);
 // void decode_ethernet_packet(uint8_t *datagram, t_ethernet_hdr *eth_hdr);
 
-void handle_packet(u_char *args, const struct pcap_pkthdr *header,
-				   const u_char *packet);
+void  handle_packet(u_char *args, const struct pcap_pkthdr *header,
+					const u_char *packet);
+void *send_packet(void *arg);
 
 /* Debug print */
 void print_debug_packet_start();
@@ -226,5 +231,6 @@ void print_debug_protocol(int protocol);
 void print_debug_ethernet_type(int ether_type);
 void print_debug_sll_protocol(int protocol);
 void print_debug_datalink_type(int datalink_type);
+void print_debug_parsing_args(t_ctx ctx);
 
 #endif /* FT_NMAP_H */

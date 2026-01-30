@@ -330,7 +330,7 @@ static bool parse_speed_strict(const char *str, uint8_t *out)
 	return false;
 }
 
-bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
+bool parse_args(int argc, char **argv, t_args *args, char ***targets_input, size_t *target_count)
 {
 	// short options (: argument required)
 	const char *optstr = "";
@@ -356,14 +356,14 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input)
 
 		case IP_MODE:
 			SET(args->flags, F_IP_MODE);
-			if (get_targets_input(optarg, &args->target_count, targets_input,
+			if (get_targets_input(optarg, target_count, targets_input,
 								  IP_MODE, args->flags))
 				return true;
 			break;
 
 		case FILE_MODE:
 			SET(args->flags, F_FILE_MODE);
-			if (get_targets_input(optarg, &args->target_count, targets_input,
+			if (get_targets_input(optarg, target_count, targets_input,
 								  FILE_MODE, args->flags))
 				return true;
 			break;
