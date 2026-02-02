@@ -11,22 +11,22 @@ CPPFLAGS    := -I $(INCLUDE_DIR)
 
 # Release (gcc)
 CC          := gcc
-CFLAGS      := -Wall -Wextra -Werror
+CFLAGS      := -Wall -Wextra -Werror --std=c11
 
 # Clang
 CLANG       := clang
 
 # ASan + UBSan (mémoire + UB)
-ASANFLAGS   := -Wall -Wextra -Werror -O0 -g \
+ASANFLAGS   := -Wall -Wextra -Werror -std=c11 -g \
                -fsanitize=address,undefined \
                -fno-omit-frame-pointer
 
 # TSan (threads / data races)
-TSANFLAGS   := -Wall -Wextra -Werror -O0 -g \
+TSANFLAGS   := -Wall -Wextra -Werror -std=c11 -g \
                -fsanitize=thread \
                -fno-omit-frame-pointer
 
-LDFLAGS     := -lpcap -lpthread
+LDFLAGS     := -lpcap -lpthread 
 
 all: $(NAME)
 

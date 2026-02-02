@@ -1,9 +1,14 @@
 #ifndef FT_NMAP_H
 #define FT_NMAP_H
 
+#define _DEFAULT_SOURCE
+
 #include "parsing.h"
 
 #include <arpa/inet.h>
+#include <stdint.h>
+#include <sys/types.h>
+
 #include <limits.h>
 #include <linux/if_ether.h>
 #include <net/ethernet.h>
@@ -16,16 +21,15 @@
 #include <netinet/udp.h>
 #include <pcap/pcap.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #define ANSI_COLOR_GREEN "\x1b[32m"
@@ -94,10 +98,9 @@ typedef struct s_ctx
 {
 	t_target *targets;
 	size_t	  target_count;
-	struct in_addr
-		   my_ip; // probably not needed (if needed, use for pcap filter)
-	char  *dev_name;
-	t_args args;
+	char	  source_ip[INET_ADDRSTRLEN];
+	char	 *dev_name;
+	t_args	  args;
 } t_ctx;
 
 typedef struct s_target_probe
@@ -125,6 +128,10 @@ typedef struct s_shared_data
 	pthread_mutex_t mutex;
 	uint8_t			gateway_mac[ETH_ALEN]; // for ethernet header (bonus
 										   // spoofing)
+	char			 source_ip[INET_ADDRSTRLEN];
+	_Atomic uint16_t id;
+	_Atomic uint16_t base_seq;
+	_Atomic uint32_t base_port;
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
 
@@ -178,7 +185,7 @@ void print_ip_header(struct ip *ip_hdr);
 /* TCP / IP */
 void	 fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
 void	 fill_tcp_header(struct tcphdr *tcp_hdr);
-uint16_t calculate_checksum(uint16_t *buffer, int len);
+uint16_t calculate_checksum(void *buffer, int len);
 void	 calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr,
 								struct tcphdr	*tcp_hdr);
 void	 set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
@@ -205,9 +212,9 @@ void free_tabp(void ***ptab, size_t count);
 bool setup_signal_handlers(void);
 
 /* Pcap wrapper */
-bool pcap_select_interface(char **dev_name, struct in_addr *my_ip);
+bool pcap_select_interface(char **dev_name, char *my_ip);
 int	 set_pcap_filter(pcap_t *interface);
-bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
+bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
 				char *errbuf, t_target first_target_ip);
 
 /* Decoding */
