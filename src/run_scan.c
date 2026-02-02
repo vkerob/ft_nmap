@@ -81,13 +81,27 @@ void free_requests_list(t_probe_request **head)
 	*head = NULL;
 }
 
+void initialize_shared_data(t_shared_data *shared_data, pcap_t *handle,
+							char *source_ip)
+{
+	shared_data->handle = handle;
+	atomic_init(&shared_data->id, 1);
+	atomic_init(&shared_data->base_port, 32768 + (rand() % (65535 - 32768)));
+	atomic_init(&shared_data->base_seq, rand());
+
+	strncpy(shared_data->source_ip, source_ip, INET_ADDRSTRLEN);
+	memset(shared_data->gateway_mac, 0, ETH_ALEN);
+	pthread_mutex_init(&shared_data->mutex, NULL);
+	shared_data->request_list_head = NULL;
+	shared_data->request_list_tail = NULL;
+}
+
 bool run_scan(t_ctx *ctx)
 {
-	pcap_t		  *handle;
-	char		   errbuf[PCAP_ERRBUF_SIZE];
-	const char	  *dev_name = ctx->dev_name;
-	struct in_addr my_ip = ctx->my_ip;
-	t_target	   first_target = ctx->targets[0];
+	pcap_t	   *handle;
+	char		errbuf[PCAP_ERRBUF_SIZE];
+	const char *dev_name = ctx->dev_name;
+	t_target	first_target = ctx->targets[0];
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
@@ -96,16 +110,14 @@ bool run_scan(t_ctx *ctx)
 		// get gateway MAC address for ethernet header, arp request if needed
 	}
 
-	if (pcap_setup(&handle, dev_name, my_ip, errbuf, first_target))
+	if (pcap_setup(&handle, dev_name, ctx->source_ip, errbuf, first_target))
 		return true;
 
 	pthread_t	  pcap_thread;
 	pthread_t	  send_thread;
 	t_shared_data shared_data;
 
-	shared_data.handle = handle;
-	memset(shared_data.gateway_mac, 0, ETH_ALEN);
-	pthread_mutex_init(&shared_data.mutex, NULL);
+	initialize_shared_data(&shared_data, handle, ctx->source_ip);
 
 	initial_probe_requests(ctx->targets, ctx->target_count, ctx->args.ports,
 						   ctx->args.port_count, ctx->args.scan_type,
@@ -116,11 +128,11 @@ bool run_scan(t_ctx *ctx)
 	pthread_create(&pcap_thread, NULL, pcap_capture, &shared_data);
 
 	// launch thread to send packets
-
-	(void)send_thread;
 	pthread_create(&send_thread, NULL, send_packet, &shared_data);
 
 	pthread_join(pcap_thread, NULL);
+
+	pthread_join(send_thread, NULL);
 
 	free_requests_list(&shared_data.request_list_head);
 	pthread_mutex_destroy(&shared_data.mutex);
