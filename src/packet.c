@@ -1,13 +1,13 @@
 #include "ft_nmap.h"
 
-int	send_packet(t_socket socket, char *datagram)
+int	send_packet(t_socket *socket, char *datagram)
 {
 	if (sendto(
-			socket.sfd,
+			socket->sfd,
 			datagram,
 			sizeof(struct tcphdr),
 			0,
-			(struct sockaddr *)&socket.sin,
+			(struct sockaddr *)&socket->sin,
 			sizeof(struct sockaddr)
 		) < 0)
 	{

@@ -13,7 +13,6 @@ int main(int argc, char **argv)
 	char								**targets_input = NULL;
 	t_args							args;
 	t_socket						socket;
-	char								datagram[4096];
 
 	memset(&args, 0, sizeof(args));
 	if (parse_args(argc, argv, &args, &targets_input))
@@ -43,7 +42,6 @@ int main(int argc, char **argv)
 	socket.sin.sin_family = AF_INET;
 	init_socket(&socket);
 
-
 	if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
@@ -53,7 +51,7 @@ int main(int argc, char **argv)
 	}
 
 	ctx.dev_name = strdup("bridge100");
-	if (capture_traffic(&ctx, &socket, datagram))
+	if (capture_traffic(&ctx, &socket))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
 		free(ctx.dev_name);
@@ -63,9 +61,6 @@ int main(int argc, char **argv)
 	// for (size_t i = 0; i < ctx.target_count; i++)
 	// 	printf("Resolved target %zu: %s (%s)\n", i, ctx.targets[i].input,
 	// 		   ctx.targets[i].ip);
-
-	// for (size_t i = 0; i < ctx.args.port_count; i++)
-	// 	printf("Port %zu: %u\n", i, ctx.args.ports[i]);
 
 	// printf("Scan type: %u\n", ctx.args.scan_type);
 	// printf("Speed: %u\n", ctx.args.speed);

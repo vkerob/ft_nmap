@@ -131,11 +131,11 @@ t_target *find_corresponding_target(
 			return &targets[i];
 		}
 	}
-	// printf("target not found\n");
 	return NULL;
 }
 
-bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_count)
+bool handle_captured_packet(
+	pcap_t *handle, t_target *targets, size_t target_count, t_socket *socket)
 {
 	while (!g_stop)
 	{
@@ -161,6 +161,8 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 
 		t_target *target = find_corresponding_target(&ip_hdr, targets, target_count);
 
+
+		analyze_response(target, &tcp_hdr, socket);
 		print_headers(&eth_hdr, &ip_hdr, &tcp_hdr);
 
 		fflush(stdout);
@@ -180,14 +182,14 @@ bool handle_captured_packet(pcap_t *handle, t_target *targets, size_t target_cou
 	return false;
 }
 
-bool	capture_traffic(t_ctx *ctx, t_socket *socket, char *datagram)
+bool	capture_traffic(t_ctx *ctx, t_socket *socket)
 {
 	pcap_t *handle;
 	char	errbuf[PCAP_ERRBUF_SIZE];
 	const char *dev_name = ctx->dev_name;
 	struct in_addr my_ip = ctx->my_ip;
 	t_target *targets = ctx->targets;
-size_t target_count = ctx->target_count;
+	size_t target_count = ctx->target_count;
 
 	handle = pcap_create(dev_name, errbuf);
 	if (!handle)
@@ -227,8 +229,8 @@ size_t target_count = ctx->target_count;
 		return true;
 	}
 
-	run_scan(*ctx, *socket, datagram);
-	if (handle_captured_packet(handle, targets, target_count))
+	run_scan(ctx, socket);
+	if (handle_captured_packet(handle, targets, target_count, socket))
 		return true;
 
 	return false;

@@ -35,7 +35,7 @@ typedef uint32_t			u32;
 typedef uint16_t			u16;
 typedef uint8_t				u8;
 typedef struct ip			t_ip;
-typedef struct iphdr	t_ip_hdr;
+typedef struct tcphdr	t_tcp_hdr;
 
 enum e_flags
 {
@@ -56,6 +56,7 @@ typedef enum e_scan_type
 	SCAN_XMAS,
 	SCAN_UDP
 }	t_scan_type;
+
 
 // t_scan_type	tcp_connection_steps[][] = {
 // 	{ SYN }, { ACK, SYN }, { ACK }
@@ -93,11 +94,11 @@ typedef struct	s_args
 	u8			flags;
 	size_t	target_count;
 
-	u16	ports[MAX_PORTS_COUNT];
-	size_t		port_count;
+	u16			ports[MAX_PORTS_COUNT];
+	size_t	port_count;
 
-	u8		scan_type;
-	u8		speed;
+	u8			scan_type;
+	u8			speed;
 }	t_args;
 
 typedef struct	s_socket
@@ -129,7 +130,7 @@ typedef struct	s_ethernet_hdr
 {
 	u8		dst_mac_addr[6];
 	u8		src_mac_addr[6];
-	u16	protocol;
+	u16		protocol;
 }	t_ethernet_hdr;
 
 /* Socket */
@@ -151,14 +152,18 @@ void			update_ip_headers_dst_addr(
 		t_ip_pseudo_hdr *ip_pseudo_hdr,
 		struct in_addr dst_addr
 );
-/* TCP */
 
+/* TCP */
 void			fill_tcp_header(struct tcphdr *tcp_hdr);
 void			update_port_tcp(struct tcphdr *tcp_hdr, u16 port);
-int				send_packet(t_socket socket, char *datagram);
+int				send_packet(t_socket *socket, char *datagram);
+void			analyze_response(
+	t_target *target,
+	t_tcp_hdr *tcp_hdr,
+	t_socket *socket);
 
 /* Scan */
-int				run_scan(t_ctx ctx, t_socket socket, char *datagram);
+int				run_scan(t_ctx *ctx, t_socket *socket);
 
 /* Parsing */
 bool			parse_args(int argc, char **argv, t_args *args, char ***targets_input);
@@ -175,7 +180,7 @@ bool			setup_signal_handlers(void);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
 int				set_pcap_filter(pcap_t *interface);
 bool			pcap_select_interface(char **dev_name, struct in_addr *my_ip);
-bool			capture_traffic(t_ctx *ctx, t_socket *socket, char *datagram);
+bool			capture_traffic(t_ctx *ctx, t_socket *socket);
 
 /* Encoding */
 void			set_default_headers(char *datagram, t_ip_pseudo_hdr *ip_pseudo_hdr);
