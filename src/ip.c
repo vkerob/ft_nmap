@@ -14,8 +14,7 @@ void	decode_ip_packet(u8 *datagram, struct ip	*ip_hdr)
 	ip_hdr->ip_dst.s_addr = ntohl((u32)ip_hdr->ip_dst.s_addr);
 }
 
-
-void	fill_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr)
+void	build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr)
 {
 	struct in_addr	src_addr;
 

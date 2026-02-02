@@ -1,12 +1,13 @@
 #include "ft_nmap.h"
 #include <signal.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 void handle_signal(int signum)
 {
 	(void)signum;
 	g_stop = 1;
+	write(g_pipefd[1], "x", 1);
 }
 
 bool setup_signal_handlers(void)

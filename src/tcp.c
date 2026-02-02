@@ -1,28 +1,28 @@
 #include "ft_nmap.h"
 
-void	send_response(t_target *target, t_socket *socket)
-{
-	char						datagram[4096];
-	t_ip_pseudo_hdr	*ip_pseudo_hdr;
+//void	send_response(t_target *target, t_socket *socket)
+//{
+//	char						datagram[4096];
+//	t_ip_pseudo_hdr	*ip_pseudo_hdr;
+//
+//	set_default_headers(datagram, ip_pseudo_hdr);
+//	update_socket(&socket->sin, ctx->targets[i], ctx->args.ports[j]);
+//	update_port_tcp(tcp_hdr, ctx->args.ports[j]);
+//	calculate_tcp_checksum(&ip_pseudo_hdr, tcp_hdr);
+//	send_packet(socket, datagram);
+//}
 
-	set_default_headers(datagram, ip_pseudo_hdr);
-	update_socket(&socket->sin, ctx->targets[i], ctx->args.ports[j]);
-	update_port_tcp(tcp_hdr, ctx->args.ports[j]);
-	calculate_tcp_checksum(&ip_pseudo_hdr, tcp_hdr);
-	send_packet(socket, datagram);
-}
-
-void	analyze_response(t_target *target, t_tcp_hdr *tcp_hdr, t_socket *socket)
-{
-	if (tcp_hdr->th_flags & (TH_ACK | TH_RST))
-	{
-		target->port_state[tcp_hdr->th_sport].close = true;
-	}
-	else if (tcp_hdr->th_flags & (TH_ACK | TH_SYN))
-	{
-		send_response(target, socket);
-	}
-}
+// void	analyze_response(t_target *target, t_tcp_hdr *tcp_hdr, t_socket *socket)
+// {
+// 	if (tcp_hdr->th_flags & (TH_ACK | TH_RST))
+// 	{
+// 		target->port_state[tcp_hdr->th_sport].close = true;
+// 	}
+// 	else if (tcp_hdr->th_flags & (TH_ACK | TH_SYN))
+// 	{
+// 		send_response(target, socket);
+// 	}
+// }
 
 void	decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr)
 {
@@ -54,13 +54,13 @@ void	calculate_tcp_checksum(
 	);
 }
 
-void	fill_tcp_header(struct tcphdr *tcp_hdr)
+void	fill_tcp_header(struct tcphdr *tcp_hdr, int destination_port)
 {
 	memset(tcp_hdr, 0, sizeof(struct tcphdr));
 	/* Source port */
 	tcp_hdr->th_sport = htons(31999);
 	/* Destination port */
-	tcp_hdr->th_dport = 0;
+	tcp_hdr->th_dport = destination_port;
 	tcp_hdr->th_seq = 0;
 	/* If ACK flag is set this is the value of the next sequence expected to receive */
 	tcp_hdr->th_ack = htonl(0);
