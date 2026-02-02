@@ -31,7 +31,7 @@ static void handle_ip_protocol(struct ip *ip_hdr)
 	{
 		struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
 		print_debug_udp_header(udp_hdr);
-		
+
 		break;
 	}
 	default:
@@ -83,7 +83,6 @@ static void handle_with_linux_sll(const u_char *packet)
 
 static void parse_datalink_layer(const u_char *packet, pcap_t *handle)
 {
-	printf("parse datalink layer\n");
 	int datalink_type = pcap_datalink(handle);
 	print_debug_datalink_type(datalink_type);
 

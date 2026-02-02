@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (pcap_select_interface(&ctx.dev_name, &ctx.my_ip))
+	if (pcap_select_interface(&ctx.dev_name, ctx.source_ip))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
 		if (ctx.dev_name)

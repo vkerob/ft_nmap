@@ -87,9 +87,9 @@ void print_debug_tcp_header(struct tcphdr *tcp_hdr)
 	printf(ANSI_COLOR_GREEN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN "  • Source Port: %d\n" ANSI_COLOR_RESET,
-		   ntohs(tcp_hdr->th_sport));
+		   tcp_hdr->th_sport);
 	printf(ANSI_COLOR_GREEN "  • Destination Port: %d\n" ANSI_COLOR_RESET,
-		   ntohs(tcp_hdr->th_dport));
+		   tcp_hdr->th_dport);
 	printf(ANSI_COLOR_GREEN "  • Sequence Number: %u\n" ANSI_COLOR_RESET,
 		   ntohl(tcp_hdr->th_seq));
 	printf(ANSI_COLOR_GREEN "  • Acknowledgment Number: %u\n" ANSI_COLOR_RESET,
