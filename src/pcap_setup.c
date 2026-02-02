@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-static bool has_ipv4_addr(const pcap_if_t *dev, struct in_addr *my_ip)
+static bool has_ipv4_addr(const pcap_if_t *dev, char *my_ip)
 {
 	for (pcap_addr_t *addr = dev->addresses; addr; addr = addr->next)
 	{
@@ -12,15 +12,14 @@ static bool has_ipv4_addr(const pcap_if_t *dev, struct in_addr *my_ip)
 		{
 			const struct sockaddr_in *sin
 				= (const struct sockaddr_in *)addr->addr;
-			*my_ip = sin->sin_addr;
+			strncpy(my_ip, inet_ntoa(sin->sin_addr), INET_ADDRSTRLEN);
 			return true;
 		}
 	}
 	return false;
 }
 
-static const pcap_if_t *pick_default_dev(const pcap_if_t *alldevs,
-										 struct in_addr	 *my_ip)
+static const pcap_if_t *pick_default_dev(const pcap_if_t *alldevs, char *my_ip)
 {
 	for (const pcap_if_t *dev = alldevs; dev; dev = dev->next)
 	{
@@ -34,7 +33,7 @@ static const pcap_if_t *pick_default_dev(const pcap_if_t *alldevs,
 	return NULL;
 }
 
-bool pcap_select_interface(char **dev_name, struct in_addr *my_ip)
+bool pcap_select_interface(char **dev_name, char *my_ip)
 {
 	char	   errbuf[PCAP_ERRBUF_SIZE];
 	pcap_if_t *alldevs = NULL;
@@ -122,7 +121,7 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-bool pcap_setup(pcap_t **handle, const char *dev_name, struct in_addr my_ip,
+bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
 				char *errbuf, t_target first_target_ip)
 {
 	*handle = pcap_create(dev_name, errbuf);
