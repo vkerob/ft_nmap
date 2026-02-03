@@ -30,7 +30,7 @@ int	init_socket(t_socket *sock)
 	sock->sfd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sock->sfd < 0)
 	{
-		fprintf(stderr, "Error creating socket %s\n", strerror(errno));
+		perror("socket: ");
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

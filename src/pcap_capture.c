@@ -1,45 +1,47 @@
 #include "ft_nmap.h"
+#include <pcap/pcap.h>
 #include <pthread.h>
+#include <stdatomic.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/fcntl.h>
 #include <sys/select.h>
 
-void *pcap_capture(void *arg)
+void *receive_routine(void *arg)
 {
-	t_shared_data *shared_data = (t_shared_data *)arg;
-	pcap_t		  *handle = shared_data->handle;
-	int			   pcap_fd = pcap_get_selectable_fd(handle);
-	fd_set		   read_fds;
+	t_shared_data	*shared_data = (t_shared_data *)arg;
+	pcap_t			*handle = shared_data->handle;
+	char			errbuf[PCAP_ERRBUF_SIZE];
+	int				ret;
 
-	int max_fd = (pcap_fd > g_pipefd[0]) ? pcap_fd : g_pipefd[0];
+	const struct timeval *timeout = pcap_get_required_select_timeout(handle);
+	if (timeout == NULL)
+	{
+		fprintf(stderr, "timeout not required\n");
+	}
+	else{
+		printf("timeout seconds: %ld\n", timeout->tv_sec);
+		fflush(stdout);
+	}
+	ret = pcap_setnonblock(handle, 1, errbuf);
+	switch (ret)
+	{
+		case PCAP_ERROR_NOT_ACTIVATED:
+			fprintf(stderr, "pcap_setnonblock: Capture handle is not activated\n");
+			return NULL;
+		case PCAP_ERROR:
+			fprintf(stderr, "pcap_setnonblock: %s\n", errbuf);
+			return NULL;
+		default:
+			break ;
+	}
 
 	while (!g_stop)
 	{
-		FD_ZERO(&read_fds);
-		FD_SET(pcap_fd, &read_fds);
-		FD_SET(g_pipefd[0], &read_fds);
-
-		int ret = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
-		if (ret == -1)
-		{
-			perror("select");
-			break;
-		}
-		if (ret > 0)
-		{
-			if (FD_ISSET(g_pipefd[0], &read_fds))
-			{
-				if (g_stop)
-					break;
-			}
-			if (FD_ISSET(pcap_fd, &read_fds))
-			{
-				printf("pcap_fd set in reads_fds\n");
-				t_pcap_user_data user_data;
-				user_data.handle = handle;
-				print_debug_packet_start();
-				pcap_dispatch(handle, 1, handle_packet, (u_char *)&user_data);
-				print_debug_packet_end();
-			}
-		}
+		t_pcap_user_data user_data;
+		user_data.handle = handle;
+		/* Returns 0 if no packet to read */
+		pcap_dispatch(handle, 1, handle_packet, (u_char *)&user_data);
 	}
 
 	return NULL;

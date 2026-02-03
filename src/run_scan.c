@@ -17,6 +17,20 @@ static void print_debug_probe_request(t_probe_request *request)
 		   "============================================\n" ANSI_COLOR_RESET);
 }
 
+bool pop_probe_request(t_probe_request **head, t_probe_request *tail, t_probe_request **popped_request){
+	*popped_request = tail;
+
+	(void)popped_request;
+	if (tail->prev)
+	{
+		tail->prev->next = NULL;
+	}
+	else{
+		*head = NULL;
+	}
+	return true;
+}
+
 bool append_probe_request(t_probe_request **head, t_probe_request **tail,
 						  t_target target, uint16_t port,
 						  enum e_scan_type scan_type, uint32_t id)
@@ -94,14 +108,18 @@ void initialize_shared_data(t_shared_data *shared_data, pcap_t *handle,
 	pthread_mutex_init(&shared_data->mutex, NULL);
 	shared_data->request_list_head = NULL;
 	shared_data->request_list_tail = NULL;
+	shared_data->nb_probe_requests = 0;
 }
 
 bool run_scan(t_ctx *ctx)
 {
-	pcap_t	   *handle;
-	char		errbuf[PCAP_ERRBUF_SIZE];
-	const char *dev_name = ctx->dev_name;
-	t_target	first_target = ctx->targets[0];
+	pcap_t			*handle;
+	char			errbuf[PCAP_ERRBUF_SIZE];
+	const char		*dev_name = ctx->dev_name;
+	t_target		first_target = ctx->targets[0];
+	pthread_t		pcap_thread;
+	pthread_t		send_thread;
+	t_shared_data	shared_data;
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
@@ -113,28 +131,26 @@ bool run_scan(t_ctx *ctx)
 	if (pcap_setup(&handle, dev_name, ctx->source_ip, errbuf, first_target))
 		return true;
 
-	pthread_t	  pcap_thread;
-	pthread_t	  send_thread;
-	t_shared_data shared_data;
-
 	initialize_shared_data(&shared_data, handle, ctx->source_ip);
 
 	initial_probe_requests(ctx->targets, ctx->target_count, ctx->args.ports,
-						   ctx->args.port_count, ctx->args.scan_type,
-						   &shared_data.request_list_head,
-						   &shared_data.request_list_tail);
+						ctx->args.port_count, ctx->args.scan_type,
+						&shared_data.request_list_head,
+						&shared_data.request_list_tail);
 
+	shared_data.nb_probe_requests = ctx->args.port_count * ctx->target_count;
+	printf("nb probe requests: %d\n", shared_data.nb_probe_requests);
 	// launch thread to handle captured packets
-	pthread_create(&pcap_thread, NULL, pcap_capture, &shared_data);
+	pthread_create(&pcap_thread, NULL, receive_routine, &shared_data);
 
 	// launch thread to send packets
-	pthread_create(&send_thread, NULL, send_packet, &shared_data);
+	pthread_create(&send_thread, NULL, send_routine, &shared_data);
 
 	pthread_join(pcap_thread, NULL);
 
 	pthread_join(send_thread, NULL);
 
-	free_requests_list(&shared_data.request_list_head);
+	// free_requests_list(&shared_data.request_list_head);
 	pthread_mutex_destroy(&shared_data.mutex);
 	pcap_close(handle);
 

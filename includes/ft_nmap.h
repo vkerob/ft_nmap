@@ -31,6 +31,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 #define ANSI_COLOR_GREEN "\x1b[32m"
 #define ANSI_COLOR_BLUE "\x1b[34m"
@@ -180,6 +181,8 @@ typedef struct s_shared_data
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
 
+	_Atomic	u32 nb_probe_requests;
+
 } t_shared_data;
 
 
@@ -226,19 +229,25 @@ void	build_tcp_header(
 	struct tcphdr *tcp_hdr,
 	uint16_t destination_port,
 	_Atomic uint32_t *base_port);
-uint16_t calculate_checksum(void *buffer, int len);
+u16 calculate_checksum(void *buffer, int len);
+
+
 void	 calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr,
 								struct tcphdr	*tcp_hdr);
 void	 set_default_headers(char *buffer, t_ip_pseudo_hdr *ip_pseudo_hdr);
-void	 print_tcp_header(struct tcphdr *tcp_hdr);
+// void	 print_tcp_header(struct tcphdr *tcp_hdr);
 void	 print_ip_header(struct ip *ip_hdr);
 void	 update_port_tcp(struct tcphdr *tcp_hdr, uint16_t port);
 void	 update_ip_headers_dst_addr(t_ip_pseudo_hdr *ip_pseudo_hdr,
 									struct in_addr	 dst_addr);
 
+/* MULTITHREAD */
+
+bool pop_probe_request(t_probe_request **head, t_probe_request *tail, t_probe_request **popped_request);
+
 /* Scan */
 bool  run_scan(t_ctx *ctx);
-void *pcap_capture(void *arg);
+void *receive_routine(void *arg);
 
 /* Parsing */
 bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
@@ -265,7 +274,8 @@ void	decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr);
 
 void  handle_packet(u_char *args, const struct pcap_pkthdr *header,
 					const u_char *packet);
-void *send_packet(void *arg);
+// void *send_packet(void *arg);
+void *send_routine(void *arg);
 
 /* Debug print */
 void print_debug_packet_start();

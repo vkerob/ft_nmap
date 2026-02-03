@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #define IP_VERSION 4
 #define IP_IHL 5
@@ -35,7 +37,7 @@ void build_ip_header(struct ip *ip_hdr, t_probe_request *request,
 	// poossible to be rejected by some firewalls
 	ip_hdr->ip_off = 0;
 	ip_hdr->ip_id = htons(atomic_fetch_add(id_counter, 1));
-	ip_hdr->ip_sum = calculate_checksum(ip_hdr, ip_hdr->ip_hl * 4);
+	// ip_hdr->ip_sum = calculate_checksum(ip_hdr, ip_hdr->ip_hl * 4);
 	ip_hdr->ip_src.s_addr = inet_addr(source_ip);
 	ip_hdr->ip_dst.s_addr = inet_addr(request->target.ip);
 	// no priority
@@ -50,9 +52,10 @@ void build_tcp_header(
 	// Will be use to calculate the TCP checksum
 	memset(tcp_hdr, 0, sizeof(struct tcphdr));
 	/* Source port */
+	printf("base port: %d\n", *base_port);
 	tcp_hdr->th_sport = htons(*base_port);
 	/* Destination port */
-	tcp_hdr->th_dport = destination_port;
+	tcp_hdr->th_dport = htons(destination_port);
 	tcp_hdr->th_seq = 0;
 	/* If ACK flag is set this is the value of the next sequence expected to receive */
 	tcp_hdr->th_ack = htonl(0);
@@ -97,12 +100,14 @@ static void build_scan_packets(t_probe_request *request, u_char *packet,
 
 	memset(&tcp_hdr, 0, sizeof(tcp_hdr));
 	memset(&udp_hdr, 0, sizeof(udp_hdr));
+	memset(&ip_pseudo_hdr, 0, sizeof(ip_pseudo_hdr));
 
 	// if (shared_data->gateway_mac[0] != 0)
 		// build_ethernet_header(&eth_hdr);
 
 	// build_ip_header(&ip_hdr, request, shared_data->source_ip, &shared_data->id);
 
+	// Use to compute the tcp checksum
 	build_pseudo_ip_header(&ip_pseudo_hdr);
 
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
@@ -126,33 +131,57 @@ static void build_scan_packets(t_probe_request *request, u_char *packet,
 	// assemble_full_packet(packet, &eth_hdr, &ip_hdr, &tcp_hdr, &udp_hdr);
 }
 
-void *send_packet(void *arg)
+static bool send_packet(t_socket *socket, u8 *packet)
 {
-	t_shared_data	*shared_data = (t_shared_data *)arg;
-	u8				packet[4096];
-	t_socket	socket;
-
-
-	//TODO: remove after debug
-	init_socket(&socket);
-	socket.sin.sin_family = AF_INET;
-	build_scan_packets(shared_data->request_list_tail, packet, shared_data);
-
-	inet_aton(shared_data->request_list_tail->target.ip, &socket.sin.sin_addr);
-	socket.sin.sin_port = shared_data->request_list_tail->target.port;
-	printf("port: %d | target ip: %s\n",shared_data->request_list_tail->target.port, shared_data->request_list_tail->target.ip );
-
 	if (sendto(
-			socket.sfd,
+			socket->sfd,
 			packet,
 			sizeof(struct tcphdr),
 			0,
-			(struct sockaddr *)&socket.sin,
+			(struct sockaddr *)&socket->sin,
 			sizeof(struct sockaddr)
 		) < 0)
 	{
-		fprintf(stderr, "Failed to send TCP packet %s\n", strerror(errno));
-		return NULL;
+		perror("sendto: ");
+		return false;
+	}
+	return true;
+}
+
+void *send_routine(void *arg)
+{
+	t_shared_data	*shared_data = (t_shared_data *)arg;
+	u8				packet[4096];
+	t_socket		socket;
+	t_probe_request	*popped_request = NULL;
+
+	//TODO: remove after debug
+
+	init_socket(&socket);
+	socket.sin.sin_family = AF_INET;
+	while (shared_data->nb_probe_requests > 0)
+	{
+		pthread_mutex_lock(&shared_data->mutex);
+		if (shared_data->request_list_tail){
+			pop_probe_request(&shared_data->request_list_head, shared_data->request_list_tail, &popped_request);
+		}
+		else{
+			return NULL;
+		}
+		shared_data->nb_probe_requests--;
+		pthread_mutex_unlock(&shared_data->mutex);
+		build_scan_packets(popped_request, packet, shared_data);
+
+		inet_aton(popped_request->target.ip, &socket.sin.sin_addr);
+		socket.sin.sin_port = popped_request->target.port;
+		// printf("port: %d | target ip: %s\n",popped_request->target.port, popped_request->target.ip );
+
+		if (!send_packet(&socket, packet)){
+			//TODO: handle this case
+			return NULL;
+		}
+
+		free(popped_request);
 	}
 	return NULL;
 }

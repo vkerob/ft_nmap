@@ -113,10 +113,12 @@ static void parse_datalink_layer(const u_char *packet, pcap_t *handle)
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
+	print_debug_packet_start();
 	(void)args;
 	(void)header;
 	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
 	pcap_t			 *handle = user_data->handle;
 
 	parse_datalink_layer(packet, handle);
+	print_debug_packet_end();
 }
