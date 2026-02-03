@@ -47,7 +47,7 @@ void build_ip_header(struct ip *ip_hdr, t_probe_request *request,
 void build_tcp_header(
 	struct tcphdr *tcp_hdr,
 	uint16_t destination_port,
-	_Atomic uint32_t *base_port)
+	_Atomic uint16_t *base_port)
 {
 	// Will be use to calculate the TCP checksum
 	memset(tcp_hdr, 0, sizeof(struct tcphdr));
@@ -158,6 +158,7 @@ void *send_routine(void *arg)
 	//TODO: remove after debug
 
 	init_socket(&socket);
+	memset(packet, 0, sizeof(packet));
 	socket.sin.sin_family = AF_INET;
 	while (shared_data->nb_probe_requests > 0)
 	{
@@ -170,9 +171,9 @@ void *send_routine(void *arg)
 		}
 		shared_data->nb_probe_requests--;
 		pthread_mutex_unlock(&shared_data->mutex);
+		inet_aton(popped_request->target.ip, &socket.sin.sin_addr);
 		build_scan_packets(popped_request, packet, shared_data);
 
-		inet_aton(popped_request->target.ip, &socket.sin.sin_addr);
 		socket.sin.sin_port = popped_request->target.port;
 		// printf("port: %d | target ip: %s\n",popped_request->target.port, popped_request->target.ip );
 

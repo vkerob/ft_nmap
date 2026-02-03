@@ -177,7 +177,7 @@ typedef struct s_shared_data
 	char			 source_ip[INET_ADDRSTRLEN];
 	_Atomic uint16_t id;
 	_Atomic uint16_t base_seq;
-	_Atomic uint32_t base_port;
+	_Atomic uint16_t base_port;
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
 
@@ -228,7 +228,7 @@ void	build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
 void	build_tcp_header(
 	struct tcphdr *tcp_hdr,
 	uint16_t destination_port,
-	_Atomic uint32_t *base_port);
+	_Atomic uint16_t *base_port);
 u16 calculate_checksum(void *buffer, int len);
 
 
