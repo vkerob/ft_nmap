@@ -3,11 +3,13 @@
 u16 calculate_checksum(void *buffer, int len)
 {
 	uint32_t	checksum = 0;
-	u16			*ptr = (u16 *)buffer;
-	int			odd = (len % 2) != 0;
+	u16			*ptr = (uint16_t *)buffer;
+	int odd = (len % 2) != 0;
 
-	for (int i = 0; i < len - odd; i++){
+	while (len > odd)
+	{
 		checksum += *ptr++;
+		len -= 2;
 	}
 	if (odd != 0)
 	{

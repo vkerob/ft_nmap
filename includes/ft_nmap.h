@@ -224,7 +224,11 @@ void print_ip_header(struct ip *ip_hdr);
 // void print_eth_header(t_ethernet_hdr *eth_hdr);
 
 /* TCP / IP */
-void	build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr);
+
+void	build_pseudo_ip_header(
+	t_ip_pseudo_hdr *ip_pseudo_hdr,
+	const char *dst_addr,
+	const char *src_addr);
 void	build_tcp_header(
 	struct tcphdr *tcp_hdr,
 	uint16_t destination_port,

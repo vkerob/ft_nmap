@@ -49,11 +49,9 @@ void build_tcp_header(
 	uint16_t destination_port,
 	_Atomic uint16_t *base_port)
 {
-	// Will be use to calculate the TCP checksum
 	memset(tcp_hdr, 0, sizeof(struct tcphdr));
 	/* Source port */
-	printf("base port: %d\n", *base_port);
-	tcp_hdr->th_sport = htons(*base_port);
+	tcp_hdr->th_sport = htons(atomic_load(base_port));
 	/* Destination port */
 	tcp_hdr->th_dport = htons(destination_port);
 	tcp_hdr->th_seq = 0;
@@ -108,7 +106,7 @@ static void build_scan_packets(t_probe_request *request, u_char *packet,
 	// build_ip_header(&ip_hdr, request, shared_data->source_ip, &shared_data->id);
 
 	// Use to compute the tcp checksum
-	build_pseudo_ip_header(&ip_pseudo_hdr);
+	build_pseudo_ip_header(&ip_pseudo_hdr, request->target.ip, shared_data->source_ip);
 
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
@@ -174,7 +172,7 @@ void *send_routine(void *arg)
 		inet_aton(popped_request->target.ip, &socket.sin.sin_addr);
 		build_scan_packets(popped_request, packet, shared_data);
 
-		socket.sin.sin_port = popped_request->target.port;
+		socket.sin.sin_port = htons(popped_request->target.port);
 		// printf("port: %d | target ip: %s\n",popped_request->target.port, popped_request->target.ip );
 
 		if (!send_packet(&socket, packet)){

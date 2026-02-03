@@ -11,11 +11,11 @@ int main(int argc, char **argv)
 	// 	return 1;
 	// }
 
-	if (pipe(g_pipefd) == -1)
-	{
-		perror("pipe");
-		return 1;
-	}
+	// if (pipe(g_pipefd) == -1)
+	// {
+	// 	perror("pipe");
+	// 	return 1;
+	// }
 
 	char **targets_input = NULL;
 	size_t target_count = 0;
@@ -54,10 +54,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	// printf("dev name: %s\n", ctx.dev_name);
 	print_debug_parsing_args(ctx);
 
-	// init_socket()
 
 	if (run_scan(&ctx))
 	{

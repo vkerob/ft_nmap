@@ -35,8 +35,8 @@ static const pcap_if_t *pick_default_dev(const pcap_if_t *alldevs, char *my_ip)
 
 bool pcap_select_interface(char **dev_name, char *my_ip)
 {
-	char	   errbuf[PCAP_ERRBUF_SIZE];
-	pcap_if_t *alldevs = NULL;
+	char		errbuf[PCAP_ERRBUF_SIZE];
+	pcap_if_t	*alldevs = NULL;
 
 	if (pcap_findalldevs(&alldevs, errbuf) == -1)
 	{
