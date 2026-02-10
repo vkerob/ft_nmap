@@ -55,12 +55,4 @@ void	handle_tcp_protocol(t_target *target, t_tcp_hdr *tcp_hdr)
 	(void)port;(void)target;
 	scan_type = determine_tcp_scan_type(tcp_hdr->th_dport);
 	scan_type_to_str(scan_type);
-	// if (scan_type != SCAN_UNKNOWN)
-	// {
-	// 	if (find_port_object(target, tcp_hdr, scan_type, &port))
-	// 	{
-			// handle_tcp_probe_response(target, tcp_hdr->th_flags, scan_type, &port);
-			// port.
-	// 	}
-	// }
 }

@@ -12,16 +12,17 @@ bool	update_pending_probe_request_list(
 	t_probe_request_sent *request_with_metadata = calloc(1, sizeof(t_probe_request_sent));
 	if (request_with_metadata == NULL)
 	{
-		request_with_metadata->request = request;
-		request_with_metadata->timestamp = sent_timestamp;
-		request_with_metadata->retries = request->retries + 1;
+		return false;
 	}
-
+	request_with_metadata->request = request;
+	request_with_metadata->timestamp = sent_timestamp;
+	request_with_metadata->retries = request->retries + 1;
 	if (*head == NULL)
 	{
 		*head = request_with_metadata;
 	}
-	else{
+	else
+	{
 		(*tail)->next = request_with_metadata;
 	}
 	*tail = request_with_metadata;

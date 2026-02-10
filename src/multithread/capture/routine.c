@@ -7,6 +7,8 @@
 #include "ethernet.h"
 #include "debug.h"
 #include "my_signal.h"
+#include "probe_request.h"
+#include "protocols.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -59,6 +61,7 @@ static bool	find_corresponding_target(
 
 void	handle_ip_protocol(
 	t_ip *ip_hdr,
+	t_datalink_hdr *hdr,
 	t_target *targets,
 	size_t targets_count,
 	u16 port_count)
@@ -80,12 +83,11 @@ void	handle_ip_protocol(
 	{
 		case IPPROTO_TCP:
 		{
-			struct tcphdr *tcp_hdr = (struct tcphdr *)protocol_hdr;
-			print_debug_tcp_header(tcp_hdr);
+			hdr->tcp_hdr = *(struct tcphdr *)protocol_hdr;
+			print_debug_tcp_header(&hdr->tcp_hdr);
 			/* PROTO_TCP is our enum with the right integer value because
 				we use it as an index after */
-			handle_tcp_protocol(&target, tcp_hdr);
-			// update_target_port_state(&target, tcp_hdr, PROTO_TCP);
+			handle_tcp_protocol(&target, &hdr->tcp_hdr);
 			break;
 		}
 		case IPPROTO_ICMP:
@@ -109,6 +111,7 @@ void	handle_ip_protocol(
 
 static void handle_with_ethernet(
 	const u_char *packet,
+	t_datalink_hdr *hdr,
 	t_target *targets,
 	size_t target_count,
 	u16 port_count)
@@ -123,12 +126,13 @@ static void handle_with_ethernet(
 		struct ip *ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
 		print_debug_ethernet_header(eth_header);
 		print_debug_ip_header(ip_hdr);
-		handle_ip_protocol(ip_hdr, targets, target_count, port_count);
+		handle_ip_protocol(ip_hdr, hdr, targets, target_count, port_count);
 	}
 }
 
 static void parse_datalink_layer(
 	const u_char *packet,
+	t_datalink_hdr *hdr,
 	pcap_t *handle,
 	t_target *targets,
 	size_t target_count,
@@ -141,7 +145,7 @@ static void parse_datalink_layer(
 	{
 		case DLT_EN10MB:
 			printf("DLT_EN10MB\n");
-			handle_with_ethernet(packet, targets, target_count, port_count);
+			handle_with_ethernet(packet, hdr, targets, target_count, port_count);
 			break;
 		// case DLT_LINUX_SLL:
 		// 	printf("DLT_LINUX_SLL\n");
@@ -170,55 +174,63 @@ void	handle_packet(
 	t_pcap_user_data	*user_data = (t_pcap_user_data *)args;
 	pcap_t						*handle = user_data->handle;
 	t_shared_data			*shared_data = user_data->shared_data;
-	// t_probe_request		probe_request;
+	t_datalink_hdr		hdr;
 
 	(void)handle;(void)shared_data;(void)packet;
-//(void)shared_data;
 	parse_datalink_layer(
 		packet,
+		&hdr,
 		handle,
 		shared_data->targets,
 		shared_data->target_count,
 		shared_data->port_count);
+	
+	t_probe_request_sent *tmp = *shared_data->pending_request_head;
+	while (tmp)
+	{
+		tmp = tmp->next;
+	}
+
 	print_debug_packet_end();
 }
 
+static void	purge_timedout_probe_request(
+	t_probe_request_sent **head_sent,
+	t_probe_request **head,
+	t_probe_request **tail)
+{
+	time_t								now;
+	t_probe_request_sent	*tmp = *head_sent;
+	t_probe_request_sent	*prev = NULL;
 
-// static void	purge_timedout_probe_request(t_probe_request_sent **head)
-// {
-// 	time_t now = time(NULL);
-
-// 	t_probe_request_sent	*tmp = *head;
-
-// 	while (tmp)
-// 	{
-// 		unsigned long seconds_elapsed = (unsigned long)difftime(tmp->timestamp, now);
-// 		switch (tmp->retries)
-// 		{
-// 			case 0:
-// 				if (seconds_elapsed > 8)
-// 				{
-// 					// update retries and reinject in probe request list
-// 				}
-// 				break ;
-// 			case 1:
-// 				if (seconds_elapsed > 16)
-// 				{
-// 					// update retries and reinject in probe request list
-// 				}
-// 				break ;
-// 			case 2:
-// 				if (seconds_elapsed > 32)
-// 				{
-// 					//set port state to something
-// 				}
-// 				break ;
-// 			default:
-// 				break ;
-// 		}
-// 		tmp = tmp->next;
-// 	}
-// }
+	while (tmp)
+	{
+		now = time(NULL);
+		unsigned long seconds_elapsed = (unsigned long)difftime(tmp->timestamp, now);
+		if (seconds_elapsed > 8)
+		{
+			// Pop tmp from the pending list
+			prev->next = tmp->next;
+			// update retries and reinject in probe request list
+			if (tmp->retries < MAX_SCAN_RETRIES)
+			{
+				tmp->request->retries += 1;
+			}
+			if (*tail)
+			{
+				(*tail)->next = tmp->request;
+			}
+			else
+			{
+				*head = tmp->request;
+			}
+			// update tail to new request
+			*tail = tmp->request;
+		}
+		prev = tmp;
+		tmp = tmp->next;
+	}
+}
 
 
 void *receive_routine(void *arg)
@@ -261,10 +273,10 @@ void *receive_routine(void *arg)
 		/* Returns 0 if no packet to read */
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
-			// purge_timedout_probe_request(
-			// 	&shared_data->pending_request_head,
-			// 	&shared_data->request_list_head,
-			// 	&shared_data->request_list_tail);
+			purge_timedout_probe_request(
+				&shared_data->pending_request_head[0],
+				&shared_data->request_list_head,
+				&shared_data->request_list_tail);
 		}
 	}
 
