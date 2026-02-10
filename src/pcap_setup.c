@@ -1,74 +1,16 @@
 #include "ft_nmap.h"
+#include <ifaddrs.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
 #include <string.h>
 
-static bool has_ipv4_addr(const pcap_if_t *dev, char *my_ip)
-{
-	for (pcap_addr_t *addr = dev->addresses; addr; addr = addr->next)
-	{
-		// if it's an IPv4 address we can cast into sockaddr_in for sin_addr
-		if (addr->addr && addr->addr->sa_family == AF_INET)
-		{
-			const struct sockaddr_in *sin
-				= (const struct sockaddr_in *)addr->addr;
-			strncpy(my_ip, inet_ntoa(sin->sin_addr), INET_ADDRSTRLEN);
-			return true;
-		}
-	}
-	return false;
-}
+#define PCAP_SNAPLEN 1024
+#define PCAP_PROMISC 0
+#define PCAP_BUFFER_SIZE (4 * 1024 * 1024) // 4MB
+#define PCAP_IMMEDIATE_MODE true
 
-static const pcap_if_t *pick_default_dev(const pcap_if_t *alldevs, char *my_ip)
-{
-	for (const pcap_if_t *dev = alldevs; dev; dev = dev->next)
-	{
-		// skip loopback
-		if (dev->flags & PCAP_IF_LOOPBACK)
-			continue;
-
-		if (has_ipv4_addr(dev, my_ip))
-			return dev;
-	}
-	return NULL;
-}
-
-bool pcap_select_interface(char **dev_name, char *my_ip)
-{
-	char	   errbuf[PCAP_ERRBUF_SIZE];
-	pcap_if_t *alldevs = NULL;
-
-	if (pcap_findalldevs(&alldevs, errbuf) == -1)
-	{
-		fprintf(stderr, "ft_nmap: pcap_findalldevs failed: %s\n", errbuf);
-		return true;
-	}
-
-	const pcap_if_t *chosen = pick_default_dev(alldevs, my_ip);
-	if (!chosen)
-	{
-		fprintf(stderr, "ft_nmap: no suitable network interface found\n");
-		pcap_freealldevs(alldevs);
-		return true;
-	}
-
-	*dev_name = strdup(chosen->name);
-	if (!*dev_name)
-	{
-		fprintf(stderr, "ft_nmap: strdup failed\n");
-		pcap_freealldevs(alldevs);
-		return true;
-	}
-	free(*dev_name);
-	//TODO: remove after debug
-	// *dev_name  = strdup("br-632297f36309"); // hardcoded for testing purpose
-	*dev_name = strdup("bridge100");
-	pcap_freealldevs(alldevs);
-	return false;
-}
-
-bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
-					int buffer_size_bytes, bool immediate_mode, int direction)
+bool pcap_configure(pcap_t *handle, int snaplen, int promisc,
+					int buffer_size_bytes, bool immediate_mode)
 {
 	if (pcap_set_snaplen(handle, snaplen) != 0)
 	{
@@ -78,11 +20,6 @@ bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
 	if (pcap_set_promisc(handle, promisc) != 0)
 	{
 		fprintf(stderr, "ft_nmap: pcap_set_promisc failed\n");
-		return true;
-	}
-	if (pcap_set_timeout(handle, timeout_ms) != 0)
-	{
-		fprintf(stderr, "ft_nmap: pcap_set_timeout failed\n");
 		return true;
 	}
 	if (pcap_set_buffer_size(handle, buffer_size_bytes) != 0)
@@ -95,12 +32,6 @@ bool pcap_configure(pcap_t *handle, int snaplen, int promisc, int timeout_ms,
 		fprintf(stderr, "ft_nmap: pcap_set_immediate_mode failed\n");
 		return true;
 	}
-	(void)direction;
-	// if (pcap_setdirection(handle, direction) != 0)
-	// {
-	// 	fprintf(stderr, "ft_nmap: pcap_setdirection failed\n");
-	// 	return true;
-	// }
 	return false;
 }
 
@@ -122,18 +53,17 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
-				char *errbuf, t_target first_target_ip)
+bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 {
-	*handle = pcap_create(dev_name, errbuf);
+	*handle = pcap_create(iface_name, errbuf);
 	if (!*handle)
 	{
 		fprintf(stderr, "ft_nmap: pcap_create failed: %s\n", errbuf);
 		return true;
 	}
 	// Configure the handle
-	if (pcap_configure(*handle, 65535, 0, 1000, 4 * 1024 * 1024, true,
-					   PCAP_D_IN))
+	if (pcap_configure(*handle, PCAP_SNAPLEN, PCAP_PROMISC, PCAP_BUFFER_SIZE,
+					   PCAP_IMMEDIATE_MODE))
 	{
 		pcap_close(*handle);
 		return true;
@@ -153,15 +83,9 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
 				pcap_geterr(*handle));
 	}
 
-	// Apply a filter to capture only packets destined to my_ip
-	// char ipbuf[INET_ADDRSTRLEN];
-	// inet_ntop(AF_INET, &my_ip, ipbuf, sizeof(ipbuf));
-	(void)my_ip;
-
 	char filter_expr[128];
 
-	snprintf(filter_expr, sizeof(filter_expr),
-			 "tcp or udp or icmp and dst host %s", first_target_ip.ip);
+	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp");
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{
@@ -170,5 +94,23 @@ bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
 		return true;
 	}
 
+	return false;
+}
+
+bool setup_pcap_handles(pcap_t **handles, size_t iface_count,
+						char (*iface_names)[IFNAMSIZ])
+{
+	for (size_t i = 0; i < iface_count; i++)
+	{
+		char errbuf[PCAP_ERRBUF_SIZE];
+		if (pcap_setup(&handles[i], iface_names[i], errbuf))
+		{
+			for (size_t j = 0; j < i; j++)
+			{
+				pcap_close(handles[j]);
+			}
+			return true;
+		}
+	}
 	return false;
 }

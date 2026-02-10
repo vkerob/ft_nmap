@@ -1,24 +1,24 @@
 #include "ft_nmap.h"
-static void	update_socket_port(struct sockaddr_in *socket_addr, u16 port)
+static void update_socket_port(struct sockaddr_in *socket_addr, u16 port)
 {
 	socket_addr->sin_port = htons(port);
 }
 
-
-static void	update_socket_addr(struct sockaddr_in *socket_addr, struct in_addr addr)
+static void update_socket_addr(struct sockaddr_in *socket_addr,
+							   struct in_addr	   addr)
 {
 	socket_addr->sin_addr = addr;
 }
 
-void	update_socket(struct sockaddr_in *socket, t_target target, u16 port)
+void update_socket(struct sockaddr_in *socket, t_target target, u16 port)
 {
 	update_socket_port(socket, port);
 	update_socket_addr(socket, target.addr.sin_addr);
 }
 
-int	init_socket(t_socket *sock)
+int init_socket(t_socket *sock)
 {
-	struct protoent	*proto;
+	struct protoent *proto;
 
 	proto = getprotobyname("tcp");
 	if (!proto)
@@ -36,7 +36,7 @@ int	init_socket(t_socket *sock)
 	return EXIT_SUCCESS;
 }
 
-void	close_socket(t_socket socket)
+void close_socket(t_socket socket)
 {
 	close(socket.sfd);
 }

@@ -1,4 +1,5 @@
 #include "ft_nmap.h"
+#include <net/if.h>
 
 sig_atomic_t volatile g_stop = 0;
 int g_pipefd[2] = { 0 };
@@ -46,27 +47,33 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (pcap_select_interface(&ctx.dev_name, ctx.source_ip))
+	if (get_iface_info(&ctx.iface_names, &ctx.iface_count, ctx.targets,
+					   ctx.target_count))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
-		if (ctx.dev_name)
-			free(ctx.dev_name);
 		return 1;
 	}
 
-	// printf("dev name: %s\n", ctx.dev_name);
 	print_debug_parsing_args(ctx);
+	print_debug_iface_info(ctx.iface_names, ctx.iface_count);
 
-	// init_socket()
+	pcap_t **handles = malloc(sizeof(pcap_t *) * ctx.iface_count);
 
-	if (run_scan(&ctx))
+	if (setup_pcap_handles(handles, ctx.iface_count, ctx.iface_names))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
-		free(ctx.dev_name);
+		free(ctx.iface_names);
 		return 1;
 	}
 
-	free(ctx.dev_name);
+	if (run_scan(&ctx, handles))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		free(ctx.iface_names);
+		return 1;
+	}
+
+	free(ctx.iface_names);
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_SUCCESS;
 }
