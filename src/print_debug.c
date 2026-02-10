@@ -231,10 +231,29 @@ void print_debug_parsing_args(t_ctx ctx)
 		   ctx.args.scan_type);
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
 		   ctx.args.speed);
-	printf("Device:    " ANSI_COLOR_YELLOW "%s\n" ANSI_COLOR_RESET,
-		   ctx.dev_name);
 
 	// Ligne de fin
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+}
+
+void print_debug_iface_info(char (*iface_names)[IFNAMSIZ], size_t iface_count)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN
+		   "         INTERFACE INFO         \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+
+	for (size_t i = 0; i < iface_count; i++)
+	{
+		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Interface %zu:\n" ANSI_COLOR_RESET,
+			   i + 1);
+		printf(ANSI_COLOR_YELLOW "  • Name: %s\n" ANSI_COLOR_RESET,
+			   iface_names[i]);
+	}
+
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }

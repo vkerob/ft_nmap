@@ -81,62 +81,61 @@ void free_requests_list(t_probe_request **head)
 	*head = NULL;
 }
 
-void initialize_shared_data(t_shared_data *shared_data, pcap_t *handle,
-							char *source_ip)
+void initialize_shared_data(t_shared_data *shared_data)
 {
-	shared_data->handle = handle;
 	atomic_init(&shared_data->id, 1);
 	atomic_init(&shared_data->base_port, 32768 + (rand() % (65535 - 32768)));
 	atomic_init(&shared_data->base_seq, rand());
 
-	strncpy(shared_data->source_ip, source_ip, INET_ADDRSTRLEN);
-	memset(shared_data->gateway_mac, 0, ETH_ALEN);
 	pthread_mutex_init(&shared_data->mutex, NULL);
 	shared_data->request_list_head = NULL;
 	shared_data->request_list_tail = NULL;
 }
 
-bool run_scan(t_ctx *ctx)
+bool run_scan(t_ctx *ctx, pcap_t **handle)
 {
-	pcap_t	   *handle;
-	char		errbuf[PCAP_ERRBUF_SIZE];
-	const char *dev_name = ctx->dev_name;
-	t_target	first_target = ctx->targets[0];
-
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
 		printf(ANSI_BOLD ANSI_COLOR_YELLOW
 			   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
-		// get gateway MAC address for ethernet header, arp request if needed
 	}
 
-	if (pcap_setup(&handle, dev_name, ctx->source_ip, errbuf, first_target))
-		return true;
-
-	pthread_t	  pcap_thread;
-	pthread_t	  send_thread;
 	t_shared_data shared_data;
 
-	initialize_shared_data(&shared_data, handle, ctx->source_ip);
+	initialize_shared_data(&shared_data);
 
 	initial_probe_requests(ctx->targets, ctx->target_count, ctx->args.ports,
 						   ctx->args.port_count, ctx->args.scan_type,
 						   &shared_data.request_list_head,
 						   &shared_data.request_list_tail);
 
+	pthread_t *pcap_thread = malloc(sizeof(pthread_t) * ctx->iface_count);
+	pthread_t *send_thread = malloc(sizeof(pthread_t) * 1);
+
 	// launch thread to handle captured packets
-	pthread_create(&pcap_thread, NULL, pcap_capture, &shared_data);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pthread_create(&pcap_thread[i], NULL, pcap_capture, &shared_data);
 
 	// launch thread to send packets
-	pthread_create(&send_thread, NULL, send_packet, &shared_data);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pthread_create(&send_thread[i], NULL, send_packet, &shared_data);
 
-	pthread_join(pcap_thread, NULL);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pthread_join(pcap_thread[i], NULL);
 
-	pthread_join(send_thread, NULL);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pthread_join(send_thread[i], NULL);
 
 	free_requests_list(&shared_data.request_list_head);
-	pthread_mutex_destroy(&shared_data.mutex);
-	pcap_close(handle);
+
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pthread_mutex_destroy(&shared_data.mutex);
+
+	free(pcap_thread);
+	free(send_thread);
+
+	for (size_t i = 0; i < ctx->iface_count; i++)
+		pcap_close(handle[i]);
 
 	return false;
 }
