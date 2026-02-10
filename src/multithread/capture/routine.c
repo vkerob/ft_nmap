@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pcap/pcap.h>
+#include <time.h>
 
 // static void handle_with_null_loopback(const u_char *packet)
 // {
@@ -183,6 +184,43 @@ void	handle_packet(
 }
 
 
+// static void	purge_timedout_probe_request(t_probe_request_sent **head)
+// {
+// 	time_t now = time(NULL);
+
+// 	t_probe_request_sent	*tmp = *head;
+
+// 	while (tmp)
+// 	{
+// 		unsigned long seconds_elapsed = (unsigned long)difftime(tmp->timestamp, now);
+// 		switch (tmp->retries)
+// 		{
+// 			case 0:
+// 				if (seconds_elapsed > 8)
+// 				{
+// 					// update retries and reinject in probe request list
+// 				}
+// 				break ;
+// 			case 1:
+// 				if (seconds_elapsed > 16)
+// 				{
+// 					// update retries and reinject in probe request list
+// 				}
+// 				break ;
+// 			case 2:
+// 				if (seconds_elapsed > 32)
+// 				{
+// 					//set port state to something
+// 				}
+// 				break ;
+// 			default:
+// 				break ;
+// 		}
+// 		tmp = tmp->next;
+// 	}
+// }
+
+
 void *receive_routine(void *arg)
 {
 	t_shared_data	*shared_data = (t_shared_data *)arg;
@@ -213,14 +251,19 @@ void *receive_routine(void *arg)
 	}
 
 	while (!g_stop)
-	
 	{
 		t_pcap_user_data user_data = {
 			.handle = handle,
 			.shared_data = shared_data
 		};
 		/* Returns 0 if no packet to read */
-		pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data);
+		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
+		{
+			// purge_timedout_probe_request(
+			// 	&shared_data->pending_request_head,
+			// 	&shared_data->request_list_head,
+			// 	&shared_data->request_list_tail);
+		}
 	}
 
 	return NULL;

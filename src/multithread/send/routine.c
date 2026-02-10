@@ -127,7 +127,6 @@ void	*send_routine(void *arg)
 			sent_timestamp);
 		pthread_mutex_unlock(
 			&shared_data->pending_request_list_mut[index_interface]);
-		// free(request);
 	}
 	return NULL;
 }
