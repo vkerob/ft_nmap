@@ -12,7 +12,7 @@ void initialize_shared_data(
 {
 	shared_data->handle = handle;
 	atomic_init(&shared_data->id, 1);
-	atomic_init(&shared_data->base_port, 32768 + (rand() % (65535 - 32768)));
+	//atomic_init(&shared_data->base_port, 32768 + (rand() % (65535 - 32768)));
 	atomic_init(&shared_data->base_seq, rand());
 
 	strncpy(shared_data->source_ip, ctx->source_ip, INET_ADDRSTRLEN);

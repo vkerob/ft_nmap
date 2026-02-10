@@ -12,26 +12,26 @@
 #include <string.h>
 #include <pcap/pcap.h>
 
-static void handle_with_null_loopback(const u_char *packet)
-{
-	struct ip *ip_hdr = (struct ip *)packet;
-	print_debug_ip_header(ip_hdr);
-	// handle_ip_protocol(ip_hdr);
-}
+// static void handle_with_null_loopback(const u_char *packet)
+// {
+// 	struct ip *ip_hdr = (struct ip *)packet;
+// 	print_debug_ip_header(ip_hdr);
+// 	// handle_ip_protocol(ip_hdr);
+// }
 
-static void handle_with_linux_sll(const u_char *packet)
-{
-	t_sll_hdr *sll_hdr = (t_sll_hdr *)packet;
-	print_debug_sll_protocol((sll_hdr->sll_protocol));
+// static void handle_with_linux_sll(const u_char *packet)
+// {
+// 	t_sll_hdr *sll_hdr = (t_sll_hdr *)packet;
+// 	print_debug_sll_protocol((sll_hdr->sll_protocol));
 
-	if (ntohs(sll_hdr->sll_protocol) == ETHERTYPE_IP)
-	{
-		struct ip *ip_hdr = (struct ip *)(packet + sizeof(t_sll_hdr));
-		print_debug_sll_header(sll_hdr);
-		print_debug_ip_header(ip_hdr);
-		// handle_ip_protocol(ip_hdr, t);
-	}
-}
+// 	if (ntohs(sll_hdr->sll_protocol) == ETHERTYPE_IP)
+// 	{
+// 		struct ip *ip_hdr = (struct ip *)(packet + sizeof(t_sll_hdr));
+// 		print_debug_sll_header(sll_hdr);
+// 		print_debug_ip_header(ip_hdr);
+// 		// handle_ip_protocol(ip_hdr, t);
+// 	}
+// }
 
 static bool	find_corresponding_target(
 	t_target *targets,
@@ -97,8 +97,8 @@ void	handle_ip_protocol(
 		}
 		case IPPROTO_UDP:
 		{
-			struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
-			print_debug_udp_header(udp_hdr);
+			// struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
+			// print_debug_udp_header(udp_hdr);
 			break;
 		}
 	default:
@@ -112,6 +112,8 @@ static void handle_with_ethernet(
 	size_t target_count,
 	u16 port_count)
 {
+
+	(void)port_count;(void)targets;(void)port_count;(void)target_count;
 	struct ether_header *eth_header = (struct ether_header *)packet;
 	print_debug_ethernet_type(ntohs(eth_header->ether_type));
 
@@ -140,17 +142,17 @@ static void parse_datalink_layer(
 			printf("DLT_EN10MB\n");
 			handle_with_ethernet(packet, targets, target_count, port_count);
 			break;
-		case DLT_LINUX_SLL:
-			printf("DLT_LINUX_SLL\n");
-			handle_with_linux_sll(packet);
-			break;
-		case DLT_RAW:
-			printf("DLT_RAW\n");
-			// handle_with_raw_ip(packet, targets);
-			break;
-		case DLT_NULL:
-			printf("DLT_NULL\n");
-			handle_with_null_loopback(packet);
+		// case DLT_LINUX_SLL:
+		// 	printf("DLT_LINUX_SLL\n");
+		// 	handle_with_linux_sll(packet);
+		// 	break;
+		// case DLT_RAW:
+		// 	printf("DLT_RAW\n");
+		// 	// handle_with_raw_ip(packet, targets);
+		// 	break;
+		// case DLT_NULL:
+		// 	printf("DLT_NULL\n");
+		// 	handle_with_null_loopback(packet);
 			break;
 		default:
 			printf("default\n");
@@ -169,6 +171,7 @@ void	handle_packet(
 	t_shared_data			*shared_data = user_data->shared_data;
 	// t_probe_request		probe_request;
 
+	(void)handle;(void)shared_data;(void)packet;
 //(void)shared_data;
 	parse_datalink_layer(
 		packet,
@@ -210,13 +213,14 @@ void *receive_routine(void *arg)
 	}
 
 	while (!g_stop)
+	
 	{
 		t_pcap_user_data user_data = {
 			.handle = handle,
 			.shared_data = shared_data
 		};
 		/* Returns 0 if no packet to read */
-		pcap_dispatch(handle, 1, handle_packet, (u_char *)&user_data);
+		pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data);
 	}
 
 	return NULL;

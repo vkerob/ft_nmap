@@ -17,7 +17,8 @@ static u16	get_max_port_number(u16 ports[MAX_PORT_COUNT])
 	return max_port_val;
 }
 
-static	void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE], u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
+static void	delete_port_map_rev(
+t_port *port_map_rev[MAX_NB_SCAN_TYPE], u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
 {
 	for (u8 i = 0; i < index; i++)
 	{
@@ -25,7 +26,8 @@ static	void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE], u8 scan_
 	}
 }
 
-static	void delete_port_map(u16 *port_map[MAX_NB_SCAN_TYPE], u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
+static void	delete_port_map(
+	u16 *port_map[MAX_NB_SCAN_TYPE], u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
 {
 	for (u8 i = 0; i < index; i++)
 	{
@@ -42,6 +44,7 @@ bool	init_portlist(
 {
 	// If not scan specified run all of them
 	// if (!HAS(args->flags, F_SCAN_TYPE))
+
 
 	for (u8 i = 0; i < nb_scan_types; i++)
 	{
@@ -62,12 +65,14 @@ bool	init_portlist(
 
 		for (u16 j = 0; j < port_count; j++)
 		{
-			port_list->port_map[i][ports[j]] = j;
+			port_list->port_map[idx][ports[j]] = j;
 		}
 
-		// memcpy(
-		// 	port_list[->port_map_rev, ports, port_count * sizeof(u16)
-		// );
+		for (u16 j = 0; j < port_count; j++)
+		{
+			port_list->port_map_rev[idx]->port_number = ports[j];
+			port_list->port_map_rev[idx]->port_state = UNKNOWN;
+		}
 	}
 	return true;
 }

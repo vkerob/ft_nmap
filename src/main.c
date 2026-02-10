@@ -60,7 +60,26 @@ bool nmap_main(t_ctx *ctx)
 						&shared_data.request_list_head,
 						&shared_data.request_list_tail);
 
-	shared_data.nb_probe_requests = ctx->args.port_count * ctx->target_count;
+	//TODO: remove hard coded values after merge
+	ctx->ifacecount = 1;
+	shared_data.pending_request_head = calloc(ctx->ifacecount, sizeof(t_probe_request *));
+	if (shared_data.pending_request_head == NULL)
+	{
+		return true;
+	}
+	shared_data.pending_request_tail = calloc(ctx->ifacecount, sizeof(t_probe_request *));
+	if (shared_data.pending_request_tail == NULL)
+	{
+		return true;
+	}
+
+	for (size_t i = 0; i < ctx->ifacecount; i++)
+	{
+		pthread_mutex_init(&shared_data.pending_request_list_mut[i], NULL);
+	}
+
+
+	shared_data.nb_probe_requests = ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 	// launch thread to handle captured packets
 
 	pthread_create(&pcap_thread, NULL, receive_routine, &shared_data);
@@ -93,14 +112,15 @@ int main(int argc, char **argv)
 	t_port_list	port_list = { 0 };
 	t_ctx				ctx = { 0 };
 
-	ctx.target_count = target_count;
-	ctx.args = args;
 
 	if (parse_args(argc, argv, &args, &targets_input, &target_count))
 	{
 		free_tabp((void ***)&targets_input, target_count);
 		return EXIT_FAILURE;
 	}
+
+	ctx.target_count = target_count;
+	ctx.args = args;
 
 	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{
@@ -125,9 +145,9 @@ int main(int argc, char **argv)
 
 	print_debug_parsing_args(ctx);
 
-
 	if (init_portlist(
 		&port_list,
+	
 		args.port_count,
 		args.ports,
 		args.nb_scan_types,

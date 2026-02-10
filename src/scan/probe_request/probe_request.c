@@ -4,13 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool pop_probe_request(t_probe_request **head, t_probe_request *tail, t_probe_request **popped_request){
-	*popped_request = tail;
+bool pop_probe_request(
+	t_probe_request **head,
+	t_probe_request **tail,
+	t_probe_request **popped_request){
+	*popped_request = *tail;
 
 	(void)popped_request;
-	if (tail->prev)
+	if ((*tail)->prev)
 	{
-		tail->prev->next = NULL;
+		*tail = (*tail)->prev;
 	}
 	else{
 		*head = NULL;
@@ -19,9 +22,12 @@ bool pop_probe_request(t_probe_request **head, t_probe_request *tail, t_probe_re
 }
 
 bool append_probe_request(
-						t_probe_request **head, t_probe_request **tail,
-						t_target target, u16 port,
-						enum e_scan_type scan_type, u32 id)
+						t_probe_request **head,
+						t_probe_request **tail,
+						t_target target,
+						u16 port,
+						enum e_scan_type scan_type,
+						u32 id)
 {
 	t_probe_request *new_request = malloc(sizeof(t_probe_request));
 	if (!new_request)
@@ -31,7 +37,7 @@ bool append_probe_request(
 
 	new_request->type = scan_type;
 	new_request->id = id;
-	new_request->timestamp = 0;
+	// new_request->timestamp = 0;
 	new_request->retries = 0;
 	new_request->status = 0;
 
@@ -77,6 +83,8 @@ bool initial_probe_requests(
 			}
 		}
 	}
+
+
 	return false;
 }
 

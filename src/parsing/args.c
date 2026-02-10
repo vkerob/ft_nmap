@@ -277,30 +277,34 @@ static bool	parse_scan_type(char *scan_str, u8 *out)
 	return false;
 }
 
-bool	parse_scan_types(char *scan_str, u8 (*out)[6])
+bool	parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
 {
 	char	*saveptr = NULL;
 	char	*token = NULL;
-	u8		i = 0;
 	u8		scan_type = 0;
 
 	do {
 		if (saveptr == NULL){
 			token = strtok_r(scan_str, ",", &saveptr);
+			if (token == NULL && saveptr != NULL)
+			{
+				token = saveptr;
+			}
 		}
 		else{
 			token = strtok_r(saveptr, ",", &saveptr);
 		}
 		if (parse_scan_type(token, &scan_type))
 		{
-			(*out)[i] = scan_type;
+			(*out)[*nb_scan_types] = scan_type;
 		}
 		else {
-			return false;
+			return true;
 		}
+		(*nb_scan_types)++;
 	}
 	while (saveptr != NULL);
-	return true;
+	return false;
 }
 
 static bool parse_speed_strict(const char *str, u8 *out)
@@ -345,7 +349,7 @@ static bool parse_speed_strict(const char *str, u8 *out)
 	return false;
 }
 
-bool parse_args(int argc, char **argv, t_args *args, char ***targets_input, size_t *target_count)
+bool	parse_args(int argc, char **argv, t_args *args, char ***targets_input, size_t *target_count)
 {
 	// short options (: argument required)
 	const char *optstr = "";
@@ -355,7 +359,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input, size
 		{ "ip", required_argument, 0, IP_MODE },
 		{ "file", required_argument, 0, FILE_MODE },
 		{ "ports", required_argument, 0, PORTS },
-		{ "scan", optional_argument, 0, SCAN },
+		{ "scan", required_argument, 0, SCAN },
 		{ "speedup", required_argument, 0, SPEED },
 		{ 0, 0, 0, 0 } // required terminator
 	};
@@ -391,7 +395,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input, size
 
 			case SCAN:
 				SET(args->flags, F_SCAN_TYPE);
-				if (parse_scan_types(optarg, &args->scan_types))
+				if (parse_scan_types(optarg, &args->scan_types, &args->nb_scan_types))
 					return true;
 				break;
 
@@ -418,9 +422,19 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input, size
 	{
 		// fill 1..1024
 		args->port_count = MAX_PORT_COUNT;
-		for (size_t i = 0; i < args->port_count; i++)
-			args->ports[i] = (u16)(i + 1);
+		for (u16 i = 0; i < args->port_count; i++)
+		{
+			args->ports[i] = i + 1;
+		}
 	}
 
+	if (!HAS(args->flags, F_SCAN_TYPE))
+	{
+		args->nb_scan_types = MAX_NB_SCAN_TYPE;
+		for (u8 i = 0; i < args->nb_scan_types; i++)
+		{
+			args->scan_types[i] = i;
+		}
+	}
 	return false;
 }

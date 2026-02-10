@@ -24,6 +24,8 @@ void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
 	if (tcp_hdr->th_flags & TH_RST) printf("RST ");
 	if (tcp_hdr->th_flags & TH_SYN) printf("SYN ");
 	if (tcp_hdr->th_flags & TH_FIN) printf("FIN ");
+	if (tcp_hdr->th_flags & 0x00) printf("None");
+	
 	printf("\n" ANSI_COLOR_RESET);
 
 	printf(ANSI_COLOR_GREEN "  • Window Size: %d\n" ANSI_COLOR_RESET,

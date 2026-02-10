@@ -12,11 +12,13 @@ void	build_pseudo_ip_header(
 (void)src_addr;
 	if (inet_pton(AF_INET, "192.168.64.1", &ip_pseudo_hdr->ip_src) == 0) {
 		fprintf(stderr, "Invalid source address\n");
+		//TODO: not exit
 		exit(EXIT_FAILURE);
 	}
 
 	if (inet_pton(AF_INET, dst_addr, &ip_pseudo_hdr->ip_dst) == 0) {
 		fprintf(stderr, "Invalid source address\n");
+		//TODO: not exit
 		exit(EXIT_FAILURE);
 	}
 
