@@ -6,6 +6,8 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
 
 static void	update_socket_port(struct sockaddr_in *socket_addr, u16 port)
 {
@@ -23,24 +25,20 @@ void update_socket(struct sockaddr_in *socket, t_target target, u16 port)
 	update_socket_addr(socket, target.addr.sin_addr);
 }
 
-int init_socket(t_socket *sock)
+bool	init_socket(t_socket *sock, u8 proto)
 {
-	struct protoent *proto;
-
-	proto = getprotobyname("tcp");
 	if (!proto)
 	{
 		fprintf(stderr, "Invalid protocol name");
-		return EXIT_FAILURE;
+		return true;
 	}
-
-	sock->sfd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+	sock->sfd = socket(PF_INET, SOCK_RAW, proto);
 	if (sock->sfd < 0)
 	{
-		perror("socket: ");
-		return EXIT_FAILURE;
+		fprintf(stderr, "ft_nmap: failed to create raw socket: %s\n", strerror(errno));
+		return true;
 	}
-	return EXIT_SUCCESS;
+	return false;
 }
 
 void close_socket(t_socket socket)

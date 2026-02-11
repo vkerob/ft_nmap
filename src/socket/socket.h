@@ -1,6 +1,8 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include "scan.h"
+
 #include <netinet/in.h>
 
 typedef struct	s_socket
@@ -10,7 +12,8 @@ typedef struct	s_socket
 	struct sockaddr_in	sin;
 }	t_socket;
 
-int		init_socket(t_socket *sock);
+bool	init_socket(t_socket *sock, u8 proto);
+
 void	close_socket(t_socket socket);
 
 #endif

@@ -73,7 +73,6 @@ typedef struct	s_ctx
 	char					source_ip[INET_ADDRSTRLEN];
 	char					(*iface_names)[IFNAMSIZ];
 	size_t				iface_count;
-	size_t				ifacecount;
 	t_args				args;
 }	t_ctx;
 
@@ -89,4 +88,5 @@ void	scan_type_to_str(enum e_scan_type scan_type);
 
 bool	get_iface_info(char (**dev_names)[IFNAMSIZ], size_t *dev_count,
 					t_target *targets, size_t target_count);
+
 #endif

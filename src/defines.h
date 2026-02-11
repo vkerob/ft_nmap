@@ -24,6 +24,7 @@
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64
 #define MAX_SCAN_RETRIES 3
+#define TIMEOUT_DELAY_SECONDS 8
 
 #define ANSI_COLOR_GREEN "\x1b[32m"
 #define ANSI_COLOR_BLUE "\x1b[34m"

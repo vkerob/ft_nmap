@@ -143,9 +143,6 @@ void print_debug_parsing_args(t_ctx ctx)
 	{
 		printf(ANSI_COLOR_BLUE "  • %u\n" ANSI_COLOR_RESET, ctx.args.ports[i]);
 	}
-
-	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
-	printf("--------------------------------------------\n");
 	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nScans to be performed:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
@@ -154,6 +151,8 @@ void print_debug_parsing_args(t_ctx ctx)
 	{
 		scan_type_to_str(ctx.args.scan_types[i]);
 	}
+	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
+	printf("--------------------------------------------\n");
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
 		   ctx.args.speed);
 

@@ -61,42 +61,60 @@ static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
 		) < 0)
 	{
 		perror("sendto: ");
-		return false;
+		return true;
 	}
 	time(sent_timestamp);
-	return true;
+	return false;
 }
 
 void	*send_routine(void *arg)
 {
 	t_shared_data		*shared_data = (t_shared_data *)arg;
 	u8							packet[4096];
-	t_socket				socket;
+	t_socket				tcp_socket;
+	t_socket				udp_socket;
+	t_socket				used_socket;
 	t_probe_request	*request = NULL;
+	time_t					sent_timestamp;
 
-	init_socket(&socket);
+	if (init_socket(&tcp_socket, IPPROTO_TCP) || init_socket(&udp_socket, IPPROTO_UDP))
+	{
+		return NULL;
+	}
 	memset(packet, 0, sizeof(packet));
-	socket.sin.sin_family = AF_INET;
+	tcp_socket.sin.sin_family = AF_INET;
+	udp_socket.sin.sin_family = AF_INET;
 	while (shared_data->nb_probe_requests > 0)
 	{
-
 	// t_datalink_hdr	*hdr = NULL;
-		pthread_mutex_lock(&shared_data->mutex);
-		if (shared_data->request_list_tail){
+		pthread_mutex_lock(&shared_data->request_list_mut);
+		if (shared_data->request_list_tail)
+		{
 			pop_probe_request(
 				&shared_data->request_list_head,
 				&shared_data->request_list_tail,
 				&request);
 		}
-		else{
+		else
+		{
+			pthread_mutex_unlock(&shared_data->request_list_mut);
 			return NULL;
 		}
 		shared_data->nb_probe_requests--;
-		pthread_mutex_unlock(&shared_data->mutex);
-		inet_aton(request->target.ip, &socket.sin.sin_addr);
+		pthread_mutex_unlock(&shared_data->request_list_mut);
+		if (request->type == SCAN_UDP)
+		{
+			used_socket = udp_socket;
+		}
+		else
+		{
+			used_socket = tcp_socket;
+		}
+
+		inet_aton(request->target.ip, &used_socket.sin.sin_addr);
 		build_scan_packets(request, packet, shared_data);
 
-		socket.sin.sin_port = htons(request->target.port);
+		used_socket.sin.sin_port = htons(request->target.port);
 
 		if (request->type == SCAN_UDP)
 		{
@@ -109,11 +127,9 @@ void	*send_routine(void *arg)
 			print_debug_tcp_header(tcp_hdr);
 		}
 
-		// Use to know when we timeout
-		time_t sent_timestamp;
-
-		if (!send_packet(&socket, packet, &sent_timestamp)){
-			//TODO: handle this case
+		if (send_packet(&used_socket, packet, &sent_timestamp))
+		{
+			fprintf(stderr, "ft_nmap: failed to send packet to %s\n", request->target.ip);
 			return NULL;
 		}
 

@@ -18,7 +18,6 @@ typedef struct	s_probe_request
 	t_target_probe					target;
 	enum e_scan_type				type;
 	u32											id;
-	// time_t									timestamp;
 	u8											retries;
 	u8											status;
 	struct s_probe_request	*next;
