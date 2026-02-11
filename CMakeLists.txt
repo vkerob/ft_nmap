@@ -9,6 +9,14 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 include(CTest)
 
+option(FT_NMAP_SANITIZERS "Enable ASAN/UBSAN in Debug builds" ON)
+set(FT_NMAP_SANITIZER_COMPILE_FLAGS)
+set(FT_NMAP_SANITIZER_LINK_FLAGS)
+if(FT_NMAP_SANITIZERS)
+        list(APPEND FT_NMAP_SANITIZER_COMPILE_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
+        list(APPEND FT_NMAP_SANITIZER_LINK_FLAGS -fsanitize=address,undefined)
+endif()
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.c)
 file(GLOB_RECURSE TESTS CONFIGURE_DEPENDS "src/**/*.c" "tests/*.c")
 list(REMOVE_ITEM TESTS ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c)
@@ -34,10 +42,20 @@ target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS})
 
 target_compile_options(ft_nmap PRIVATE
         -Wall -Wextra -Werror -g
+        ${FT_NMAP_SANITIZER_COMPILE_FLAGS}
 )
 
 target_compile_options(tests_ft_nmap PRIVATE
-        -Wall -Wextra -Werror
+        -Wall -Wextra -Werror -g
+        ${FT_NMAP_SANITIZER_COMPILE_FLAGS}
+)
+
+target_link_options(ft_nmap PRIVATE
+        ${FT_NMAP_SANITIZER_LINK_FLAGS}
+)
+
+target_link_options(tests_ft_nmap PRIVATE
+        ${FT_NMAP_SANITIZER_LINK_FLAGS}
 )
 
 find_path(PCAP_ROOT_DIR

@@ -79,7 +79,7 @@ void handle_ip_protocol(t_ip *ip_hdr, t_datalink_hdr *hdr)
 		hdr->tcp_hdr = *(struct tcphdr *)protocol_hdr;
 		print_debug_tcp_header(&hdr->tcp_hdr);
 		/* PROTO_TCP is our enum with the right integer value because
-				we use it as an index after */
+						we use it as an index after */
 		// handle_tcp_protocol(target, &hdr->tcp_hdr);
 		break;
 	}
@@ -171,6 +171,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	t_probe_request_sent *tmp = *shared_data->pending_request_head;
 	while (tmp)
 	{
+
 		if (strcmp(tmp->request->target.ip, target.ip) == 0)
 		{
 			// TODO:

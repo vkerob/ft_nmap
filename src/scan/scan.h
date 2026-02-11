@@ -1,42 +1,43 @@
 #ifndef SCAN_H
 #define SCAN_H
 
+#include "args.h"
 #include "defines.h"
 #include "typesdef.h"
-#include "args.h"
 
-#include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
-#include <net/if.h>
+#include <sys/socket.h>
 
 typedef struct s_port
 {
-	u16	port_number;
+	u16 port_number;
 	u8	port_state;
-}	t_port;
+} t_port;
 
 typedef struct t_port_list
 {
-	u16			*port_map[MAX_NB_SCAN_TYPE];
-	t_port	*port_map_rev[MAX_NB_SCAN_TYPE];
-}	t_port_list;
+	u16	   *port_map[MAX_NB_SCAN_TYPE];
+	t_port *port_map_rev[MAX_NB_SCAN_TYPE];
+} t_port_list;
 
 typedef struct s_iface_info
 {
-	char							name[IFNAMSIZ];
-	struct in_addr		ip_addr; // ip of the interface, used as source ip in packets
-	struct ether_addr	mac_addr; // not defined yet, mac of the interface.
-}	t_iface_info;
+	char		   name[IFNAMSIZ];
+	struct in_addr ip_addr; // ip of the interface, used as source ip in packets
+	struct ether_addr mac_addr;	   // not defined yet, mac of the interface.
+	u8				  iface_index; // index of the interface
+} t_iface_info;
 
 typedef struct s_target
 {
-	char								*input;
-	char								ip[INET_ADDRSTRLEN];
-	struct sockaddr_in	addr;
-	t_iface_info				iface_info;
-}	t_target;
+	char			  *input;
+	char			   ip[INET_ADDRSTRLEN];
+	struct sockaddr_in addr;
+	t_iface_info	   iface_info;
+} t_target;
 
 typedef enum e_scan_type
 {
@@ -47,16 +48,17 @@ typedef enum e_scan_type
 	SCAN_XMAS,
 	SCAN_UDP,
 	SCAN_UNKNOWN
-}	t_scan_type;
+} t_scan_type;
 
-typedef struct	s_port_range_scan_type
+typedef struct s_port_range_scan_type
 {
-	t_scan_type	scan_type;
-	u16					min_port_range;
-	u16					max_port_range;
-}	t_port_range_scan_type;
+	t_scan_type scan_type;
+	u16			min_port_range;
+	u16			max_port_range;
+} t_port_range_scan_type;
 
-typedef enum	e_port_state {
+typedef enum e_port_state
+{
 	OPEN = 1,
 	CLOSE,
 	FILTERED,
@@ -64,29 +66,24 @@ typedef enum	e_port_state {
 	OPEN_FILTERED,
 	CLOSE_FILTERED,
 	UNKNOWN,
-}	t_port_state;
+} t_port_state;
 
-typedef struct	s_ctx
+typedef struct s_ctx
 {
-	t_target			*targets;
-	size_t				target_count;
-	char					source_ip[INET_ADDRSTRLEN];
-	char					(*iface_names)[IFNAMSIZ];
-	size_t				iface_count;
-	t_args				args;
-}	t_ctx;
+	t_target *targets;
+	size_t	  target_count;
+	char (*iface_names)[IFNAMSIZ];
+	size_t iface_count;
+	t_args args;
+} t_ctx;
 
+bool init_portlist(t_port_list *port_list, u16 port_count,
+				   u16 ports[MAX_PORT_COUNT], u8 nb_scan_types,
+				   u8 scan_types[MAX_NB_SCAN_TYPE]);
 
-bool	init_portlist(
-	t_port_list	*port_list,
-	u16					port_count,
-	u16					ports[MAX_PORT_COUNT],
-	u8					nb_scan_types,
-	u8					scan_types[MAX_NB_SCAN_TYPE]);
+void scan_type_to_str(enum e_scan_type scan_type);
 
-void	scan_type_to_str(enum e_scan_type scan_type);
-
-bool	get_iface_info(char (**dev_names)[IFNAMSIZ], size_t *dev_count,
+bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
 					t_target *targets, size_t target_count);
 
 #endif

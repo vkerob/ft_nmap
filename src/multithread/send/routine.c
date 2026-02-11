@@ -1,33 +1,32 @@
-#include "send.h"
-#include "protocols.h"
-#include "shared.h"
-#include "typesdef.h"
-#include "socket.h"
 #include "ip.h"
+#include "protocols.h"
+#include "send.h"
+#include "shared.h"
+#include "socket.h"
+#include "typesdef.h"
 #include "udp.h"
 
 #include <pthread.h>
-#include <stdlib.h>
 #include <string.h>
 
-
-static void build_scan_packets(t_probe_request *request, u_char *packet,
-							   t_shared_data *shared_data)
+static void build_scan_packets(t_probe_request *request, u_char *packet)
 {
 	// struct ether_header	eth_hdr;
-	t_ip_pseudo_hdr		ip_pseudo_hdr;
+	t_ip_pseudo_hdr ip_pseudo_hdr;
 	// struct ip			ip_hdr;
-	t_datalink_hdr	hdr = { 0 };
+	t_datalink_hdr hdr = { 0 };
 
 	memset(&ip_pseudo_hdr, 0, sizeof(ip_pseudo_hdr));
 
 	// if (shared_data->gateway_mac[0] != 0)
-		// build_ethernet_header(&eth_hdr);
+	// build_ethernet_header(&eth_hdr);
 
-	// build_ip_header(&ip_hdr, request, shared_data->source_ip, &shared_data->id);
+	// build_ip_header(&ip_hdr, request, shared_data->source_ip,
+	// &shared_data->id);
 
 	// Use to compute the tcp checksum
-	build_pseudo_ip_header(&ip_pseudo_hdr, request->target.ip, shared_data->source_ip);
+	const char *src_ip = inet_ntoa(request->iface_info.ip_addr);
+	build_pseudo_ip_header(&ip_pseudo_hdr, request->target.ip, src_ip);
 
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
@@ -42,7 +41,7 @@ static void build_scan_packets(t_probe_request *request, u_char *packet,
 		// build UDP header
 		build_udp_header(&hdr.udp_hdr, request->target.port);
 	}
-	//TEMPORARY
+	// TEMPORARY
 
 	memcpy(packet, &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
 	(void)packet;
@@ -51,14 +50,9 @@ static void build_scan_packets(t_probe_request *request, u_char *packet,
 
 static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
 {
-	if (sendto(
-			socket->sfd,
-			packet,
-			sizeof(struct tcphdr),
-			0,
-			(struct sockaddr *)&socket->sin,
-			sizeof(struct sockaddr)
-		) < 0)
+	if (sendto(socket->sfd, packet, sizeof(struct tcphdr), 0,
+			   (struct sockaddr *)&socket->sin, sizeof(struct sockaddr))
+		< 0)
 	{
 		perror("sendto: ");
 		return true;
@@ -67,17 +61,18 @@ static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
 	return false;
 }
 
-void	*send_routine(void *arg)
+void *send_routine(void *arg)
 {
-	t_shared_data		*shared_data = (t_shared_data *)arg;
-	u8							packet[4096];
-	t_socket				tcp_socket;
-	t_socket				udp_socket;
-	t_socket				used_socket;
-	t_probe_request	*request = NULL;
-	time_t					sent_timestamp;
+	t_shared_data	*shared_data = (t_shared_data *)arg;
+	u8				 packet[4096];
+	t_socket		 tcp_socket;
+	t_socket		 udp_socket;
+	t_socket		 used_socket;
+	t_probe_request *request = NULL;
+	time_t			 sent_timestamp;
 
-	if (init_socket(&tcp_socket, IPPROTO_TCP) || init_socket(&udp_socket, IPPROTO_UDP))
+	if (init_socket(&tcp_socket, IPPROTO_TCP)
+		|| init_socket(&udp_socket, IPPROTO_UDP))
 	{
 		return NULL;
 	}
@@ -86,14 +81,12 @@ void	*send_routine(void *arg)
 	udp_socket.sin.sin_family = AF_INET;
 	while (shared_data->nb_probe_requests > 0)
 	{
-	// t_datalink_hdr	*hdr = NULL;
+		// t_datalink_hdr	*hdr = NULL;
 		pthread_mutex_lock(&shared_data->request_list_mut);
 		if (shared_data->request_list_tail)
 		{
-			pop_probe_request(
-				&shared_data->request_list_head,
-				&shared_data->request_list_tail,
-				&request);
+			pop_probe_request(&shared_data->request_list_head,
+							  &shared_data->request_list_tail, &request);
 		}
 		else
 		{
@@ -112,7 +105,7 @@ void	*send_routine(void *arg)
 		}
 
 		inet_aton(request->target.ip, &used_socket.sin.sin_addr);
-		build_scan_packets(request, packet, shared_data);
+		build_scan_packets(request, packet);
 
 		used_socket.sin.sin_port = htons(request->target.port);
 
@@ -129,17 +122,18 @@ void	*send_routine(void *arg)
 
 		if (send_packet(&used_socket, packet, &sent_timestamp))
 		{
-			fprintf(stderr, "ft_nmap: failed to send packet to %s\n", request->target.ip);
+			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
+					request->target.ip);
 			return NULL;
 		}
 
-		//TODO: remove hardcoded value after merge
+		// TODO: remove hardcoded value after merge
 		int index_interface = 0;
-		pthread_mutex_lock(&shared_data->pending_request_list_mut[index_interface]);
+		pthread_mutex_lock(
+			&shared_data->pending_request_list_mut[index_interface]);
 		update_pending_probe_request_list(
 			&shared_data->pending_request_head[index_interface],
-			&shared_data->pending_request_tail[index_interface],
-			request,
+			&shared_data->pending_request_tail[index_interface], request,
 			sent_timestamp);
 		pthread_mutex_unlock(
 			&shared_data->pending_request_list_mut[index_interface]);
