@@ -1,12 +1,12 @@
 #include "args.h"
+#include "commons.h"
+#include "debug.h"
 #include "my_signal.h"
-#include "scan.h"
 #include "parsing.h"
 #include "probe_request.h"
-#include "shared.h"
-#include "commons.h"
+#include "scan.h"
 #include "setup.h"
-#include "debug.h"
+#include "shared.h"
 
 #include <pcap/pcap.h>
 #include <pthread.h>
@@ -16,9 +16,9 @@ sig_atomic_t volatile g_stop = 0;
 
 bool nmap_main(t_ctx *ctx, pcap_t **handles)
 {
-	t_shared_data	shared_data;
-	pthread_t			*pcap_threads = NULL;
-	pthread_t			*send_threads = NULL;
+	t_shared_data shared_data;
+	pthread_t	 *pcap_threads = NULL;
+	pthread_t	 *send_threads = NULL;
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
@@ -32,30 +32,23 @@ bool nmap_main(t_ctx *ctx, pcap_t **handles)
 	}
 
 	initial_probe_requests(
-						ctx->targets,
-						ctx->target_count,
-						ctx->args.ports,
-						ctx->args.port_count,
-						ctx->args.scan_types,
-						ctx->args.nb_scan_types,
-						&shared_data.request_list_head,
-						&shared_data.request_list_tail);
+		ctx->targets, ctx->target_count, ctx->args.ports, ctx->args.port_count,
+		ctx->args.scan_types, ctx->args.nb_scan_types,
+		&shared_data.request_list_head, &shared_data.request_list_tail);
 
-	shared_data.nb_probe_requests = ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
+	shared_data.nb_probe_requests
+		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
-
-	if (initialize_and_launch_threads(
-			ctx->iface_count,
-			ctx->args.speed,
-			&pcap_threads,
-			&send_threads,
-			&shared_data) == false)
+	if (initialize_and_launch_threads(ctx->iface_count, ctx->args.speed,
+									  &pcap_threads, &send_threads,
+									  &shared_data)
+		== false)
 	{
 		return true;
 	}
-	
 
-	join_and_free_threads(pcap_threads, send_threads, ctx->args.speed, ctx->iface_count);
+	join_and_free_threads(pcap_threads, send_threads, ctx->args.speed,
+						  ctx->iface_count);
 
 	deinitialize_shared_data(&shared_data, handles, ctx);
 
@@ -70,12 +63,11 @@ int main(int argc, char **argv)
 	// 	return 1;
 	// }
 
-	char				**targets_input = NULL;
-	size_t			target_count = 0;
-	t_args			args = { 0 };
-	t_port_list	port_list = { 0 };
-	t_ctx				ctx = { 0 };
-
+	char	  **targets_input = NULL;
+	size_t		target_count = 0;
+	t_args		args = { 0 };
+	t_port_list port_list = { 0 };
+	t_ctx		ctx = { 0 };
 
 	if (parse_args(argc, argv, &args, &targets_input, &target_count))
 	{
@@ -109,7 +101,7 @@ int main(int argc, char **argv)
 	print_debug_parsing_args(ctx);
 	print_debug_iface_info(ctx.iface_names, ctx.iface_count);
 
-	pcap_t	**handles = malloc(sizeof(pcap_t *) * ctx.iface_count);
+	pcap_t **handles = malloc(sizeof(pcap_t *) * ctx.iface_count);
 
 	if (handles == NULL)
 	{
@@ -121,12 +113,9 @@ int main(int argc, char **argv)
 		goto error;
 	}
 
-	if (init_portlist(
-		&port_list,
-		args.port_count,
-		args.ports,
-		args.nb_scan_types,
-		args.scan_types) == false)
+	if (init_portlist(&port_list, args.port_count, args.ports,
+					  args.nb_scan_types, args.scan_types)
+		== false)
 	{
 		goto error;
 	}
@@ -142,4 +131,3 @@ error:
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_FAILURE;
 }
-

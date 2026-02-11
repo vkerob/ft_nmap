@@ -3,6 +3,6 @@
 
 #include <stddef.h>
 
-void	free_tabp(void ***ptab, size_t count);
+void free_tabp(void ***ptab, size_t count);
 
 #endif

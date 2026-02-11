@@ -1,27 +1,24 @@
 #ifndef CAPTURE_H
 #define CAPTURE_H
 
-#include "typesdef.h"
 #include "defines.h"
 #include "shared.h"
+#include "typesdef.h"
 
 #include <pcap/pcap.h>
 
-typedef struct	s_pcap_user_data
+typedef struct s_pcap_user_data
 {
-	pcap_t				*handle;
-	t_shared_data	*shared_data;
-}	t_pcap_user_data;
+	pcap_t		  *handle;
+	t_shared_data *shared_data;
+} t_pcap_user_data;
 
-
-bool	pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
+bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
 				char *errbuf, t_target first_target_ip);
 
-void	handle_packet(u_char *args, const struct pcap_pkthdr *header,
-						const u_char *packet);
+void handle_packet(u_char *args, const struct pcap_pkthdr *header,
+				   const u_char *packet);
 
-void	*receive_routine(void *arg);
-
-
+void *receive_routine(void *arg);
 
 #endif

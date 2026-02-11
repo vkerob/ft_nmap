@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.12)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(ft_nmap
@@ -50,7 +50,7 @@ set (HINT_DIR ${PCAP_ROOT_DIR}/lib)
 
 #set(CMAKE_FIND_DEBUG_MODE TRUE)
 
-find_library(LIBPCAP NAMES pcap HINTS ${HINTDIR} NO_CACHE REQUIRED NO_CMAKE_FIND_ROOT_PATH)
+find_library(LIBPCAP NAMES pcap HINTS ${HINT_DIR} REQUIRED NO_CMAKE_FIND_ROOT_PATH)
 
 #set(CMAKE_FIND_DEBUG_MODE FALSE)
 
