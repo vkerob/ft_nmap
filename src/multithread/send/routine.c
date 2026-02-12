@@ -18,11 +18,11 @@ static void build_scan_packets(t_probe_request *request, u_char *packet)
 
 	memset(&ip_pseudo_hdr, 0, sizeof(ip_pseudo_hdr));
 
-	// if (shared_data->gateway_mac[0] != 0)
+	// if (shared_data_probe->gateway_mac[0] != 0)
 	// build_ethernet_header(&eth_hdr);
 
-	// build_ip_header(&ip_hdr, request, shared_data->source_ip,
-	// &shared_data->id);
+	// build_ip_header(&ip_hdr, request, shared_data_probe->source_ip,
+	// &shared_data_probe->id);
 
 	// Use to compute the tcp checksum
 	const char *src_ip = inet_ntoa(request->iface_info.ip_addr);
@@ -63,13 +63,13 @@ static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
 
 void *send_routine(void *arg)
 {
-	t_shared_data	*shared_data = (t_shared_data *)arg;
-	u8				 packet[4096];
-	t_socket		 tcp_socket;
-	t_socket		 udp_socket;
-	t_socket		 used_socket;
-	t_probe_request *request = NULL;
-	time_t			 sent_timestamp;
+	t_shared_data_probe *shared_data_probe = (t_shared_data_probe *)arg;
+	u8					 packet[4096];
+	t_socket			 tcp_socket;
+	t_socket			 udp_socket;
+	t_socket			 used_socket;
+	t_probe_request		*request = NULL;
+	time_t				 sent_timestamp;
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -80,24 +80,24 @@ void *send_routine(void *arg)
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
 
-	while (shared_data->nb_probe_requests > 0
-		   || shared_data->nb_probe_requests_done
-				  != shared_data->nb_probe_requests_initial)
+	while (shared_data_probe->nb_probe_requests > 0
+		   || shared_data_probe->nb_probe_requests_done
+				  != shared_data_probe->nb_probe_requests_initial)
 	{
 		// t_datalink_hdr	*hdr = NULL;
-		pthread_mutex_lock(&shared_data->request_list_mut);
-		if (shared_data->request_list_tail)
+		pthread_mutex_lock(&shared_data_probe->request_list_mut);
+		if (shared_data_probe->request_list_tail)
 		{
-			pop_probe_request(&shared_data->request_list_head,
-							  &shared_data->request_list_tail, &request);
+			pop_probe_request(&shared_data_probe->request_list_head,
+							  &shared_data_probe->request_list_tail, &request);
 		}
 		else
 		{
-			pthread_mutex_unlock(&shared_data->request_list_mut);
+			pthread_mutex_unlock(&shared_data_probe->request_list_mut);
 			return NULL;
 		}
-		shared_data->nb_probe_requests--;
-		pthread_mutex_unlock(&shared_data->request_list_mut);
+		shared_data_probe->nb_probe_requests--;
+		pthread_mutex_unlock(&shared_data_probe->request_list_mut);
 		if (request->type == SCAN_UDP)
 		{
 			used_socket = udp_socket;
@@ -131,22 +131,22 @@ void *send_routine(void *arg)
 		}
 
 		pthread_mutex_lock(
-			&shared_data
+			&shared_data_probe
 				 ->pending_request_list_mut[request->iface_info.iface_index]);
 		if (update_pending_probe_request_list(
-				&(shared_data
+				&(shared_data_probe
 					  ->pending_request_head[request->iface_info.iface_index]),
-				&shared_data
+				&shared_data_probe
 					 ->pending_request_tail[request->iface_info.iface_index],
 				request, sent_timestamp))
 		{
 			pthread_mutex_unlock(
-				&shared_data->pending_request_list_mut[request->iface_info
-														   .iface_index]);
+				&shared_data_probe->pending_request_list_mut[request->iface_info
+																 .iface_index]);
 			return NULL;
 		}
 		pthread_mutex_unlock(
-			&shared_data
+			&shared_data_probe
 				 ->pending_request_list_mut[request->iface_info.iface_index]);
 	}
 	return NULL;

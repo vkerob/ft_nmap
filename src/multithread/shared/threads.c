@@ -9,9 +9,11 @@
 #include <string.h>
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t	**pcap_threads,
-								   pthread_t	**send_threads,
-								   t_shared_data *shared_data, char (*iface_names)[IFNAMSIZ])
+								   pthread_t				**pcap_threads,
+								   pthread_t				**send_threads,
+								   t_shared_data_probe		 *shared_data_probe,
+								   t_shared_data_pcap_thread *shared_data_pcap,
+								   t_iface_info				 *ifaces)
 {
 	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
 	if (*pcap_threads == NULL)
@@ -31,11 +33,17 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	{
 
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&shared_data->handle, iface_names[i], errbuf))
+		if (pcap_setup(&shared_data_pcap->handle, ifaces[i].name, errbuf))
 			return true;
+		shared_data_pcap->pending_request_list_mut
+			= shared_data_probe->pending_request_list_mut[i];
+		shared_data_pcap->pending_request_head
+			= shared_data_probe->pending_request_head[i];
+		shared_data_pcap->pending_request_tail
+			= shared_data_probe->pending_request_head[i];
 
 		int ret = pthread_create(&(*pcap_threads)[i], NULL, receive_routine,
-								 shared_data);
+								 shared_data_pcap);
 		if (ret != 0)
 		{
 			free(*send_threads);
@@ -49,8 +57,8 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	// launch thread to send packets
 	for (u8 i = 0; i < nb_send_thread; i++)
 	{
-		int ret
-			= pthread_create(&(*send_threads)[i], NULL, send_routine, shared_data);
+		int ret = pthread_create(&(*send_threads)[i], NULL, send_routine,
+								 shared_data_probe);
 		if (ret != 0)
 		{
 			fprintf(stderr, "ft_nmap: pthread_create failed: %s\n",

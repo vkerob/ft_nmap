@@ -8,7 +8,7 @@
 
 #include <pcap/pcap.h>
 
-typedef struct s_shared_data
+typedef struct s_shared_data_probe
 {
 	_Atomic u16 id;
 	_Atomic u16 base_seq;
@@ -29,7 +29,7 @@ typedef struct s_shared_data
 	t_probe_request **pending_request_head;
 	t_probe_request **pending_request_tail;
 	pthread_mutex_t	 *pending_request_list_mut;
-} t_shared_data;
+} t_shared_data_probe;
 
 typedef struct s_shared_data_pcap_thread
 {
@@ -50,18 +50,21 @@ typedef struct s_shared_data_pcap_thread
 
 } t_shared_data_pcap_thread;
 
-bool initialize_shared_data(t_shared_data			   *shared_data,
-							t_shared_data_pcap_thread **shared_data_pcap,
-							t_ctx					   *ctx);
+bool initialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
+								  t_ctx				  *ctx);
 
-void deinitialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
-							  t_ctx *ctx);
+void initialize_shared_data_pcap(t_shared_data_pcap_thread *shared_data_pcap,
+								 t_shared_data_probe	   *shared_data_probe);
+
+void deinitialize_shared_data(t_shared_data_probe *shared_data_probe,
+							  pcap_t **handles, t_ctx *ctx);
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t	**pcap_threads,
-								   pthread_t	**send_threads,
-								   t_shared_data *shared_data,
-								   char (*iface_names)[IFNAMSIZ]);
+								   pthread_t				**pcap_threads,
+								   pthread_t				**send_threads,
+								   t_shared_data_probe		 *shared_data_probe,
+								   t_shared_data_pcap_thread *shared_data_pcap,
+								   t_iface_info				 *ifaces);
 
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);

@@ -16,10 +16,10 @@ sig_atomic_t volatile g_stop = 0;
 
 bool nmap_main(t_ctx *ctx)
 {
-	t_shared_data			   shared_data;
-	t_shared_data_pcap_thread *shared_data_pcap = NULL;
-	pthread_t				  *pcap_threads = NULL;
-	pthread_t				  *send_threads = NULL;
+	t_shared_data_probe		  shared_data_probe;
+	t_shared_data_pcap_thread shared_data_pcap;
+	pthread_t				 *pcap_threads = NULL;
+	pthread_t				 *send_threads = NULL;
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
@@ -27,26 +27,27 @@ bool nmap_main(t_ctx *ctx)
 			   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
 	}
 
-	if (initialize_shared_data(&shared_data, &shared_data_pcap, ctx))
+	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
 		printf("failed to initialize shared data\n");
 		return true;
 	}
+	initialize_shared_data_pcap(&shared_data_pcap, &shared_data_probe);
 
-	if (initial_probe_requests(ctx, &shared_data.request_list_head,
-							   &shared_data.request_list_tail))
+	if (initial_probe_requests(ctx, &shared_data_probe.request_list_head,
+							   &shared_data_probe.request_list_tail))
 	{
 		printf("failed to initialize probe request\n");
 		return true;
 	}
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
-	shared_data.nb_probe_requests
+	shared_data_probe.nb_probe_requests
 		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
-	if (initialize_and_launch_threads(ctx->iface_count, ctx->args.speed,
-									  &pcap_threads, &send_threads,
-									  &shared_data, &shared_data_pcap))
+	if (initialize_and_launch_threads(
+			ctx->iface_count, ctx->args.speed, &pcap_threads, &send_threads,
+			&shared_data_probe, &shared_data_pcap, ctx->ifaces))
 	{
 		return true;
 	}
@@ -54,7 +55,7 @@ bool nmap_main(t_ctx *ctx)
 	join_and_free_threads(&pcap_threads, &send_threads, ctx->args.speed,
 						  ctx->iface_count);
 
-	// deinitialize_shared_data(&shared_data, handles, ctx);
+	// deinitialize_shared_data(&shared_data_probe, handles, ctx);
 
 	return false;
 }
@@ -110,7 +111,6 @@ int main(int argc, char **argv)
 		goto error;
 	}
 
-	free(ctx.iface_names);
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_SUCCESS;
 
