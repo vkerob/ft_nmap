@@ -41,7 +41,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 			return true;
 		}
 	}
-	printf("nb send threads %d\n", nb_send_thread);
+
 	// launch thread to send packets
 	for (u8 i = 0; i < nb_send_thread; i++)
 	{

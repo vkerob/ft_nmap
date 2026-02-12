@@ -1,6 +1,6 @@
 
-#include "tcp.h"
 #include "protocols.h"
+#include "tcp.h"
 
 // static void	handle_tcp_probe_response(
 // 	t_target *target, u8 flags, t_scan_type scan_type, t_port *port)
@@ -47,12 +47,15 @@
 
 // }
 
-void	handle_tcp_protocol(t_target *target, t_tcp_hdr *tcp_hdr)
+void handle_tcp_protocol(t_target *target, t_tcp_hdr *tcp_hdr)
 {
-	t_port			port;
-	t_scan_type	scan_type;
+	// t_port		port;
+	t_scan_type scan_type;
 
-	(void)port;(void)target;
+	(void)target;
+	(void)scan_type;
+	// (void)port;
+	(void)target;
 	scan_type = determine_tcp_scan_type(tcp_hdr->th_dport);
-	scan_type_to_str(scan_type);
+	// scan_type_to_str(scan_type);
 }

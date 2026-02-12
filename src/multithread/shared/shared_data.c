@@ -29,17 +29,20 @@ bool initialize_shared_data(t_shared_data			   *shared_data,
 	{
 		return true;
 	}
+
 	// shared_data->handles = ctx->handles;
 	atomic_init(&shared_data->id, 1);
 	atomic_init(&shared_data->base_seq, rand());
+	atomic_init(&shared_data->nb_probe_requests, 0);
+	atomic_init(&shared_data->nb_probe_requests_done, 0);
 
 	shared_data->request_list_head = NULL;
 	shared_data->request_list_tail = NULL;
-	shared_data->nb_probe_requests = 0;
 	shared_data->targets = ctx->targets;
 	shared_data->target_count = ctx->target_count;
 	shared_data->port_count = ctx->args.port_count;
 	shared_data->targets = ctx->targets;
+	shared_data->nb_probe_requests_initial = shared_data->nb_probe_requests;
 
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
@@ -61,6 +64,10 @@ bool initialize_shared_data(t_shared_data			   *shared_data,
 			= shared_data->pending_request_head[i];
 		(*shared_data_pcap)[i].pending_request_tail
 			= shared_data->pending_request_head[i];
+		(*shared_data_pcap)[i].nb_probe_requests
+			= shared_data->nb_probe_requests;
+		(*shared_data_pcap)[i].nb_probe_requests_initial
+			= shared_data->nb_probe_requests;
 	}
 
 	// shared_data->pending_request_tail

@@ -165,6 +165,8 @@ void print_debug_protocol(int protocol)
 
 void print_debug_probe_request(t_probe_request *request)
 {
+	char buf[16] = { 0 };
+
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_CYAN "New Probe Request:\n" ANSI_COLOR_RESET);
@@ -172,7 +174,9 @@ void print_debug_probe_request(t_probe_request *request)
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
 		   request->target.ip, request->target.port);
-	scan_type_to_str(request->type);
+	scan_type_to_str(request->type, buf);
+	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
+
 	printf(ANSI_COLOR_GREEN "  • ID: %u\n" ANSI_COLOR_RESET, request->id);
 	printf(ANSI_COLOR_GREEN "  • Retries: %u\n" ANSI_COLOR_RESET,
 		   request->retries);
@@ -282,10 +286,10 @@ void print_debug_parsing_args(t_ctx ctx)
 	printf(ANSI_COLOR_CYAN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 
-	for (u8 i = 0; i < ctx.args.nb_scan_types; i++)
-	{
-		scan_type_to_str(ctx.args.scan_types[i]);
-	}
+	// for (u8 i = 0; i < ctx.args.nb_scan_types; i++)
+	// {
+	// 	scan_type_to_str(ctx.args.scan_types[i]);
+	// }
 	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
 	printf("--------------------------------------------\n");
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,

@@ -79,8 +79,10 @@ void *send_routine(void *arg)
 	memset(packet, 0, sizeof(packet));
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
-	printf("nb probe request %u\n", shared_data->nb_probe_requests);
-	while (shared_data->nb_probe_requests > 0)
+
+	while (shared_data->nb_probe_requests > 0
+		   || shared_data->nb_probe_requests_done
+				  != shared_data->nb_probe_requests_initial)
 	{
 		// t_datalink_hdr	*hdr = NULL;
 		pthread_mutex_lock(&shared_data->request_list_mut);

@@ -14,6 +14,8 @@ typedef struct s_shared_data
 	_Atomic u16 id;
 	_Atomic u16 base_seq;
 	_Atomic u32 nb_probe_requests;
+	u32			nb_probe_requests_initial;
+	_Atomic u32 nb_probe_requests_done;
 	t_target   *targets;
 	size_t		target_count;
 	size_t		iface_count;
@@ -34,6 +36,9 @@ typedef struct s_shared_data_pcap_thread
 	pcap_t *handle;
 
 	t_iface_info iface_info;
+	_Atomic u32	 nb_probe_requests;
+	u32			 nb_probe_requests_initial;
+	_Atomic u32	 nb_probe_requests_done;
 
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;

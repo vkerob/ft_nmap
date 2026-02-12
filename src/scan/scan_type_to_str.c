@@ -1,19 +1,27 @@
 #include "scan.h"
 
-#include <stdio.h>
+#include <string.h>
 
-void	scan_type_to_str(enum e_scan_type scan_type)
+void scan_type_to_str(t_scan_type scan_type, char buf[16])
 {
-	if (scan_type == SCAN_SYN)
-		printf("SYN\n");
-	else if (scan_type == SCAN_NULL)
-		printf("NULL\n");
-	else if (scan_type == SCAN_ACK)
-		printf("ACK\n");
-	else if (scan_type == SCAN_FIN)
-		printf("XMAS\n");
-	else if (scan_type == SCAN_UDP)
-		printf("UDP\n");
-	else
-		printf("UNKNOWN\n");
+	switch (scan_type)
+	{
+	case SCAN_SYN:
+		strcpy(buf, "SYN");
+		break;
+	case SCAN_NULL:
+		strcpy(buf, "NULL");
+		break;
+	case SCAN_ACK:
+		strcpy(buf, "NULL");
+		break;
+	case SCAN_FIN:
+		strcpy(buf, "FIN");
+		break;
+	case SCAN_UDP:
+		strcpy(buf, "UDP");
+		break;
+	default:
+		break;
+	}
 }

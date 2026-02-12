@@ -85,7 +85,7 @@ bool init_portlist(t_port_list *port_list, u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 nb_scan_types,
 				   u8 scan_types[MAX_NB_SCAN_TYPE]);
 
-void scan_type_to_str(enum e_scan_type scan_type);
+void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 
 bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count);
