@@ -251,7 +251,7 @@ void *receive_routine(void *arg)
 {
 	t_shared_data *shared_data = (t_shared_data *)arg;
 	// TODO: change this
-	pcap_t *handle = shared_data->handles[0];
+	pcap_t *handle = shared_data->handle;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int	 ret;

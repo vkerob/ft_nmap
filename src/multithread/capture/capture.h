@@ -13,8 +13,7 @@ typedef struct s_pcap_user_data
 	t_shared_data *shared_data;
 } t_pcap_user_data;
 
-bool pcap_setup(pcap_t **handle, const char *dev_name, char *my_ip,
-				char *errbuf, t_target first_target_ip);
+bool pcap_setup(pcap_t **handle, const char *dev_name, char *errbuf);
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet);

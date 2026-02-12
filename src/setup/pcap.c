@@ -1,11 +1,11 @@
-#include "setup.h"
 #include "scan.h"
+#include "setup.h"
 
 #include <ifaddrs.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PCAP_SNAPLEN 1024
 #define PCAP_PROMISC 0
@@ -13,7 +13,7 @@
 #define PCAP_IMMEDIATE_MODE true
 
 static bool pcap_configure(pcap_t *handle, int snaplen, int promisc,
-					int buffer_size_bytes, bool immediate_mode)
+						   int buffer_size_bytes, bool immediate_mode)
 {
 	if (pcap_set_snaplen(handle, snaplen) != 0)
 	{
@@ -56,7 +56,7 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-static bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
+bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 {
 	*handle = pcap_create(iface_name, errbuf);
 	if (!*handle)
@@ -88,7 +88,8 @@ static bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 
 	char filter_expr[128];
 
-	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp");
+	snprintf(filter_expr, sizeof(filter_expr),
+			 "tcp or udp or icmp and src host 192.168.1.201");
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{
