@@ -1,11 +1,11 @@
-#include "setup.h"
 #include "scan.h"
+#include "setup.h"
 
 #include <ifaddrs.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PCAP_SNAPLEN 1024
 #define PCAP_PROMISC 0
@@ -13,7 +13,7 @@
 #define PCAP_IMMEDIATE_MODE true
 
 static bool pcap_configure(pcap_t *handle, int snaplen, int promisc,
-					int buffer_size_bytes, bool immediate_mode)
+						   int buffer_size_bytes, bool immediate_mode)
 {
 	if (pcap_set_snaplen(handle, snaplen) != 0)
 	{
@@ -101,12 +101,12 @@ static bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 }
 
 bool setup_pcap_handles(pcap_t **handles, size_t iface_count,
-						char (*iface_names)[IFNAMSIZ])
+						t_iface_info *finfos)
 {
 	for (size_t i = 0; i < iface_count; i++)
 	{
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&handles[i], iface_names[i], errbuf))
+		if (pcap_setup(&handles[i], finfos[i].name, errbuf))
 		{
 			for (size_t j = 0; j < i; j++)
 			{

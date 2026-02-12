@@ -12,7 +12,7 @@ typedef struct	s_socket
 	struct sockaddr_in	sin;
 }	t_socket;
 
-bool	init_socket(t_socket *sock, u8 proto);
+bool	init_socket(t_socket *sock, int proto);
 
 void	close_socket(t_socket socket);
 

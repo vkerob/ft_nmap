@@ -24,23 +24,40 @@ typedef struct s_shared_data
 	pthread_mutex_t	 request_list_mut;
 
 	// one for each interface
-	t_probe_request_sent **pending_request_head;
-	t_probe_request_sent **pending_request_tail;
-	pthread_mutex_t		  *pending_request_list_mut;
+	t_probe_request **pending_request_head;
+	t_probe_request **pending_request_tail;
+	pthread_mutex_t	 *pending_request_list_mut;
 } t_shared_data;
 
-bool initialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
-							t_ctx *ctx);
+typedef struct s_shared_data_pcap_thread
+{
+	pcap_t *handle;
+
+	t_iface_info iface_info;
+
+	t_probe_request *request_list_head;
+	t_probe_request *request_list_tail;
+	pthread_mutex_t	 request_list_mut;
+
+	t_probe_request *pending_request_head;
+	t_probe_request *pending_request_tail;
+	pthread_mutex_t	 pending_request_list_mut;
+
+} t_shared_data_pcap_thread;
+
+bool initialize_shared_data(t_shared_data			   *shared_data,
+							t_shared_data_pcap_thread **shared_data_pcap,
+							t_ctx					   *ctx);
 
 void deinitialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
 							  t_ctx *ctx);
 
-bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t	**pcap_threads,
-								   pthread_t	**send_threads,
-								   t_shared_data *shared_data);
+bool initialize_and_launch_threads(
+	size_t nb_pcap_thread, u8 nb_send_thread, pthread_t **pcap_threads,
+	pthread_t **send_threads, t_shared_data *shared_data,
+	t_shared_data_pcap_thread **shared_data_pcap);
 
-void join_and_free_threads(pthread_t *pcap_threads, pthread_t *send_threads,
+void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);
 
 #endif

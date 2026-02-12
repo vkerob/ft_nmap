@@ -7,24 +7,41 @@
 #include <string.h>
 #include <unistd.h>
 
-static bool add_unique_dev(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
-						   const char *ifname, u8 *iface_index)
+static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
+						   size_t *iface_count, const char *ifname,
+						   u8 *iface_index)
 {
+
 	for (size_t i = 0; i < *iface_count; i++)
-		if (strcmp((*iface_names)[i], ifname) == 0)
+	{
+		if (strcmp((*ifaces)[i].name, ifname) == 0)
+		{
 			return false;
+		}
+	}
 
-	char (*tmp)[IFNAMSIZ]
-		= realloc(*iface_names, (*iface_count + 1) * sizeof(**iface_names));
-	if (!tmp)
-		return true;
-	*iface_names = tmp;
+	if (*ifaces)
+	{
+		*ifaces = realloc(*ifaces, (*iface_count + 1) * sizeof(t_iface_info));
+		if (!*ifaces)
+		{
+			return true;
+		}
+	}
+	else
+	{
+		*ifaces = calloc(*iface_count + 1, sizeof(t_iface_info));
+		if (!*ifaces)
+		{
+			return true;
+		}
+	}
 
-	strncpy((*iface_names)[*iface_count], ifname, IFNAMSIZ);
-	(*iface_names)[*iface_count][IFNAMSIZ - 1] = '\0';
+	strncpy((*ifaces)[*iface_count].name, ifname, IFNAMSIZ);
+	(*ifaces)[*iface_count].name[IFNAMSIZ - 1] = '\0';
+	(*ifaces)[*iface_count].ip_addr = local_addr;
 
-	(*iface_count)++;
-	*iface_index = (*iface_count) - 1;
+	*iface_index = (*iface_count)++;
 	return false;
 }
 
@@ -57,7 +74,9 @@ static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
 	freeifaddrs(ifaddr);
 }
 
-bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
+// bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
+//					t_target *targets, size_t target_count)
+bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count)
 {
 	u8 iface_index = 0;
@@ -108,15 +127,16 @@ bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
 
 		ifname_from_ipv4(local_addr.sin_addr, ifname_buf);
 
-		if (add_unique_dev(iface_names, iface_count, ifname_buf, &iface_index))
+		if (add_unique_dev(ifaces, local_addr.sin_addr, iface_count, ifname_buf,
+						   &iface_index))
 		{
 			fprintf(stderr, "ft_nmap: Failed to add interface name\n");
 			return true;
 		}
-
-		targets[i].iface_info.iface_index = iface_index;
-		targets[i].iface_info.ip_addr = local_addr.sin_addr;
-		strncpy(targets[i].iface_info.name, ifname_buf, IFNAMSIZ);
+		targets[i].iface_info = (*ifaces)[iface_index];
+		// targets[i].iface_info.iface_index = iface_index;
+		// targets[i].iface_info.ip_addr = local_addr.sin_addr;
+		// strncpy(targets[i].iface_info.name, ifname_buf, IFNAMSIZ);
 	}
 	return false;
 }

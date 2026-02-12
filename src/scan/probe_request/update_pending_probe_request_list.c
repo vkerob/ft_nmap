@@ -3,28 +3,24 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-bool	update_pending_probe_request_list(
-	t_probe_request_sent **head,
-	t_probe_request_sent **tail,
-	t_probe_request	*request,
-	time_t sent_timestamp)
+bool update_pending_probe_request_list(t_probe_request **head_pending_list,
+									   t_probe_request **tail_pending_list,
+									   t_probe_request	*request,
+									   time_t			 sent_timestamp)
 {
-	t_probe_request_sent *request_with_metadata = calloc(1, sizeof(t_probe_request_sent));
-	if (request_with_metadata == NULL)
+	request->timestamp = sent_timestamp;
+	request->retries = request->retries + 1;
+	request->next = NULL;
+	request->prev = NULL;
+	if (*head_pending_list == NULL)
 	{
-		return false;
-	}
-	request_with_metadata->request = request;
-	request_with_metadata->timestamp = sent_timestamp;
-	request_with_metadata->retries = request->retries + 1;
-	if (*head == NULL)
-	{
-		*head = request_with_metadata;
+		*head_pending_list = request;
 	}
 	else
 	{
-		(*tail)->next = request_with_metadata;
+		(*tail_pending_list)->next = request;
+		request->prev = *tail_pending_list;
 	}
-	*tail = request_with_metadata;
-	return true;
+	*tail_pending_list = request;
+	return false;
 }

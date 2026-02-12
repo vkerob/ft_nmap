@@ -38,25 +38,26 @@
 // 	}
 // }
 
-static bool find_corresponding_target(t_target *targets, size_t targets_count,
-									  struct in_addr *src_ip, t_target *target)
-{
-	const char *src_ip_addr = inet_ntoa(*src_ip);
+// static bool find_corresponding_target(t_target *targets, size_t
+// targets_count, 									  struct in_addr *src_ip,
+// t_target *target)
+// {
+// 	const char *src_ip_addr = inet_ntoa(*src_ip);
 
-	/* Maybe there's a quicker way to find the target back using the long
-	value of the IP rather than with the string notation */
+// 	/* Maybe there's a quicker way to find the target back using the long
+// 	value of the IP rather than with the string notation */
 
-	for (size_t i = 0; i < targets_count; i++)
-	{
-		if (strcmp(targets[i].ip, src_ip_addr) == 0)
-		{
-			target = &targets[i];
-			(void)target;
-			return true;
-		}
-	}
-	return false;
-}
+// 	for (size_t i = 0; i < targets_count; i++)
+// 	{
+// 		if (strcmp(targets[i].ip, src_ip_addr) == 0)
+// 		{
+// 			target = &targets[i];
+// 			(void)target;
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
 
 void handle_ip_protocol(t_ip *ip_hdr, t_datalink_hdr *hdr)
 {
@@ -153,63 +154,64 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	print_debug_packet_start();
 	(void)args;
 	(void)header;
-	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
-	pcap_t			 *handle = user_data->handle;
-	t_shared_data	 *shared_data = user_data->shared_data;
-	t_ip			  ip_hdr;
-	t_datalink_hdr	  hdr;
-	t_target		  target;
+	t_pcap_user_data		  *user_data = (t_pcap_user_data *)args;
+	pcap_t					  *handle = user_data->handle;
+	t_shared_data_pcap_thread *shared_data = user_data->shared_data;
+	t_ip					   ip_hdr;
+	t_datalink_hdr			   hdr;
+	// t_target				   target;
 
 	(void)handle;
 	(void)shared_data;
 	(void)packet;
 	parse_datalink_layer(packet, &ip_hdr, &hdr, handle);
-	find_corresponding_target(shared_data->targets, shared_data->target_count,
-							  &ip_hdr.ip_src, &target);
+	// find_corresponding_target(shared_data->targets,
+	// shared_data->target_count, 						  &ip_hdr.ip_src,
+	// &target);
 	print_debug_packet_end();
 
-	t_probe_request_sent *tmp = *shared_data->pending_request_head;
-	while (tmp)
-	{
-
-		if (strcmp(tmp->request->target.ip, target.ip) == 0)
-		{
-			// TODO:
-			// pthread_mutex_lock(&shared_data->pending_request_list_mut[0]); is
-			// hardcoded
-			pthread_mutex_lock(&shared_data->pending_request_list_mut[0]);
-			if (tmp->prev)
-			{
-				tmp->prev->next = tmp->next;
-				tmp->next->prev = tmp->prev;
-				t_probe_request_sent *save = tmp->next;
-				free(tmp);
-				tmp = save;
-			}
-			pthread_mutex_unlock(&shared_data->pending_request_list_mut[0]);
-		}
-		tmp = tmp->next;
-	}
+	// t_probe_request_sent *tmp = *shared_data->pending_request_head;
+	// while (tmp)
+	// {
+	// 	if (strcmp(tmp->request->target.ip, target.ip) == 0)
+	// 	{
+	// 		// TODO:
+	// 		// pthread_mutex_lock(&shared_data->pending_request_list_mut[0]); is
+	// 		// hardcoded
+	// 		pthread_mutex_lock(&shared_data->pending_request_list_mut[0]);
+	// 		if (tmp->prev)
+	// 		{
+	// 			tmp->prev->next = tmp->next;
+	// 			tmp->next->prev = tmp->prev;
+	// 			t_probe_request_sent *save = tmp->next;
+	// 			free(tmp);
+	// 			tmp = save;
+	// 		}
+	// 		pthread_mutex_unlock(&shared_data->pending_request_list_mut[0]);
+	// 	}
+	// 	tmp = tmp->next;
+	// }
 }
 
 static void
-purge_timedout_probe_request(t_probe_request_sent **head_sent,
+purge_timedout_probe_request(t_probe_request **head_pending_list,
 							 t_probe_request **head, t_probe_request **tail,
 							 pthread_mutex_t *pending_request_list_mut,
 							 pthread_mutex_t *request_list_mut)
 {
-	time_t				  now;
-	t_probe_request_sent *tmp = *head_sent;
+	time_t			 now;
+	t_probe_request *tmp = *head_pending_list;
 
+	pthread_mutex_lock(pending_request_list_mut);
 	while (tmp)
 	{
 		now = time(NULL);
 		unsigned long seconds_elapsed
 			= (unsigned long)difftime(tmp->timestamp, now);
+
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
 			// Pop tmp from the pending list
-			pthread_mutex_lock(pending_request_list_mut);
 			if (tmp->prev)
 			{
 				// Link previous node with next
@@ -220,52 +222,52 @@ purge_timedout_probe_request(t_probe_request_sent **head_sent,
 			{
 				// Update head and erase prev of next
 				tmp->next->prev = NULL;
-				*head_sent = tmp->next;
+				*head_pending_list = tmp->next;
 			}
-			pthread_mutex_unlock(pending_request_list_mut);
 			// Update retries and reinject in probe request list
 			if (tmp->retries < MAX_SCAN_RETRIES)
 			{
-				tmp->request->retries += 1;
+				tmp->retries += 1;
+				tmp->timestamp = 0;
 			}
 			pthread_mutex_lock(request_list_mut);
 			if (*tail)
 			{
-				(*tail)->next = tmp->request;
+				(*tail)->next = tmp;
 			}
 			else
 			{
-				*head = tmp->request;
+				*head = tmp;
 			}
 			// update tail to new request
-			*tail = tmp->request;
+			*tail = tmp;
 			pthread_mutex_unlock(request_list_mut);
 			// free probe_request_sent object
-			free(tmp);
 		}
 		tmp = tmp->next;
 	}
+	pthread_mutex_unlock(pending_request_list_mut);
 }
 
 void *receive_routine(void *arg)
 {
-	t_shared_data *shared_data = (t_shared_data *)arg;
+	t_shared_data_pcap_thread *shared_data = (t_shared_data_pcap_thread *)arg;
 	// TODO: change this
-	pcap_t *handle = shared_data->handles[0];
+	pcap_t *handle = shared_data->handle;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int	 ret;
 
-	const struct timeval *timeout = pcap_get_required_select_timeout(handle);
-	if (timeout == NULL)
-	{
-		fprintf(stderr, "timeout not required\n");
-	}
-	else
-	{
-		printf("timeout seconds: %ld\n", timeout->tv_sec);
-		fflush(stdout);
-	}
+	// const struct timeval *timeout = pcap_get_required_select_timeout(handle);
+	// if (timeout == NULL)
+	// {
+	// 	fprintf(stderr, "timeout not required\n");
+	// }
+	// else
+	// {
+	// 	printf("timeout seconds: %ld\n", timeout->tv_sec);
+	// 	fflush(stdout);
+	// }
 	ret = pcap_setnonblock(handle, 1, errbuf);
 	switch (ret)
 	{
@@ -286,14 +288,12 @@ void *receive_routine(void *arg)
 		/* Returns 0 if no packet to read */
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
-			// TODO: &shared_data->pending_request_list_mut[0], is hardcoded
 
-			purge_timedout_probe_request(
-				&shared_data->pending_request_head[0],
-				&shared_data->request_list_head,
-				&shared_data->request_list_tail,
-				&shared_data->pending_request_list_mut[0],
-				&shared_data->request_list_mut);
+			purge_timedout_probe_request(&shared_data->pending_request_head,
+										 &shared_data->request_list_head,
+										 &shared_data->request_list_tail,
+										 &shared_data->pending_request_list_mut,
+										 &shared_data->request_list_mut);
 		}
 	}
 

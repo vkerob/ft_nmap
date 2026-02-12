@@ -5,10 +5,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool initialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
-							t_ctx *ctx)
+bool initialize_shared_data(t_shared_data			   *shared_data,
+							t_shared_data_pcap_thread **shared_data_pcap,
+							t_ctx					   *ctx)
 {
-	shared_data->handles = handles;
+
+	shared_data->pending_request_list_mut
+		= calloc(ctx->iface_count, sizeof(pthread_mutex_t));
+	if (shared_data->pending_request_list_mut == NULL)
+	{
+		return true;
+	}
+	shared_data->pending_request_head
+		= calloc(ctx->iface_count, sizeof(t_probe_request *));
+	if (shared_data->pending_request_head == NULL)
+	{
+		return true;
+	}
+	shared_data->pending_request_tail = shared_data->pending_request_head;
+	*shared_data_pcap
+		= calloc(ctx->iface_count, sizeof(t_shared_data_pcap_thread));
+	if (*shared_data_pcap == NULL)
+	{
+		return true;
+	}
+	// shared_data->handles = ctx->handles;
 	atomic_init(&shared_data->id, 1);
 	atomic_init(&shared_data->base_seq, rand());
 
@@ -20,29 +41,41 @@ bool initialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
 	shared_data->port_count = ctx->args.port_count;
 	shared_data->targets = ctx->targets;
 
-	shared_data->pending_request_head
-		= calloc(ctx->iface_count, sizeof(t_probe_request *));
-	if (shared_data->pending_request_head == NULL)
-	{
-		return true;
-	}
-	shared_data->pending_request_tail
-		= calloc(ctx->iface_count, sizeof(t_probe_request *));
-	if (shared_data->pending_request_tail == NULL)
-	{
-		return true;
-	}
-	shared_data->pending_request_list_mut
-		= calloc(ctx->iface_count, sizeof(pthread_mutex_t));
-	if (shared_data->pending_request_list_mut == NULL)
-	{
-		return true;
-	}
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
 		pthread_mutex_init(&shared_data->pending_request_list_mut[i], NULL);
 	}
 	pthread_mutex_init(&shared_data->request_list_mut, NULL);
+
+	for (size_t i = 0; i < ctx->iface_count; i++)
+	{
+		(*shared_data_pcap)[i].handle = ctx->handles[i];
+		(*shared_data_pcap)[i].iface_info = ctx->ifaces[i];
+		(*shared_data_pcap)[i].request_list_head
+			= shared_data->request_list_head;
+		(*shared_data_pcap)[i].request_list_tail
+			= shared_data->request_list_tail;
+		(*shared_data_pcap)[i].pending_request_list_mut
+			= shared_data->pending_request_list_mut[i];
+		(*shared_data_pcap)[i].pending_request_head
+			= shared_data->pending_request_head[i];
+		(*shared_data_pcap)[i].pending_request_tail
+			= shared_data->pending_request_head[i];
+	}
+
+	// shared_data->pending_request_tail
+	// 	= calloc(ctx->iface_count, sizeof(t_probe_request *));
+	// if (shared_data->pending_request_tail == NULL)
+	// {
+	// 	return true;
+	// }
+	// shared_data->pending_request_list_mut
+	// 	= calloc(ctx->iface_count, sizeof(pthread_mutex_t));
+	// if (shared_data->pending_request_list_mut == NULL)
+	// {
+	// 	return true;
+	// }
+
 	return false;
 }
 

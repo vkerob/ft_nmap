@@ -7,6 +7,7 @@
 
 #include <net/if.h>
 #include <netinet/in.h>
+#include <pcap/pcap.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -27,8 +28,9 @@ typedef struct s_iface_info
 {
 	char		   name[IFNAMSIZ];
 	struct in_addr ip_addr; // ip of the interface, used as source ip in packets
-	struct ether_addr mac_addr;	   // not defined yet, mac of the interface.
-	u8				  iface_index; // index of the interface
+	struct ether_addr	 mac_addr;	  // not defined yet, mac of the interface.
+	u8					 iface_index; // index of the interface
+	struct s_iface_info *next;
 } t_iface_info;
 
 typedef struct s_target
@@ -70,11 +72,13 @@ typedef enum e_port_state
 
 typedef struct s_ctx
 {
-	t_target *targets;
-	size_t	  target_count;
-	char (*iface_names)[IFNAMSIZ];
-	size_t iface_count;
-	t_args args;
+	t_target	 *targets;
+	size_t		  target_count;
+	t_iface_info *ifaces;
+	size_t		  iface_count;
+	t_args		  args;
+
+	pcap_t **handles;
 } t_ctx;
 
 bool init_portlist(t_port_list *port_list, u16 port_count,
@@ -83,7 +87,7 @@ bool init_portlist(t_port_list *port_list, u16 port_count,
 
 void scan_type_to_str(enum e_scan_type scan_type);
 
-bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
+bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count);
 
 #endif

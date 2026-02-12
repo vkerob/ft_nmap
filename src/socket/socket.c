@@ -25,13 +25,8 @@ void update_socket(struct sockaddr_in *socket, t_target target, u16 port)
 	update_socket_addr(socket, target.addr.sin_addr);
 }
 
-bool	init_socket(t_socket *sock, u8 proto)
+bool	init_socket(t_socket *sock, int proto)
 {
-	if (!proto)
-	{
-		fprintf(stderr, "Invalid protocol name");
-		return true;
-	}
 	sock->sfd = socket(PF_INET, SOCK_RAW, proto);
 	if (sock->sfd < 0)
 	{
