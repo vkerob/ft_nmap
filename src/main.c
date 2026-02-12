@@ -5,7 +5,6 @@
 #include "parsing.h"
 #include "probe_request.h"
 #include "scan.h"
-#include "setup.h"
 #include "shared.h"
 
 #include <pcap/pcap.h>

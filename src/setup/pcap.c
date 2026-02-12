@@ -1,11 +1,8 @@
-#include "scan.h"
 #include "setup.h"
 
 #include <ifaddrs.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define PCAP_SNAPLEN 1024
 #define PCAP_PROMISC 0
@@ -88,8 +85,7 @@ bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 
 	char filter_expr[128];
 
-	snprintf(filter_expr, sizeof(filter_expr),
-			 "tcp or udp or icmp and src host 192.168.1.201");
+	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp");
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{

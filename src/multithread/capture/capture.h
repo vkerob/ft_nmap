@@ -1,7 +1,6 @@
 #ifndef CAPTURE_H
 #define CAPTURE_H
 
-#include "defines.h"
 #include "shared.h"
 #include "typesdef.h"
 
