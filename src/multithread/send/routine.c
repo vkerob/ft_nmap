@@ -79,7 +79,10 @@ void *send_routine(void *arg)
 	memset(packet, 0, sizeof(packet));
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
-	while (shared_data->nb_probe_requests > 0)
+
+	while (shared_data->nb_probe_requests > 0
+		   || shared_data->nb_probe_requests_done
+				  != shared_data->nb_probe_requests_initial)
 	{
 		// t_datalink_hdr	*hdr = NULL;
 		pthread_mutex_lock(&shared_data->request_list_mut);
@@ -127,16 +130,24 @@ void *send_routine(void *arg)
 			return NULL;
 		}
 
-		// TODO: remove hardcoded value after merge
-		int index_interface = 0;
 		pthread_mutex_lock(
-			&shared_data->pending_request_list_mut[index_interface]);
-		update_pending_probe_request_list(
-			&shared_data->pending_request_head[index_interface],
-			&shared_data->pending_request_tail[index_interface], request,
-			sent_timestamp);
+			&shared_data
+				 ->pending_request_list_mut[request->iface_info.iface_index]);
+		if (update_pending_probe_request_list(
+				&(shared_data
+					  ->pending_request_head[request->iface_info.iface_index]),
+				&shared_data
+					 ->pending_request_tail[request->iface_info.iface_index],
+				request, sent_timestamp))
+		{
+			pthread_mutex_unlock(
+				&shared_data->pending_request_list_mut[request->iface_info
+														   .iface_index]);
+			return NULL;
+		}
 		pthread_mutex_unlock(
-			&shared_data->pending_request_list_mut[index_interface]);
+			&shared_data
+				 ->pending_request_list_mut[request->iface_info.iface_index]);
 	}
 	return NULL;
 }

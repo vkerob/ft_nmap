@@ -1,11 +1,98 @@
 #include "debug.h"
 #include "defines.h"
+#include "ip.h"
 #include "scan.h"
+#include "sll.h"
+#include "udp.h"
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <stdio.h>
 #include <pcap/pcap.h>
+#include <stdio.h>
+#include <sys/socket.h>
+
+void print_debug_udp_header(t_udp_hdr *udp_hdr)
+{
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW "\nUDP Header:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW "  • Source Port: %d\n" ANSI_COLOR_RESET,
+		   ntohs(udp_hdr->uh_sport));
+	printf(ANSI_COLOR_YELLOW "  • Destination Port: %d\n" ANSI_COLOR_RESET,
+		   ntohs(udp_hdr->uh_dport));
+	printf(ANSI_COLOR_YELLOW "  • Length: %d bytes\n" ANSI_COLOR_RESET,
+		   ntohs(udp_hdr->uh_ulen));
+	printf(ANSI_COLOR_YELLOW "  • Checksum: 0x%04x\n" ANSI_COLOR_RESET,
+		   ntohs(udp_hdr->uh_sum));
+}
+
+void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
+{
+	printf(ANSI_BOLD ANSI_COLOR_GREEN "\nTCP Header:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN "  • Source Port: %d\n" ANSI_COLOR_RESET,
+		   ntohs(tcp_hdr->th_sport));
+	printf(ANSI_COLOR_GREEN "  • Destination Port: %d\n" ANSI_COLOR_RESET,
+		   ntohs(tcp_hdr->th_dport));
+	printf(ANSI_COLOR_GREEN "  • Sequence Number: %u\n" ANSI_COLOR_RESET,
+		   ntohl(tcp_hdr->th_seq));
+	printf(ANSI_COLOR_GREEN "  • Acknowledgment Number: %u\n" ANSI_COLOR_RESET,
+		   ntohl(tcp_hdr->th_ack));
+	printf(ANSI_COLOR_GREEN "  • Header Length: %d bytes\n" ANSI_COLOR_RESET,
+		   tcp_hdr->th_off * 4);
+	printf(ANSI_COLOR_GREEN "  • Flags: ");
+	if (tcp_hdr->th_flags & TH_URG)
+		printf("URG ");
+	if (tcp_hdr->th_flags & TH_ACK)
+		printf("ACK ");
+	if (tcp_hdr->th_flags & TH_PUSH)
+		printf("PUSH ");
+	if (tcp_hdr->th_flags & TH_RST)
+		printf("RST ");
+	if (tcp_hdr->th_flags & TH_SYN)
+		printf("SYN ");
+	if (tcp_hdr->th_flags & TH_FIN)
+		printf("FIN ");
+	if (tcp_hdr->th_flags & 0x00)
+		printf("None");
+
+	printf("\n" ANSI_COLOR_RESET);
+
+	printf(ANSI_COLOR_GREEN "  • Window Size: %d\n" ANSI_COLOR_RESET,
+		   ntohs(tcp_hdr->th_win));
+	printf(ANSI_COLOR_GREEN "  • Checksum: 0x%04x\n" ANSI_COLOR_RESET,
+		   ntohs(tcp_hdr->th_sum));
+	printf(ANSI_COLOR_GREEN "  • Urgent Pointer: %d\n" ANSI_COLOR_RESET,
+		   ntohs(tcp_hdr->th_urp));
+}
+
+void print_debug_sll_header(t_sll_hdr *sll_hdr)
+{
+	printf(ANSI_BOLD ANSI_COLOR_MAGENTA "\nSLL Header:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA "  • Packet Type: %d\n" ANSI_COLOR_RESET,
+		   ntohs(sll_hdr->sll_pkt_type));
+	printf(ANSI_COLOR_MAGENTA "  • Hardware Type: %d\n" ANSI_COLOR_RESET,
+		   ntohs(sll_hdr->sll_hatype));
+	printf(ANSI_COLOR_MAGENTA
+		   "  • Hardware Address Length: %d\n" ANSI_COLOR_RESET,
+		   ntohs(sll_hdr->sll_halen));
+	printf(ANSI_COLOR_MAGENTA "  • Protocol: 0x%04x\n" ANSI_COLOR_RESET,
+		   ntohs(sll_hdr->sll_protocol));
+}
+
+void print_debug_sll_protocol(int protocol)
+{
+	if (protocol != ETHERTYPE_IP)
+	{
+		printf(ANSI_COLOR_RED
+			   "Captured non-IP packet: Protocol=0x%04x\n" ANSI_COLOR_RESET,
+			   protocol);
+	}
+}
 
 void print_debug_packet_start()
 {
@@ -45,8 +132,6 @@ void print_debug_ethernet_header(t_eth_hdr *eth_header)
 		   ntohs(eth_header->ether_type));
 }
 
-
-
 // void print_debug_icmp_header(struct icmphdr *icmp_hdr)
 // {
 // 	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nICMP Header:\n" ANSI_COLOR_RESET);
@@ -58,26 +143,53 @@ void print_debug_ethernet_header(t_eth_hdr *eth_header)
 // 		   ntohs(icmp_hdr->checksum));
 // }
 
-
-
 void print_debug_protocol(int protocol)
 {
 	switch (protocol)
 	{
-		case IPPROTO_TCP:
-			printf(ANSI_BOLD ANSI_COLOR_GREEN "  • TCP Packet\n" ANSI_COLOR_RESET);
-			break;
-		case IPPROTO_ICMP:
-			printf(ANSI_BOLD ANSI_COLOR_CYAN "  • ICMP Packet\n" ANSI_COLOR_RESET);
-			break;
-		case IPPROTO_UDP:
-			printf(ANSI_BOLD ANSI_COLOR_YELLOW "  • UDP Packet\n" ANSI_COLOR_RESET);
-			break;
-		default:
-			printf(ANSI_COLOR_RED "  • Other Protocol: %d\n" ANSI_COLOR_RESET,
-				   protocol);
-			break;
+	case IPPROTO_TCP:
+		printf(ANSI_BOLD ANSI_COLOR_GREEN "  • TCP Packet\n" ANSI_COLOR_RESET);
+		break;
+	case IPPROTO_ICMP:
+		printf(ANSI_BOLD ANSI_COLOR_CYAN "  • ICMP Packet\n" ANSI_COLOR_RESET);
+		break;
+	case IPPROTO_UDP:
+		printf(ANSI_BOLD ANSI_COLOR_YELLOW "  • UDP Packet\n" ANSI_COLOR_RESET);
+		break;
+	default:
+		printf(ANSI_COLOR_RED "  • Other Protocol: %d\n" ANSI_COLOR_RESET,
+			   protocol);
+		break;
 	}
+}
+
+void print_debug_probe_request(t_probe_request *request)
+{
+	char buf[16] = { 0 };
+
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN "New Probe Request:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
+		   request->target.ip, request->target.port);
+	scan_type_to_str(request->type, buf);
+	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
+
+	printf(ANSI_COLOR_GREEN "  • ID: %u\n" ANSI_COLOR_RESET, request->id);
+	printf(ANSI_COLOR_GREEN "  • Retries: %u\n" ANSI_COLOR_RESET,
+		   request->retries);
+	printf(ANSI_COLOR_GREEN "  • Status: %u\n" ANSI_COLOR_RESET,
+		   request->status);
+	printf(ANSI_COLOR_GREEN "  • Interface: %s\n" ANSI_COLOR_RESET,
+		   request->iface_info.name);
+	printf(ANSI_COLOR_GREEN "  • IP src Address: %s\n" ANSI_COLOR_RESET,
+		   inet_ntoa(request->iface_info.ip_addr));
+	printf(ANSI_COLOR_GREEN "  • iface index: %u\n" ANSI_COLOR_RESET,
+		   request->iface_info.iface_index);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
 }
 
 void print_debug_ethernet_type(int ether_type)
@@ -90,6 +202,32 @@ void print_debug_ethernet_type(int ether_type)
 	}
 }
 
+void print_debug_ip_header(struct ip *ip_hdr)
+{
+	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nIP Header:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE "  • Source IP: %s\n" ANSI_COLOR_RESET,
+		   inet_ntoa(ip_hdr->ip_src));
+	printf(ANSI_COLOR_BLUE "  • Destination IP: %s\n" ANSI_COLOR_RESET,
+		   inet_ntoa(ip_hdr->ip_dst));
+	printf(ANSI_COLOR_BLUE "  • Version: %d\n" ANSI_COLOR_RESET, ip_hdr->ip_v);
+	printf(ANSI_COLOR_BLUE "  • Header Length: %d bytes\n" ANSI_COLOR_RESET,
+		   ip_hdr->ip_hl * 4);
+	printf(ANSI_COLOR_BLUE "  • Type of Service: %d\n" ANSI_COLOR_RESET,
+		   ip_hdr->ip_tos);
+	printf(ANSI_COLOR_BLUE "  • Total Length: %d bytes\n" ANSI_COLOR_RESET,
+		   ntohs(ip_hdr->ip_len));
+	printf(ANSI_COLOR_BLUE "  • Identification: %d\n" ANSI_COLOR_RESET,
+		   ntohs(ip_hdr->ip_id));
+	printf(ANSI_COLOR_BLUE "  • Fragment Offset: %d\n" ANSI_COLOR_RESET,
+		   ntohs(ip_hdr->ip_off) & 0x1FFF);
+	printf(ANSI_COLOR_BLUE "  • Time to Live: %d\n" ANSI_COLOR_RESET,
+		   ip_hdr->ip_ttl);
+	printf(ANSI_COLOR_BLUE "  • Protocol: %d\n" ANSI_COLOR_RESET, ip_hdr->ip_p);
+	printf(ANSI_COLOR_BLUE "  • Header Checksum: 0x%04x\n" ANSI_COLOR_RESET,
+		   ntohs(ip_hdr->ip_sum));
+}
 
 void print_debug_datalink_type(int datalink_type)
 {
@@ -143,14 +281,15 @@ void print_debug_parsing_args(t_ctx ctx)
 	{
 		printf(ANSI_COLOR_BLUE "  • %u\n" ANSI_COLOR_RESET, ctx.args.ports[i]);
 	}
-	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nScans to be performed:\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN
+		   "\nScans to be performed:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 
-	for (u8 i = 0; i < ctx.args.nb_scan_types; i++)
-	{
-		scan_type_to_str(ctx.args.scan_types[i]);
-	}
+	// for (u8 i = 0; i < ctx.args.nb_scan_types; i++)
+	// {
+	// 	scan_type_to_str(ctx.args.scan_types[i]);
+	// }
 	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
 	printf("--------------------------------------------\n");
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
@@ -161,12 +300,12 @@ void print_debug_parsing_args(t_ctx ctx)
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }
 
-void print_debug_iface_info(char (*iface_names)[IFNAMSIZ], size_t iface_count)
+void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count)
 {
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_CYAN
-		   "         INTERFACE INFO         \n" ANSI_COLOR_RESET);
+		   "         INTERFACES INFO         \n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 
@@ -175,10 +314,9 @@ void print_debug_iface_info(char (*iface_names)[IFNAMSIZ], size_t iface_count)
 		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Interface %zu:\n" ANSI_COLOR_RESET,
 			   i + 1);
 		printf(ANSI_COLOR_YELLOW "  • Name: %s\n" ANSI_COLOR_RESET,
-			   iface_names[i]);
+			   ifaces[i].name);
 	}
 
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }
-

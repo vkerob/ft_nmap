@@ -102,12 +102,12 @@ bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 }
 
 bool setup_pcap_handles(pcap_t **handles, size_t iface_count,
-						char (*iface_names)[IFNAMSIZ])
+						t_iface_info *finfos)
 {
 	for (size_t i = 0; i < iface_count; i++)
 	{
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&handles[i], iface_names[i], errbuf))
+		if (pcap_setup(&handles[i], finfos[i].name, errbuf))
 		{
 			for (size_t j = 0; j < i; j++)
 			{
