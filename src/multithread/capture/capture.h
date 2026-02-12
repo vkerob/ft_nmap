@@ -8,8 +8,8 @@
 
 typedef struct s_pcap_user_data
 {
-	pcap_t					  *handle;
-	t_shared_data_pcap_thread *shared_data_probe;
+	pcap_t			   *handle;
+	t_shared_data_pcap *shared_data_probe;
 } t_pcap_user_data;
 
 bool pcap_setup(pcap_t **handle, const char *dev_name, char *errbuf);

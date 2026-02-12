@@ -62,8 +62,8 @@ bool initialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
 	return false;
 }
 
-void initialize_shared_data_pcap(t_shared_data_pcap_thread *shared_data_pcap,
-								 t_shared_data_probe	   *shared_data_probe)
+void initialize_shared_data_pcap(t_shared_data_pcap	 *shared_data_pcap,
+								 t_shared_data_probe *shared_data_probe)
 {
 	shared_data_pcap->request_list_head = shared_data_probe->request_list_head;
 	shared_data_pcap->request_list_tail = shared_data_probe->request_list_tail;

@@ -1,4 +1,5 @@
 #include "capture.h"
+#include "debug.h"
 #include "send.h"
 #include "shared.h"
 
@@ -9,11 +10,11 @@
 #include <string.h>
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t				**pcap_threads,
-								   pthread_t				**send_threads,
-								   t_shared_data_probe		 *shared_data_probe,
-								   t_shared_data_pcap_thread *shared_data_pcap,
-								   t_iface_info				 *ifaces)
+								   pthread_t		  **pcap_threads,
+								   pthread_t		  **send_threads,
+								   t_shared_data_probe *shared_data_probe,
+								   t_shared_data_pcap  *shared_data_pcap,
+								   t_iface_info		   *ifaces)
 {
 	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
 	if (*pcap_threads == NULL)
@@ -41,6 +42,8 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 			= shared_data_probe->pending_request_head[i];
 		shared_data_pcap->pending_request_tail
 			= shared_data_probe->pending_request_head[i];
+
+		print_debug_shared_data_pcap(shared_data_pcap);
 
 		int ret = pthread_create(&(*pcap_threads)[i], NULL, receive_routine,
 								 shared_data_pcap);

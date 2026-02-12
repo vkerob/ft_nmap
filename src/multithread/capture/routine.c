@@ -153,11 +153,11 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	print_debug_packet_start();
 	(void)args;
 	(void)header;
-	t_pcap_user_data		  *user_data = (t_pcap_user_data *)args;
-	pcap_t					  *handle = user_data->handle;
-	t_shared_data_pcap_thread *shared_data_probe = user_data->shared_data_probe;
-	t_ip					   ip_hdr;
-	t_datalink_hdr			   hdr;
+	t_pcap_user_data   *user_data = (t_pcap_user_data *)args;
+	pcap_t			   *handle = user_data->handle;
+	t_shared_data_pcap *shared_data_probe = user_data->shared_data_probe;
+	t_ip				ip_hdr;
+	t_datalink_hdr		hdr;
 	// t_target				   target;
 
 	(void)handle;
@@ -250,8 +250,7 @@ purge_timedout_probe_request(t_probe_request **head_pending_list,
 
 void *receive_routine(void *arg)
 {
-	t_shared_data_pcap_thread *shared_data_probe
-		= (t_shared_data_pcap_thread *)arg;
+	t_shared_data_pcap *shared_data_probe = (t_shared_data_pcap *)arg;
 	// TODO: change this
 	pcap_t *handle = shared_data_probe->handle;
 

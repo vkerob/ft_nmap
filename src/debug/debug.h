@@ -3,6 +3,7 @@
 
 #include "probe_request.h"
 #include "scan.h"
+#include "shared.h"
 #include "sll.h"
 #include "typesdef.h"
 
@@ -35,5 +36,7 @@ void print_debug_ip_header(struct ip *ip_hdr);
 void print_debug_udp_header(t_udp_hdr *udp_hdr);
 
 void print_debug_probe_request(t_probe_request *request);
+
+void print_debug_shared_data_pcap(t_shared_data_pcap *shared_data_pcap);
 
 #endif

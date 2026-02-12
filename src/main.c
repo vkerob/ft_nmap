@@ -15,10 +15,10 @@ sig_atomic_t volatile g_stop = 0;
 
 bool nmap_main(t_ctx *ctx)
 {
-	t_shared_data_probe		  shared_data_probe;
-	t_shared_data_pcap_thread shared_data_pcap;
-	pthread_t				 *pcap_threads = NULL;
-	pthread_t				 *send_threads = NULL;
+	t_shared_data_probe shared_data_probe;
+	t_shared_data_pcap	shared_data_pcap;
+	pthread_t		   *pcap_threads = NULL;
+	pthread_t		   *send_threads = NULL;
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{

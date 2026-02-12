@@ -320,3 +320,27 @@ void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count)
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }
+
+void print_debug_shared_data_pcap(t_shared_data_pcap *shared_data_pcap)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN " SHARED DATA PCAP \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW "PCAP Handle:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW " • %p\n" ANSI_COLOR_RESET,
+		   (void *)shared_data_pcap->handle);
+	printf(ANSI_BOLD ANSI_COLOR_GREEN
+		   "\nPending Request List:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_GREEN " • Head: %p\n" ANSI_COLOR_RESET,
+		   (void *)shared_data_pcap->pending_request_head);
+	printf(ANSI_COLOR_GREEN " • Tail: %p\n" ANSI_COLOR_RESET,
+		   (void *)shared_data_pcap->pending_request_tail);
+	printf(ANSI_BOLD ANSI_COLOR_BLUE
+		   "\nPending Request List Mutex:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE " • %p\n" ANSI_COLOR_RESET,
+		   (void *)&shared_data_pcap->pending_request_list_mut);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+}
