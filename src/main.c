@@ -14,7 +14,7 @@
 
 sig_atomic_t volatile g_stop = 0;
 
-bool nmap_main(t_ctx *ctx, pcap_t **handles)
+bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data shared_data;
 	pthread_t	 *pcap_threads = NULL;
@@ -26,7 +26,7 @@ bool nmap_main(t_ctx *ctx, pcap_t **handles)
 			   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
 	}
 
-	if (initialize_shared_data(&shared_data, handles, ctx))
+	if (initialize_shared_data(&shared_data, ctx))
 	{
 		return true;
 	}
@@ -34,14 +34,12 @@ bool nmap_main(t_ctx *ctx, pcap_t **handles)
 	initial_probe_requests(ctx, &shared_data.request_list_head,
 						   &shared_data.request_list_tail);
 
-	return true;
 	shared_data.nb_probe_requests
 		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
 	if (initialize_and_launch_threads(ctx->iface_count, ctx->args.speed,
 									  &pcap_threads, &send_threads,
-									  &shared_data)
-		== false)
+									  &shared_data, ctx->iface_names))
 	{
 		return true;
 	}
@@ -99,30 +97,11 @@ int main(int argc, char **argv)
 	print_debug_parsing_args(ctx);
 	print_debug_iface_info(ctx.iface_names, ctx.iface_count);
 
-	pcap_t **handles = malloc(sizeof(pcap_t *) * ctx.iface_count);
-
-	if (handles == NULL)
+	if (nmap_main(&ctx) == false)
 	{
 		goto error;
 	}
 
-	if (setup_pcap_handles(handles, ctx.iface_count, ctx.iface_names))
-	{
-		goto error;
-	}
-
-	// if (init_portlist(&port_list, args.port_count, args.ports,
-	// 				  args.nb_scan_types, args.scan_types)
-	// 	== false)
-	// {
-	// 	goto error;
-	// }
-	if (nmap_main(&ctx, handles) == false)
-	{
-		goto error;
-	}
-
-	free(handles);
 	free(ctx.iface_names);
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_SUCCESS;

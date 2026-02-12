@@ -10,22 +10,27 @@
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t	**pcap_threads,
 								   pthread_t	**send_threads,
-								   t_shared_data *shared_data)
+								   t_shared_data *shared_data, char (*iface_names)[IFNAMSIZ])
 {
-	pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t *));
-	if (pcap_threads == NULL)
+	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
+	if (*pcap_threads == NULL)
 	{
 		return true;
 	}
-	send_threads = calloc(nb_send_thread, sizeof(pthread_t *));
-	if (pcap_threads == NULL)
+	*send_threads = calloc(nb_send_thread, sizeof(pthread_t));
+	if (*send_threads == NULL)
 	{
 		return true;
 	}
 	// launch thread to handle captured packets
 	for (size_t i = 0; i < nb_pcap_thread; i++)
 	{
-		int ret = pthread_create(pcap_threads[i], NULL, receive_routine,
+
+		char errbuf[PCAP_ERRBUF_SIZE];
+		if (pcap_setup(&shared_data->handle, iface_names[i], errbuf))
+			return true;
+
+		int ret = pthread_create(&(*pcap_threads)[i], NULL, receive_routine,
 								 shared_data);
 		if (ret != 0)
 		{
@@ -39,7 +44,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	for (u8 i = 0; i < nb_send_thread; i++)
 	{
 		int ret
-			= pthread_create(send_threads[i], NULL, send_routine, shared_data);
+			= pthread_create(&(*send_threads)[i], NULL, send_routine, shared_data);
 		if (ret != 0)
 		{
 			fprintf(stderr, "ft_nmap: pthead_create failed: %s\n",

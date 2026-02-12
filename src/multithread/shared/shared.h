@@ -10,7 +10,6 @@
 
 typedef struct s_shared_data
 {
-	pcap_t	  **handles;
 	_Atomic u16 id;
 	_Atomic u16 base_seq;
 	_Atomic u32 nb_probe_requests;
@@ -18,6 +17,7 @@ typedef struct s_shared_data
 	size_t		target_count;
 	size_t		iface_count;
 	u16			port_count;
+	pcap_t	   *handle;
 
 	t_probe_request *request_list_head;
 	t_probe_request *request_list_tail;
@@ -38,7 +38,8 @@ void deinitialize_shared_data(t_shared_data *shared_data, pcap_t **handles,
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t	**pcap_threads,
 								   pthread_t	**send_threads,
-								   t_shared_data *shared_data);
+								   t_shared_data *shared_data,
+								   char (*iface_names)[IFNAMSIZ]);
 
 void join_and_free_threads(pthread_t *pcap_threads, pthread_t *send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);
