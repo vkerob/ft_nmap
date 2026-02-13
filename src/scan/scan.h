@@ -28,17 +28,15 @@ typedef struct s_iface_info
 {
 	char		   name[IFNAMSIZ];
 	struct in_addr ip_addr; // ip of the interface, used as source ip in packets
-	struct ether_addr	 mac_addr;	  // not defined yet, mac of the interface.
-	u8					 iface_index; // index of the interface
-	struct s_iface_info *next;
+	struct ether_addr mac_addr;	   // not defined yet, mac of the interface.
+	u8				  iface_index; // index of the interface
 } t_iface_info;
 
 typedef struct s_target
 {
-	char			  *input;
-	char			   ip[INET_ADDRSTRLEN];
-	struct sockaddr_in addr;
-	t_iface_info	   iface_info;
+	char		  *input;
+	struct in_addr addr;
+	t_iface_info   iface_info;
 } t_target;
 
 typedef enum e_scan_type

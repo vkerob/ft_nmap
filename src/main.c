@@ -3,7 +3,6 @@
 #include "debug.h"
 #include "my_signal.h"
 #include "parsing.h"
-#include "probe_request.h"
 #include "scan.h"
 #include "shared.h"
 
@@ -16,7 +15,6 @@ sig_atomic_t volatile g_stop = 0;
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_probe shared_data_probe;
-	t_shared_data_pcap	shared_data_pcap;
 	pthread_t		   *pcap_threads = NULL;
 	pthread_t		   *send_threads = NULL;
 
@@ -31,22 +29,24 @@ bool nmap_main(t_ctx *ctx)
 		printf("failed to initialize shared data\n");
 		return true;
 	}
-	initialize_shared_data_pcap(&shared_data_pcap, &shared_data_probe);
+	t_shared_data_pcap *pcap_ctxs = NULL;
 
-	if (initial_probe_requests(ctx, &shared_data_probe.request_list_head,
-							   &shared_data_probe.request_list_tail))
+	initialize_shared_data_pcap(&pcap_ctxs, ctx->iface_count,
+								&shared_data_probe, ctx->ifaces);
+
+	if (initial_probe_request_list(ctx, &shared_data_probe.probe_request_list))
 	{
 		printf("failed to initialize probe request\n");
 		return true;
 	}
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
-	shared_data_probe.nb_probe_requests
+	shared_data_probe.probe_request_list.nb_probe_requests
 		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
 	if (initialize_and_launch_threads(
 			ctx->iface_count, ctx->args.speed, &pcap_threads, &send_threads,
-			&shared_data_probe, &shared_data_pcap, ctx->ifaces))
+			&shared_data_probe, pcap_ctxs, ctx->ifaces))
 	{
 		return true;
 	}

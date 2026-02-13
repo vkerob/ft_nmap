@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include <string.h>
 
-static void build_scan_packets(t_probe_request *request, u_char *packet)
+static void build_scan_packets(t_request *request, u_char *packet)
 {
 	// struct ether_header	eth_hdr;
 	t_ip_pseudo_hdr ip_pseudo_hdr;
@@ -26,7 +26,8 @@ static void build_scan_packets(t_probe_request *request, u_char *packet)
 
 	// Use to compute the tcp checksum
 	const char *src_ip = inet_ntoa(request->iface_info.ip_addr);
-	build_pseudo_ip_header(&ip_pseudo_hdr, request->target.ip, src_ip);
+	build_pseudo_ip_header(&ip_pseudo_hdr, inet_ntoa(request->target.ip_addr),
+						   src_ip);
 
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
@@ -68,7 +69,7 @@ void *send_routine(void *arg)
 	t_socket			 tcp_socket;
 	t_socket			 udp_socket;
 	t_socket			 used_socket;
-	t_probe_request		*request = NULL;
+	t_request			*request = NULL;
 	time_t				 sent_timestamp;
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
@@ -80,24 +81,23 @@ void *send_routine(void *arg)
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
 
-	while (shared_data_probe->nb_probe_requests > 0
-		   || shared_data_probe->nb_probe_requests_done
-				  != shared_data_probe->nb_probe_requests_initial)
+	while (shared_data_probe->probe_request_list.nb_probe_requests > 0)
 	{
 		// t_datalink_hdr	*hdr = NULL;
-		pthread_mutex_lock(&shared_data_probe->request_list_mut);
-		if (shared_data_probe->request_list_tail)
+		pthread_mutex_lock(&shared_data_probe->probe_request_list.mut);
+		if (shared_data_probe->probe_request_list.tail)
 		{
-			pop_probe_request(&shared_data_probe->request_list_head,
-							  &shared_data_probe->request_list_tail, &request);
+			pop_probe_request(&shared_data_probe->probe_request_list.head,
+							  &shared_data_probe->probe_request_list.tail,
+							  &request);
 		}
 		else
 		{
-			pthread_mutex_unlock(&shared_data_probe->request_list_mut);
+			pthread_mutex_unlock(&shared_data_probe->probe_request_list.mut);
 			return NULL;
 		}
-		shared_data_probe->nb_probe_requests--;
-		pthread_mutex_unlock(&shared_data_probe->request_list_mut);
+		shared_data_probe->probe_request_list.nb_probe_requests--;
+		pthread_mutex_unlock(&shared_data_probe->probe_request_list.mut);
 		if (request->type == SCAN_UDP)
 		{
 			used_socket = udp_socket;
@@ -107,7 +107,7 @@ void *send_routine(void *arg)
 			used_socket = tcp_socket;
 		}
 
-		inet_aton(request->target.ip, &used_socket.sin.sin_addr);
+		inet_aton(inet_ntoa(request->target.ip_addr), &used_socket.sin.sin_addr);
 		build_scan_packets(request, packet);
 
 		used_socket.sin.sin_port = htons(request->target.port);
@@ -115,39 +115,46 @@ void *send_routine(void *arg)
 		if (request->type == SCAN_UDP)
 		{
 			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-			print_debug_udp_header(udp_hdr);
+			// print_debug_udp_header(udp_hdr);
+			(void)udp_hdr;
 		}
 		else
 		{
 			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
-			print_debug_tcp_header(tcp_hdr);
+			// print_debug_tcp_header(tcp_hdr);
+			(void)tcp_hdr;
 		}
 
 		if (send_packet(&used_socket, packet, &sent_timestamp))
 		{
 			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
-					request->target.ip);
+					inet_ntoa(request->target.ip_addr));
 			return NULL;
 		}
 
 		pthread_mutex_lock(
 			&shared_data_probe
-				 ->pending_request_list_mut[request->iface_info.iface_index]);
+				 ->pending_request_list[request->iface_info.iface_index]
+				 .mut);
 		if (update_pending_probe_request_list(
 				&(shared_data_probe
-					  ->pending_request_head[request->iface_info.iface_index]),
+					  ->pending_request_list[request->iface_info.iface_index]
+					  .head),
 				&shared_data_probe
-					 ->pending_request_tail[request->iface_info.iface_index],
+					 ->pending_request_list[request->iface_info.iface_index]
+					 .tail,
 				request, sent_timestamp))
 		{
 			pthread_mutex_unlock(
-				&shared_data_probe->pending_request_list_mut[request->iface_info
-																 .iface_index]);
+				&shared_data_probe
+					 ->pending_request_list[request->iface_info.iface_index]
+					 .mut);
 			return NULL;
 		}
 		pthread_mutex_unlock(
 			&shared_data_probe
-				 ->pending_request_list_mut[request->iface_info.iface_index]);
+				 ->pending_request_list[request->iface_info.iface_index]
+				 .mut);
 	}
 	return NULL;
 }
