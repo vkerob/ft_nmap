@@ -34,19 +34,12 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	{
 
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&shared_data_pcap->handle, ifaces[i].name, errbuf))
+		if (pcap_setup(&shared_data_pcap[i].handle, ifaces[i].name, errbuf))
 			return true;
-		shared_data_pcap->pending_request_list_mut
-			= shared_data_probe->pending_request_list_mut[i];
-		shared_data_pcap->pending_request_head
-			= shared_data_probe->pending_request_head[i];
-		shared_data_pcap->pending_request_tail
-			= shared_data_probe->pending_request_head[i];
-
-		print_debug_shared_data_pcap(shared_data_pcap);
+		print_debug_shared_data_pcap(&shared_data_pcap[i]);
 
 		int ret = pthread_create(&(*pcap_threads)[i], NULL, receive_routine,
-								 shared_data_pcap);
+								 &shared_data_pcap[i]);
 		if (ret != 0)
 		{
 			free(*send_threads);

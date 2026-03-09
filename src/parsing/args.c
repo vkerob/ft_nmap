@@ -1,6 +1,6 @@
 #include "args.h"
-#include "parsing.h"
 #include "defines.h"
+#include "parsing.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -26,8 +26,7 @@ void free_targets(t_target **targets, size_t count)
 }
 
 // Resolve hostname/IP to IPv4 sockaddr and numeric string; no reverse DNS
-static bool resolve_target(const char *host, struct sockaddr_in *dst,
-						   char ipbuf[INET_ADDRSTRLEN])
+static bool resolve_target(const char *host, struct in_addr *dst)
 {
 	struct addrinfo	 hints;
 	struct addrinfo *res = NULL;
@@ -43,16 +42,9 @@ static bool resolve_target(const char *host, struct sockaddr_in *dst,
 
 	// Copy the first IPv4 result
 	memset(dst, 0, sizeof(*dst));
-	memcpy(dst, res->ai_addr, sizeof(*dst));
+	memcpy(dst, &((struct sockaddr_in *)res->ai_addr)->sin_addr, sizeof(*dst));
 
 	freeaddrinfo(res);
-	// Produce numeric IP string for display
-	if (inet_ntop(AF_INET, &dst->sin_addr, ipbuf, INET_ADDRSTRLEN) == NULL)
-	{
-		perror("inet_ntop");
-		return false;
-	}
-
 	return true;
 }
 
@@ -71,7 +63,7 @@ bool resolve_targets(char **inputs, size_t count, t_target **targets)
 			return true;
 		}
 
-		if (!resolve_target(inputs[i], &tmp[i].addr, tmp[i].ip))
+		if (!resolve_target(inputs[i], &tmp[i].addr))
 		{
 			free_targets(&tmp, i + 1);
 			return true;
@@ -235,7 +227,7 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 	return error;
 }
 
-static bool	parse_scan_type(char *scan_str, u8 *out)
+static bool parse_scan_type(char *scan_str, u8 *out)
 {
 	char upper_scan_str[strlen(scan_str) + 1];
 	strcpy(upper_scan_str, scan_str);
@@ -277,33 +269,36 @@ static bool	parse_scan_type(char *scan_str, u8 *out)
 	return false;
 }
 
-bool	parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
+bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
 {
-	char	*saveptr = NULL;
-	char	*token = NULL;
-	u8		scan_type = 0;
+	char *saveptr = NULL;
+	char *token = NULL;
+	u8	  scan_type = 0;
 
-	do {
-		if (saveptr == NULL){
+	do
+	{
+		if (saveptr == NULL)
+		{
 			token = strtok_r(scan_str, ",", &saveptr);
 			if (token == NULL && saveptr != NULL)
 			{
 				token = saveptr;
 			}
 		}
-		else{
+		else
+		{
 			token = strtok_r(saveptr, ",", &saveptr);
 		}
 		if (parse_scan_type(token, &scan_type))
 		{
 			(*out)[*nb_scan_types] = scan_type;
 		}
-		else {
+		else
+		{
 			return true;
 		}
 		(*nb_scan_types)++;
-	}
-	while (saveptr != NULL);
+	} while (saveptr != NULL);
 	return false;
 }
 
@@ -349,7 +344,8 @@ static bool parse_speed_strict(const char *str, u8 *out)
 	return false;
 }
 
-bool	parse_args(int argc, char **argv, t_args *args, char ***targets_input, size_t *target_count)
+bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
+				size_t *target_count)
 {
 	// short options (: argument required)
 	const char *optstr = "";
@@ -369,48 +365,49 @@ bool	parse_args(int argc, char **argv, t_args *args, char ***targets_input, size
 	{
 		switch (flag)
 		{
-			case HELP:
-				SET(args->flags, F_HELP);
-				break;
+		case HELP:
+			SET(args->flags, F_HELP);
+			break;
 
-			case IP_MODE:
-				SET(args->flags, F_IP_MODE);
-				if (get_targets_input(optarg, target_count, targets_input,
-										IP_MODE, args->flags))
-					return true;
-				break;
-
-			case FILE_MODE:
-				SET(args->flags, F_FILE_MODE);
-				if (get_targets_input(optarg, target_count, targets_input,
-										FILE_MODE, args->flags))
-					return true;
-				break;
-
-			case PORTS:
-				SET(args->flags, F_PORTS);
-				if (parse_ports(optarg, args->ports, &args->port_count))
-					return true;
-				break;
-
-			case SCAN:
-				SET(args->flags, F_SCAN_TYPE);
-				if (parse_scan_types(optarg, &args->scan_types, &args->nb_scan_types))
-					return true;
-				break;
-
-			case SPEED:
-				SET(args->flags, F_SPEED);
-				if (parse_speed_strict(optarg, &args->speed))
-					return true;
-				break;
-			case '?':
-			case ':':
-				fprintf(stderr, "ft_nmap: Invalid arguments. Use --help for usage "
-								"information.\n");
+		case IP_MODE:
+			SET(args->flags, F_IP_MODE);
+			if (get_targets_input(optarg, target_count, targets_input, IP_MODE,
+								  args->flags))
 				return true;
-			default:
-				break;
+			break;
+
+		case FILE_MODE:
+			SET(args->flags, F_FILE_MODE);
+			if (get_targets_input(optarg, target_count, targets_input,
+								  FILE_MODE, args->flags))
+				return true;
+			break;
+
+		case PORTS:
+			SET(args->flags, F_PORTS);
+			if (parse_ports(optarg, args->ports, &args->port_count))
+				return true;
+			break;
+
+		case SCAN:
+			SET(args->flags, F_SCAN_TYPE);
+			if (parse_scan_types(optarg, &args->scan_types,
+								 &args->nb_scan_types))
+				return true;
+			break;
+
+		case SPEED:
+			SET(args->flags, F_SPEED);
+			if (parse_speed_strict(optarg, &args->speed))
+				return true;
+			break;
+		case '?':
+		case ':':
+			fprintf(stderr, "ft_nmap: Invalid arguments. Use --help for usage "
+							"information.\n");
+			return true;
+		default:
+			break;
 		}
 	}
 	if (optind < argc)

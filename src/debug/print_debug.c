@@ -163,7 +163,7 @@ void print_debug_protocol(int protocol)
 	}
 }
 
-void print_debug_probe_request(t_probe_request *request)
+void print_debug_probe_request(t_request *request)
 {
 	char buf[16] = { 0 };
 
@@ -173,7 +173,7 @@ void print_debug_probe_request(t_probe_request *request)
 	printf(ANSI_COLOR_GREEN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
-		   request->target.ip, request->target.port);
+		   inet_ntoa(request->target.ip_addr), request->target.port);
 	scan_type_to_str(request->type, buf);
 	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
 
@@ -271,7 +271,7 @@ void print_debug_parsing_args(t_ctx ctx)
 	for (size_t i = 0; i < ctx.target_count; i++)
 	{
 		printf(ANSI_COLOR_GREEN "  • %s (%s)\n" ANSI_COLOR_RESET,
-			   ctx.targets[i].input, ctx.targets[i].ip);
+			   ctx.targets[i].input, inet_ntoa(ctx.targets[i].addr));
 	}
 
 	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nPorts:\n" ANSI_COLOR_RESET);
@@ -334,13 +334,13 @@ void print_debug_shared_data_pcap(t_shared_data_pcap *shared_data_pcap)
 	printf(ANSI_BOLD ANSI_COLOR_GREEN
 		   "\nPending Request List:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN " • Head: %p\n" ANSI_COLOR_RESET,
-		   (void *)shared_data_pcap->pending_request_head);
+		   (void *)shared_data_pcap->pending_request_list->head);
 	printf(ANSI_COLOR_GREEN " • Tail: %p\n" ANSI_COLOR_RESET,
-		   (void *)shared_data_pcap->pending_request_tail);
+		   (void *)shared_data_pcap->pending_request_list->tail);
 	printf(ANSI_BOLD ANSI_COLOR_BLUE
 		   "\nPending Request List Mutex:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_BLUE " • %p\n" ANSI_COLOR_RESET,
-		   (void *)&shared_data_pcap->pending_request_list_mut);
+		   (void *)&shared_data_pcap->pending_request_list->mut);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }

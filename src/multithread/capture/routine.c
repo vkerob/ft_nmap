@@ -4,12 +4,13 @@
 #include "icmp.h"
 #include "ip.h"
 #include "my_signal.h"
-#include "probe_request.h"
 #include "protocols.h"
+#include "request.h"
 #include "sll.h"
 #include "tcp.h"
 #include "udp.h"
 
+#include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -58,155 +59,120 @@
 // 	return false;
 // }
 
-void handle_ip_protocol(t_ip *ip_hdr, t_datalink_hdr *hdr)
+static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
+							   t_datalink_hdr *hdr)
 {
-	void *protocol_hdr;
+	const u8 *protocol_hdr;
+	size_t	  ip_hlen;
+	size_t	  l4_len;
 
-	protocol_hdr = (void *)((u8 *)ip_hdr + ip_hdr->ip_hl * 4);
+	if (l3_caplen < sizeof(struct ip))
+		return false;
 
-	// if (find_corresponding_target(targets, targets_count, &ip_hdr->ip_src,
-	// target))
-	// {
-	// 	//TODO: handle this case
-	// 	return ;
-	// }
+	ip_hlen = (size_t)ip_hdr->ip_hl * 4;
+	if (ip_hlen < sizeof(struct ip) || l3_caplen < ip_hlen)
+		return false;
+
+	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
+	l4_len = l3_caplen - ip_hlen;
+
 	print_debug_protocol(ip_hdr->ip_p);
 
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
-	{
-		hdr->tcp_hdr = *(struct tcphdr *)protocol_hdr;
+		if (l4_len < sizeof(struct tcphdr))
+			return false;
+		hdr->tcp_hdr = *(const struct tcphdr *)protocol_hdr;
 		print_debug_tcp_header(&hdr->tcp_hdr);
-		/* PROTO_TCP is our enum with the right integer value because
-						we use it as an index after */
-		// handle_tcp_protocol(target, &hdr->tcp_hdr);
-		break;
-	}
-	case IPPROTO_ICMP:
-	{
-		// struct tcphdr *tcp_hdr = (struct tcphdr *)protocol_hdr;
-		// handle_icmp_protocol(&target, tcp_hdr);
-		// struct icmphdr *icmp_hdr = (struct icmphdr *)protocol_hdr;
-		// print_debug_icmp_header(icmp_hdr);
-		break;
-	}
+		return true;
+
 	case IPPROTO_UDP:
-	{
-		// struct udphdr *udp_hdr = (struct udphdr *)protocol_hdr;
-		// print_debug_udp_header(udp_hdr);
-		break;
-	}
+		if (l4_len < sizeof(struct udphdr))
+			return false;
+		hdr->udp_hdr = *(const struct udphdr *)protocol_hdr;
+		print_debug_udp_header(&hdr->udp_hdr);
+		return true;
+
+	case IPPROTO_ICMP:
+		return true;
+
 	default:
-		break;
+		return false;
 	}
 }
 
-static void handle_with_ethernet(const u_char *packet, t_ip *ip_hdr,
-								 t_datalink_hdr *hdr)
+static bool handle_with_ethernet(const u_char *packet, bpf_u_int32 caplen,
+								 t_ip *ip_hdr, t_datalink_hdr *hdr)
 {
-	struct ether_header *eth_header = (struct ether_header *)packet;
-	print_debug_ethernet_type(ntohs(eth_header->ether_type));
+	struct ether_header *eth_header;
+	const t_ip			*pkt_ip;
+	size_t				 l2_len;
+	size_t				 l3_caplen;
 
-	if (ntohs(eth_header->ether_type) == ETHERTYPE_IP)
-	{
-		ip_hdr = (struct ip *)(packet + sizeof(struct ether_header));
-		print_debug_ethernet_header(eth_header);
-		print_debug_ip_header(ip_hdr);
-		handle_ip_protocol(ip_hdr, hdr);
-	}
+	l2_len = sizeof(struct ether_header);
+	if (caplen < l2_len + sizeof(struct ip))
+		return false;
+
+	eth_header = (struct ether_header *)packet;
+	print_debug_ethernet_type(ntohs(eth_header->ether_type));
+	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
+		return false;
+
+	pkt_ip = (const t_ip *)(packet + l2_len);
+	*ip_hdr = *pkt_ip;
+
+	print_debug_ethernet_header(eth_header);
+	print_debug_ip_header(ip_hdr);
+
+	l3_caplen = caplen - l2_len;
+	return handle_ip_protocol(pkt_ip, (bpf_u_int32)l3_caplen, hdr);
 }
 
-static void parse_datalink_layer(const u_char *packet, t_ip *ip_hdr,
-								 t_datalink_hdr *datalink_hdr, pcap_t *handle)
+static bool parse_datalink_layer(const u_char *packet, bpf_u_int32 caplen,
+								 t_ip *ip_hdr, t_datalink_hdr *datalink_hdr,
+								 pcap_t *handle)
 {
 	int datalink_type = pcap_datalink(handle);
 	print_debug_datalink_type(datalink_type);
 
-	switch (datalink_type)
-	{
-	case DLT_EN10MB:
-		printf("DLT_EN10MB\n");
-		handle_with_ethernet(packet, ip_hdr, datalink_hdr);
-		break;
-		// case DLT_LINUX_SLL:
-		// 	printf("DLT_LINUX_SLL\n");
-		// 	handle_with_linux_sll(packet);
-		// 	break;
-		// case DLT_RAW:
-		// 	printf("DLT_RAW\n");
-		// 	// handle_with_raw_ip(packet, targets);
-		// 	break;
-		// case DLT_NULL:
-		// 	printf("DLT_NULL\n");
-		// 	handle_with_null_loopback(packet);
-		break;
-	default:
-		printf("default\n");
-		break;
-	}
+	if (datalink_type == DLT_EN10MB)
+		return handle_with_ethernet(packet, caplen, ip_hdr, datalink_hdr);
+	return false;
 }
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
-	print_debug_packet_start();
-	(void)args;
-	(void)header;
 	t_pcap_user_data   *user_data = (t_pcap_user_data *)args;
-	pcap_t			   *handle = user_data->handle;
-	t_shared_data_pcap *shared_data_probe = user_data->shared_data_probe;
-	t_ip				ip_hdr;
-	t_datalink_hdr		hdr;
-	// t_target				   target;
+	t_shared_data_pcap *shared_data_pcap = user_data->shared_data_pcap;
+	t_ip				ip_hdr = { 0 };
+	t_datalink_hdr		hdr = { 0 };
 
-	(void)handle;
-	(void)shared_data_probe;
-	(void)packet;
-	parse_datalink_layer(packet, &ip_hdr, &hdr, handle);
-	// find_corresponding_target(shared_data_probe->targets,
-	// shared_data_probe->target_count, &ip_hdr.ip_src, &target);
+	print_debug_packet_start();
+	if (!parse_datalink_layer(packet, header->caplen, &ip_hdr, &hdr,
+							  user_data->handle))
+		return;
+
 	print_debug_packet_end();
-
-	// t_probe_request_sent *tmp = *shared_data_probe->pending_request_head;
-	// while (tmp)
-	// {
-	// 	if (strcmp(tmp->request->target.ip, target.ip) == 0)
-	// 	{
-	// 		// TODO:
-	// 		//
-	// pthread_mutex_lock(&shared_data_probe->pending_request_list_mut[0]); is
-	// 		// hardcoded
-	// 		pthread_mutex_lock(&shared_data_probe->pending_request_list_mut[0]);
-	// 		if (tmp->prev)
-	// 		{
-	// 			tmp->prev->next = tmp->next;
-	// 			tmp->next->prev = tmp->prev;
-	// 			t_probe_request_sent *save = tmp->next;
-	// 			free(tmp);
-	// 			tmp = save;
-	// 		}
-	// 		pthread_mutex_unlock(&shared_data_probe->pending_request_list_mut[0]);
-	// 	}
-	// 	tmp = tmp->next;
-	// }
+	(void)shared_data_pcap;
 }
 
 static void
-purge_timedout_probe_request(t_probe_request **head_pending_list,
-							 t_probe_request **head, t_probe_request **tail,
+purge_timedout_probe_request(t_request **head_pending_list, t_request **head,
+							 t_request		**tail,
 							 pthread_mutex_t *pending_request_list_mut,
 							 pthread_mutex_t *request_list_mut)
 {
-	time_t			 now;
-	t_probe_request *tmp = *head_pending_list;
+	time_t	   now;
+	t_request *tmp = *head_pending_list;
 
 	pthread_mutex_lock(pending_request_list_mut);
 	while (tmp)
 	{
 		now = time(NULL);
 		unsigned long seconds_elapsed
-			= (unsigned long)difftime(tmp->timestamp, now);
+			= (unsigned long)difftime(now, tmp->timestamp);
 
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
@@ -250,9 +216,9 @@ purge_timedout_probe_request(t_probe_request **head_pending_list,
 
 void *receive_routine(void *arg)
 {
-	t_shared_data_pcap *shared_data_probe = (t_shared_data_pcap *)arg;
+	t_shared_data_pcap *shared_data_pcap = (t_shared_data_pcap *)arg;
 	// TODO: change this
-	pcap_t *handle = shared_data_probe->handle;
+	pcap_t *handle = shared_data_pcap->handle;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int	 ret;
@@ -283,17 +249,16 @@ void *receive_routine(void *arg)
 	while (!g_stop)
 	{
 		t_pcap_user_data user_data
-			= { .handle = handle, .shared_data_probe = shared_data_probe };
+			= { .handle = handle, .shared_data_pcap = shared_data_pcap };
 		/* Returns 0 if no packet to read */
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
-
 			purge_timedout_probe_request(
-				&shared_data_probe->pending_request_head,
-				&shared_data_probe->request_list_head,
-				&shared_data_probe->request_list_tail,
-				&shared_data_probe->pending_request_list_mut,
-				&shared_data_probe->request_list_mut);
+				&shared_data_pcap->pending_request_list->head,
+				&shared_data_pcap->probe_request_list->head,
+				&shared_data_pcap->probe_request_list->tail,
+				&shared_data_pcap->pending_request_list->mut,
+				&shared_data_pcap->probe_request_list->mut);
 		}
 	}
 

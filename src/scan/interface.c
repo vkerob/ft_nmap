@@ -92,9 +92,14 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 			return true;
 		}
 
-		struct sockaddr_in dst_addr = targets[i].addr;
+		struct sockaddr_in dst_addr;
+		memset(&dst_addr, 0, sizeof(dst_addr));
+
+		dst_addr.sin_family = AF_INET;
+		dst_addr.sin_addr = targets[i].addr; // <- in_addr
 		dst_addr.sin_port
 			= htons(53); // arbitrary port, we won't actually send data
+
 		// Connect the socket to the target address. This doesn't send any
 		// packets because it's a UDP socket, but it will cause the kernel to
 		// assign a local IP address and interface to the socket based on the
