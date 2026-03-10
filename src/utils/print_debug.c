@@ -12,6 +12,40 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
+void print_debug_capture_thread_startup(pthread_t phid)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	sync_printf(ANSI_COLOR_RED
+				"Thread %lu -> capture_routine()\n" ANSI_COLOR_RESET,
+				phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+}
+
+void print_debug_sender_thread_startup(pthread_t phid)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	sync_printf(
+		ANSI_COLOR_RED "Thread %lu -> send_routine()\n" ANSI_COLOR_RESET, phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+}
+
+void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
+											 struct timeval *tv)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	sync_printf(ANSI_COLOR_RED
+				"Thread %u sent probe at %ld.%06ld\n" ANSI_COLOR_RESET,
+				phid, tv->tv_sec, tv->tv_usec);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	(void)request;
+}
+
 void print_debug_udp_header(t_udp_hdr *udp_hdr)
 {
 	printf(ANSI_BOLD ANSI_COLOR_YELLOW "\nUDP Header:\n" ANSI_COLOR_RESET);
@@ -163,7 +197,7 @@ void print_debug_protocol(int protocol)
 	}
 }
 
-void print_debug_probe_request(t_request *request)
+void print_debug_probe_request(t_probe *request)
 {
 	char buf[16] = { 0 };
 
@@ -173,7 +207,7 @@ void print_debug_probe_request(t_request *request)
 	printf(ANSI_COLOR_GREEN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
-		   inet_ntoa(request->target.ip_addr), request->target.port);
+		   inet_ntoa(request->target->iface_info->ip_addr), request->port);
 	scan_type_to_str(request->type, buf);
 	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
 
@@ -183,11 +217,11 @@ void print_debug_probe_request(t_request *request)
 	printf(ANSI_COLOR_GREEN "  • Status: %u\n" ANSI_COLOR_RESET,
 		   request->status);
 	printf(ANSI_COLOR_GREEN "  • Interface: %s\n" ANSI_COLOR_RESET,
-		   request->iface_info.name);
+		   request->target->iface_info->name);
 	printf(ANSI_COLOR_GREEN "  • IP src Address: %s\n" ANSI_COLOR_RESET,
-		   inet_ntoa(request->iface_info.ip_addr));
+		   inet_ntoa(request->target->iface_info->ip_addr));
 	printf(ANSI_COLOR_GREEN "  • iface index: %u\n" ANSI_COLOR_RESET,
-		   request->iface_info.iface_index);
+		   request->target->iface_info->iface_index);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 }
@@ -321,26 +355,63 @@ void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count)
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }
 
-void print_debug_shared_data_pcap(t_shared_data_pcap *shared_data_pcap)
+void print_debug_shared_data_pcap(t_receiver_data *shared_data_pcap)
 {
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_CYAN " SHARED DATA PCAP \n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
-	printf(ANSI_BOLD ANSI_COLOR_YELLOW "PCAP Handle:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW " • %p\n" ANSI_COLOR_RESET,
-		   (void *)shared_data_pcap->handle);
-	printf(ANSI_BOLD ANSI_COLOR_GREEN
-		   "\nPending Request List:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_GREEN " • Head: %p\n" ANSI_COLOR_RESET,
-		   (void *)shared_data_pcap->pending_request_list->head);
-	printf(ANSI_COLOR_GREEN " • Tail: %p\n" ANSI_COLOR_RESET,
-		   (void *)shared_data_pcap->pending_request_list->tail);
-	printf(ANSI_BOLD ANSI_COLOR_BLUE
-		   "\nPending Request List Mutex:\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_BLUE "PCAP Handle:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_BLUE " • %p\n" ANSI_COLOR_RESET,
-		   (void *)&shared_data_pcap->pending_request_list->mut);
+		   (void *)shared_data_pcap->handle);
+	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nsent Request List:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE " • Head: %p\n" ANSI_COLOR_RESET,
+		   (void *)shared_data_pcap->to_send->head);
+	printf(ANSI_COLOR_BLUE " • Tail: %p\n" ANSI_COLOR_RESET,
+		   (void *)shared_data_pcap->to_send->tail);
+	printf(ANSI_BOLD ANSI_COLOR_BLUE
+		   "\nsent Request List Mutex:\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_BLUE " • %p\n" ANSI_COLOR_RESET,
+		   (void *)&shared_data_pcap->to_send->mut);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+}
+
+void print_debug_shared_data_probe(t_shared_data_probe *shared_data_probe,
+								   t_iface_info		   *ifaces)
+{
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN " SHARED DATA PROBE \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_MAGENTA
+		   "Number of interface: \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA " • %zu\n" ANSI_COLOR_RESET,
+		   shared_data_probe->iface_count);
+	printf(ANSI_BOLD ANSI_COLOR_MAGENTA
+		   "Number of ports to scan:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA " • %d\n" ANSI_COLOR_RESET,
+		   shared_data_probe->port_count);
+	printf(ANSI_COLOR_MAGENTA "Number of probe to send: \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA " • %d\n" ANSI_COLOR_RESET,
+		   shared_data_probe->to_send.nb_probe);
+	printf(ANSI_BOLD ANSI_COLOR_MAGENTA
+		   "Queue of probe to send:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_MAGENTA " • %p\n" ANSI_COLOR_RESET,
+		   (void *)&shared_data_probe->to_send);
+	printf(ANSI_BOLD ANSI_COLOR_MAGENTA
+		   "\nQueues of sent probe (one per interface):\n" ANSI_COLOR_RESET);
+	for (size_t i = 0; i < shared_data_probe->iface_count; i++)
+	{
+		printf(ANSI_COLOR_MAGENTA "	• Queue of %s interface\n" ANSI_COLOR_RESET,
+			   ifaces[i].name);
+		printf(ANSI_COLOR_MAGENTA "	• Queue address: %p\n" ANSI_COLOR_RESET,
+			   (void *)&shared_data_probe->sent[i]);
+		printf(ANSI_COLOR_MAGENTA "	• Queue mutex: %p\n" ANSI_COLOR_RESET,
+			   (void *)&shared_data_probe->sent[i].mut);
+	}
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 }

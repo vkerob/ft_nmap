@@ -8,21 +8,21 @@
 
 #include <pcap/pcap.h>
 
-typedef struct s_pending_queue
-{
-	t_request	   *head;
-	t_request	   *tail;
-	pthread_mutex_t mut;
-	u8				nb_pending_requests;
-} t_pending_queue;
+// typedef struct s_sent_queue
+// {
+// 	t_probe		   *head;
+// 	t_probe		   *tail;
+// 	pthread_mutex_t mut;
+// 	u8				nb_sent_requests;
+// } t_sent_queue;
 
-typedef struct s_request_list
+typedef struct s_probe_queue
 {
-	t_request	   *head;
-	t_request	   *tail;
+	t_probe		   *head;
+	t_probe		   *tail;
 	pthread_mutex_t mut;
-	u8				nb_probe_requests;
-} t_request_list;
+	u8				nb_probe;
+} t_probe_queue;
 
 typedef struct s_shared_data_probe
 {
@@ -31,28 +31,28 @@ typedef struct s_shared_data_probe
 	size_t		iface_count;
 	u16			port_count;
 
-	t_request_list probe_request_list;
+	t_probe_queue to_send;
 
 	// one for each interface
-	t_pending_queue *pending_request_list;
+	t_probe_queue *sent;
 } t_shared_data_probe;
 
-typedef struct s_shared_data_pcap
+typedef struct s_receiver_data
 {
 	pcap_t *handle;
 
-	t_iface_info iface_info;
+	t_iface_info *iface_info;
+	// reference of sent request list of corresponding interface
+	t_probe_queue *to_send;
+	// reference of sent request list
+	t_probe_queue *sent;
 
-	t_request_list *probe_request_list; // pointer to shared request list
-
-	t_pending_queue *pending_request_list;
-
-} t_shared_data_pcap;
+} t_receiver_data;
 
 bool initialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
 								  t_ctx				  *ctx);
 
-bool initialize_shared_data_pcap(t_shared_data_pcap **pcap_ctxs,
+bool initialize_shared_data_pcap(t_receiver_data	**pcap_ctxs,
 								 size_t				  iface_count,
 								 t_shared_data_probe *shared_data_probe,
 								 t_iface_info		 *ifaces);
@@ -64,12 +64,12 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t		  **pcap_threads,
 								   pthread_t		  **send_threads,
 								   t_shared_data_probe *shared_data_probe,
-								   t_shared_data_pcap  *shared_data_pcap,
+								   t_receiver_data	   *shared_data_pcap,
 								   t_iface_info		   *ifaces);
 
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);
 
-bool initial_probe_request_list(t_ctx *ctx, t_request_list *probe_request_list);
+bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send);
 
 #endif

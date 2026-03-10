@@ -36,7 +36,7 @@ typedef struct s_target
 {
 	char		  *input;
 	struct in_addr addr;
-	t_iface_info   iface_info;
+	t_iface_info  *iface_info;
 } t_target;
 
 typedef enum e_scan_type

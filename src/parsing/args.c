@@ -52,13 +52,17 @@ bool resolve_targets(char **inputs, size_t count, t_target **targets)
 {
 	t_target *tmp = calloc(count, sizeof(*tmp));
 	if (!tmp)
+	{
+		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
+	}
 
 	for (size_t i = 0; i < count; i++)
 	{
 		tmp[i].input = strdup(inputs[i]);
 		if (!tmp[i].input)
 		{
+			fprintf(stderr, "ft_nmap: strdup failed: %s\n", strerror(errno));
 			free_targets(&tmp, i);
 			return true;
 		}

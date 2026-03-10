@@ -7,6 +7,15 @@
 #include "sll.h"
 #include "typesdef.h"
 
+void print_debug_capture_thread_startup(pthread_t phid);
+
+void print_debug_sender_thread_startup(pthread_t phid);
+
+void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
+											 struct timeval *tv);
+
+void sync_printf(const char *format, ...);
+
 void print_debug_packet_start();
 
 void print_debug_packet_end();
@@ -35,8 +44,10 @@ void print_debug_ip_header(struct ip *ip_hdr);
 
 void print_debug_udp_header(t_udp_hdr *udp_hdr);
 
-void print_debug_probe_request(t_request *request);
+void print_debug_probe_request(t_probe *request);
 
-void print_debug_shared_data_pcap(t_shared_data_pcap *shared_data_pcap);
+void print_debug_shared_data_pcap(t_receiver_data *shared_data_pcap);
 
+void print_debug_shared_data_probe(t_shared_data_probe *shared_data_probe,
+								   t_iface_info		   *ifaces);
 #endif

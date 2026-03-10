@@ -1,6 +1,6 @@
-#include "debug.h"
 #include "scan.h"
 
+#include <errno.h>
 #include <ifaddrs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +33,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		*ifaces = calloc(*iface_count + 1, sizeof(t_iface_info));
 		if (!*ifaces)
 		{
+			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 			return true;
 		}
 	}
@@ -138,10 +139,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 			fprintf(stderr, "ft_nmap: Failed to add interface name\n");
 			return true;
 		}
-		targets[i].iface_info = (*ifaces)[iface_index];
-		// targets[i].iface_info.iface_index = iface_index;
-		// targets[i].iface_info.ip_addr = local_addr.sin_addr;
-		// strncpy(targets[i].iface_info.name, ifname_buf, IFNAMSIZ);
+		targets[i].iface_info = &(*ifaces[iface_index]);
 	}
 	return false;
 }

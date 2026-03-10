@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool pop_probe_request(t_request **head, t_request **tail,
-					   t_request **popped_request)
+bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 {
 	*popped_request = *tail;
 
@@ -17,19 +16,18 @@ bool pop_probe_request(t_request **head, t_request **tail,
 	{
 		*head = NULL;
 	}
+	// print_debug_probe_request(*popped_request);
 	return true;
 }
 
-bool append_probe_request(t_request **head, t_request **tail, t_target target,
+bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 						  u16 port, t_scan_type scan_type, u32 id)
 {
-	t_request *new_request = malloc(sizeof(t_request));
+	t_probe *new_request = malloc(sizeof(t_probe));
 	if (!new_request)
 		return true;
-	new_request->target.ip_addr = target.addr;
-	new_request->target.port = port;
-
-	new_request->iface_info = target.iface_info;
+	new_request->target = target;
+	new_request->port = port;
 
 	new_request->type = scan_type;
 	new_request->id = id;

@@ -5,7 +5,7 @@
 
 #include <stdatomic.h>
 
-void build_ip_header(t_ip *ip_hdr, t_request *request, char *source_ip,
+void build_ip_header(t_ip *ip_hdr, t_probe *request, char *source_ip,
 					 _Atomic uint16_t *id_counter)
 {
 	(void)ip_hdr;
@@ -22,7 +22,7 @@ void build_ip_header(t_ip *ip_hdr, t_request *request, char *source_ip,
 	ip_hdr->ip_id = htons(atomic_fetch_add(id_counter, 1));
 	// ip_hdr->ip_sum = calculate_checksum(ip_hdr, ip_hdr->ip_hl * 4);
 	ip_hdr->ip_src.s_addr = inet_addr(source_ip);
-	ip_hdr->ip_dst.s_addr = request->target.ip_addr.s_addr;
+	ip_hdr->ip_dst.s_addr = request->target->iface_info->ip_addr.s_addr;
 	// no priority
 	ip_hdr->ip_tos = 0;
 }

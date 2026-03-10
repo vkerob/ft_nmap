@@ -29,19 +29,20 @@ bool nmap_main(t_ctx *ctx)
 		printf("failed to initialize shared data\n");
 		return true;
 	}
-	t_shared_data_pcap *pcap_ctxs = NULL;
+	t_receiver_data *pcap_ctxs = NULL;
 
 	initialize_shared_data_pcap(&pcap_ctxs, ctx->iface_count,
 								&shared_data_probe, ctx->ifaces);
 
-	if (initial_probe_request_list(ctx, &shared_data_probe.probe_request_list))
+	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
 		printf("failed to initialize probe request\n");
 		return true;
 	}
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
-	shared_data_probe.probe_request_list.nb_probe_requests
+
+	shared_data_probe.to_send.nb_probe
 		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
 	if (initialize_and_launch_threads(

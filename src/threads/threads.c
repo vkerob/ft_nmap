@@ -13,7 +13,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t		  **pcap_threads,
 								   pthread_t		  **send_threads,
 								   t_shared_data_probe *shared_data_probe,
-								   t_shared_data_pcap  *shared_data_pcap,
+								   t_receiver_data	   *shared_data_pcap,
 								   t_iface_info		   *ifaces)
 {
 	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
@@ -38,7 +38,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 			return true;
 		print_debug_shared_data_pcap(&shared_data_pcap[i]);
 
-		int ret = pthread_create(&(*pcap_threads)[i], NULL, receive_routine,
+		int ret = pthread_create(&(*pcap_threads)[i], NULL, capture_routine,
 								 &shared_data_pcap[i]);
 		if (ret != 0)
 		{
@@ -50,6 +50,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 		}
 	}
 
+	print_debug_shared_data_probe(shared_data_probe, ifaces);
 	// launch thread to send packets
 	for (u8 i = 0; i < nb_send_thread; i++)
 	{
