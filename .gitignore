@@ -9,5 +9,4 @@ ft_nmap
 obj
 test.txt
 build
-docker-compose.yml
 launch.kitty-session

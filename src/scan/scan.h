@@ -18,7 +18,7 @@ typedef struct s_port
 	u8	port_state;
 } t_port;
 
-typedef struct t_port_list
+typedef struct s_port_list
 {
 	u16	   *port_map[MAX_NB_SCAN_TYPE];
 	t_port *port_map_rev[MAX_NB_SCAN_TYPE];

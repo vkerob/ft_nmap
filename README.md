@@ -3,8 +3,29 @@
 ## Usage
 
 In the main directory run
+
 ```bash
 cmake -B build; cmake --build build
+```
+
+## Docker
+
+Start the container:
+
+```bash
+docker compose up -d
+```
+
+Enter the container:
+
+```bash
+docker exec -it ft_nmap_container bash
+```
+
+Stop the container:
+
+```bash
+docker compose down
 ```
 
 ## Testing
@@ -14,7 +35,6 @@ Run unit tests:
 ```bash
 ctest --test-dir build --output-on-failure
 ```
-
 
 ## Documentation
 
@@ -51,7 +71,7 @@ Envoie une requête avec le flag ``ACK`` de set
 | No response received (even after retransmissions)           | `filtered`     |
 | ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13) | `filtered`     |
 
-L'avantage du scan ``ACK `` par rapport au scan ``SYN`` est qu'il donnera un résultat de port filtré inférieur à celui du ``SYN | ACK`` qui lui est facilment filtrable car le firewall peut directement déterminé que c'est une connection entrante.
+L'avantage du scan ``ACK`` par rapport au scan ``SYN`` est qu'il donnera un résultat de port filtré inférieur à celui du ``SYN | ACK`` qui lui est facilment filtrable car le firewall peut directement déterminé que c'est une connection entrante.
 En envoyant seulement ``ACK`` le firewall est obligé de garder un état de chaque connection sortante afin d'être capable de déterminer si cette ``ACK`` fait suite à une demande de synchronisation sortante ou entrante, et renvoyer ``filtered`` dans ce dernier cas de figure.
 
 ==Nécessite des droits sudo.==
@@ -74,10 +94,9 @@ XMAX: Envoie une requête avec les flags FIN, PSH et URG de set (-sX sur nmap)
 
 ### Protocole UDP
 
-**SCAN UDP**
+### SCAN UDP
 
 ## Types d'états de port
-
 
 ``filtered``: un firewall bloque la communication avec le port donc on ne peut pas dire si il est ``open`` ou ``close``
 

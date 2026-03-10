@@ -172,60 +172,64 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	(void)receiver_data;
 }
 
-// static void purge_timedout_probe_request(t_probe **head_sent_queue,
-// 										 t_probe **head, t_probe **tail,
-// 										 pthread_mutex_t *sent_queue_mut,
-// 										 pthread_mutex_t *to_send_queue_mut)
-// {
-// 	time_t	 now;
-// 	t_probe *tmp = *head_sent_queue;
+static void purge_timedout_probe_request(t_probe_queue *sent,
+										 t_probe_queue *to_send)
+{
+	time_t	 now;
+	t_probe *tmp = sent->head;
 
-// 	pthread_mutex_lock(sent_queue_mut);
-// 	while (tmp)
-// 	{
-// 		now = time(NULL);
-// 		unsigned long seconds_elapsed
-// 			= (unsigned long)difftime(now, tmp->timestamp);
+	pthread_mutex_lock(&sent->mut);
+	while (tmp)
+	{
+		now = time(NULL);
+		unsigned long seconds_elapsed
+			= (unsigned long)difftime(now, tmp->timestamp);
 
-// 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
-// 		{
-// 			// Pop tmp from the sent list
-// 			if (tmp->prev)
-// 			{
-// 				// Link previous node with next
-// 				tmp->prev->next = tmp->next;
-// 				tmp->next->prev = tmp->prev;
-// 			}
-// 			else if (tmp->next)
-// 			{
-// 				// Update head and erase prev of next
-// 				tmp->next->prev = NULL;
-// 				*head_sent_queue = tmp->next;
-// 			}
-// 			// Update retries and reinject in probe request list
-// 			if (tmp->retries < MAX_SCAN_RETRIES)
-// 			{
-// 				tmp->retries += 1;
-// 				tmp->timestamp = 0;
-// 			}
-// 			pthread_mutex_lock(to_send_queue_mut);
-// 			if (*tail)
-// 			{
-// 				(*tail)->next = tmp;
-// 			}
-// 			else
-// 			{
-// 				*head = tmp;
-// 			}
-// 			// update tail to new request
-// 			*tail = tmp;
-// 			pthread_mutex_unlock(to_send_queue_mut);
-// 			// free probe_request_sent object
-// 		}
-// 		tmp = tmp->next;
-// 	}
-// 	pthread_mutex_unlock(sent_queue_mut);
-// }
+		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
+		{
+			// Pop tmp from the sent list
+			if (tmp->prev)
+			{
+				// Link previous node with next
+				tmp->prev->next = tmp->next;
+				tmp->next->prev = tmp->prev;
+			}
+			else if (tmp->next)
+			{
+				// Update head and erase prev of next
+				tmp->next->prev = NULL;
+				sent->head = tmp->next;
+			}
+			else
+			{
+				// Only one element in the list, reset head and tail
+				sent->head = NULL;
+				sent->tail = NULL;
+			}
+			// Update retries and reinject in probe request list
+			if (tmp->retries < MAX_SCAN_RETRIES)
+			{
+				tmp->retries += 1;
+				tmp->timestamp = 0;
+			}
+			pthread_mutex_lock(&to_send->mut);
+			if (to_send->tail)
+			{
+				to_send->tail->next = tmp;
+			}
+			else
+			{
+				to_send->head = tmp;
+			}
+			// update tail to new request
+			to_send->tail = tmp;
+			pthread_mutex_unlock(&to_send->mut);
+			// free probe_request_sent object
+		}
+		tmp = tmp->next;
+	}
+	pthread_mutex_unlock(&sent->mut);
+}
 
 void *capture_routine(void *arg)
 {
@@ -273,11 +277,8 @@ void *capture_routine(void *arg)
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
 			// sync_printf("Thread %lu: no received packet\n");
-			// purge_timedout_probe_request(&receiver_data->to_send->head,
-			// 							 &receiver_data->to_send->head,
-			// 							 &receiver_data->to_send->tail,
-			// 							 &receiver_data->to_send->mut,
-			// 							 &receiver_data->to_send->mut);
+			purge_timedout_probe_request(receiver_data->sent,
+										 receiver_data->to_send);
 		}
 	}
 	print_debug_capture_thread_leave(phid);
