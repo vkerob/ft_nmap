@@ -10,11 +10,11 @@
 #include <string.h>
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t		  **pcap_threads,
-								   pthread_t		  **send_threads,
-								   t_shared_data_probe *shared_data_probe,
-								   t_receiver_data	   *shared_data_pcap,
-								   t_iface_info		   *ifaces)
+								   pthread_t		   **pcap_threads,
+								   pthread_t		   **send_threads,
+								   t_shared_data_sender *shared_data_probe,
+								   t_receiver_data		*receiver_data,
+								   t_iface_info			*ifaces)
 {
 	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
 	if (*pcap_threads == NULL)
@@ -32,14 +32,13 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	// launch thread to handle captured packets
 	for (size_t i = 0; i < nb_pcap_thread; i++)
 	{
-
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&shared_data_pcap[i].handle, ifaces[i].name, errbuf))
+		if (pcap_setup(&receiver_data[i].handle, ifaces[i].name, errbuf))
 			return true;
-		print_debug_shared_data_pcap(&shared_data_pcap[i]);
+		print_debug_receiver_data(&receiver_data[i]);
 
 		int ret = pthread_create(&(*pcap_threads)[i], NULL, capture_routine,
-								 &shared_data_pcap[i]);
+								 &receiver_data[i]);
 		if (ret != 0)
 		{
 			free(*send_threads);
@@ -51,7 +50,7 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	}
 
 	print_debug_shared_data_probe(shared_data_probe, ifaces);
-	// launch thread to send packets
+
 	for (u8 i = 0; i < nb_send_thread; i++)
 	{
 		int ret = pthread_create(&(*send_threads)[i], NULL, send_routine,

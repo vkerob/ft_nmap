@@ -5,11 +5,11 @@
 #include "typesdef.h"
 
 #include <pcap/pcap.h>
-
+extern pthread_mutex_t printf_mutex;
 typedef struct s_pcap_user_data
 {
 	pcap_t			*handle;
-	t_receiver_data *shared_data_pcap;
+	t_receiver_data *receiver_data;
 } t_pcap_user_data;
 
 bool pcap_setup(pcap_t **handle, const char *dev_name, char *errbuf);

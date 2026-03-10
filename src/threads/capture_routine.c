@@ -76,8 +76,8 @@ static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
+	pthread_mutex_lock(&printf_mutex);
 	print_debug_protocol(ip_hdr->ip_p);
-
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
@@ -85,6 +85,8 @@ static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
 			return false;
 		hdr->tcp_hdr = *(const struct tcphdr *)protocol_hdr;
 		print_debug_tcp_header(&hdr->tcp_hdr);
+		pthread_mutex_unlock(&printf_mutex);
+
 		return true;
 
 	case IPPROTO_UDP:
@@ -92,9 +94,11 @@ static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
 			return false;
 		hdr->udp_hdr = *(const struct udphdr *)protocol_hdr;
 		print_debug_udp_header(&hdr->udp_hdr);
+		pthread_mutex_unlock(&printf_mutex);
 		return true;
 
 	case IPPROTO_ICMP:
+		pthread_mutex_unlock(&printf_mutex);
 		return true;
 
 	default:
@@ -115,16 +119,20 @@ static bool handle_with_ethernet(const u_char *packet, bpf_u_int32 caplen,
 		return false;
 
 	eth_header = (struct ether_header *)packet;
+	pthread_mutex_lock(&printf_mutex);
 	print_debug_ethernet_type(ntohs(eth_header->ether_type));
+	pthread_mutex_unlock(&printf_mutex);
+
 	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 		return false;
 
 	pkt_ip = (const t_ip *)(packet + l2_len);
 	*ip_hdr = *pkt_ip;
+	pthread_mutex_lock(&printf_mutex);
 
 	print_debug_ethernet_header(eth_header);
 	print_debug_ip_header(ip_hdr);
-
+	pthread_mutex_unlock(&printf_mutex);
 	l3_caplen = caplen - l2_len;
 	return handle_ip_protocol(pkt_ip, (bpf_u_int32)l3_caplen, hdr);
 }
@@ -144,8 +152,11 @@ static bool parse_datalink_layer(const u_char *packet, bpf_u_int32 caplen,
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
+	sync_printf(ANSI_COLOR_RED
+				"Thread %lu enter handle_packet()\n" ANSI_COLOR_RESET,
+				pthread_self());
 	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
-	t_receiver_data	 *shared_data_pcap = user_data->shared_data_pcap;
+	t_receiver_data	 *receiver_data = user_data->receiver_data;
 	t_ip			  ip_hdr = { 0 };
 	t_datalink_hdr	  hdr = { 0 };
 
@@ -155,7 +166,10 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 		return;
 
 	print_debug_packet_end();
-	(void)shared_data_pcap;
+	sync_printf(ANSI_COLOR_RED
+				"Thread %lu leave handle_packet()\n" ANSI_COLOR_RESET,
+				pthread_self());
+	(void)receiver_data;
 }
 
 // static void purge_timedout_probe_request(t_probe **head_sent_queue,
@@ -219,9 +233,9 @@ void *capture_routine(void *arg)
 	phid = pthread_self();
 	print_debug_capture_thread_startup(phid);
 
-	t_receiver_data *shared_data_pcap = (t_receiver_data *)arg;
+	t_receiver_data *receiver_data = (t_receiver_data *)arg;
 	// TODO: change this
-	pcap_t *handle = shared_data_pcap->handle;
+	pcap_t *handle = receiver_data->handle;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int	 ret;
@@ -254,17 +268,18 @@ void *capture_routine(void *arg)
 	while (!g_stop)
 	{
 		t_pcap_user_data user_data
-			= { .handle = handle, .shared_data_pcap = shared_data_pcap };
+			= { .handle = handle, .receiver_data = receiver_data };
 		/* Returns 0 if no packet to read */
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
-			// purge_timedout_probe_request(&shared_data_pcap->to_send->head,
-			// 							 &shared_data_pcap->to_send->head,
-			// 							 &shared_data_pcap->to_send->tail,
-			// 							 &shared_data_pcap->to_send->mut,
-			// 							 &shared_data_pcap->to_send->mut);
+			// sync_printf("Thread %lu: no received packet\n");
+			// purge_timedout_probe_request(&receiver_data->to_send->head,
+			// 							 &receiver_data->to_send->head,
+			// 							 &receiver_data->to_send->tail,
+			// 							 &receiver_data->to_send->mut,
+			// 							 &receiver_data->to_send->mut);
 		}
 	}
-
+	print_debug_capture_thread_leave(phid);
 	return NULL;
 }

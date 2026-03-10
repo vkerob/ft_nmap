@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool initialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
-								  t_ctx				  *ctx)
+bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
+								  t_ctx				   *ctx)
 {
 	// init the sent request list for each interface
 	shared_data_probe->sent = calloc(ctx->iface_count, sizeof(t_probe_queue));
@@ -50,10 +50,9 @@ bool initialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
 	return false;
 }
 
-bool initialize_shared_data_pcap(t_receiver_data	**pcap_ctxs,
-								 size_t				  iface_count,
-								 t_shared_data_probe *shared_data_probe,
-								 t_iface_info		 *ifaces)
+bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
+							  t_shared_data_sender *shared_data_probe,
+							  t_iface_info		   *ifaces)
 {
 	*pcap_ctxs = calloc(iface_count, sizeof(t_receiver_data));
 	if (!*pcap_ctxs)
@@ -72,7 +71,7 @@ bool initialize_shared_data_pcap(t_receiver_data	**pcap_ctxs,
 	return false;
 }
 
-void deinitialize_shared_data_probe(t_shared_data_probe *shared_data_probe,
+void deinitialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 									pcap_t **handles, t_ctx *ctx)
 {
 	for (size_t i = 0; i < ctx->iface_count; i++)

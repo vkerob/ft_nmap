@@ -14,9 +14,9 @@ sig_atomic_t volatile g_stop = 0;
 
 bool nmap_main(t_ctx *ctx)
 {
-	t_shared_data_probe shared_data_probe;
-	pthread_t		   *pcap_threads = NULL;
-	pthread_t		   *send_threads = NULL;
+	t_shared_data_sender shared_data_probe;
+	pthread_t			*pcap_threads = NULL;
+	pthread_t			*send_threads = NULL;
 
 	if (HAS(ctx->args.flags, F_SPOOF))
 	{
@@ -31,8 +31,8 @@ bool nmap_main(t_ctx *ctx)
 	}
 	t_receiver_data *pcap_ctxs = NULL;
 
-	initialize_shared_data_pcap(&pcap_ctxs, ctx->iface_count,
-								&shared_data_probe, ctx->ifaces);
+	initialize_receiver_data(&pcap_ctxs, ctx->iface_count, &shared_data_probe,
+							 ctx->ifaces);
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{

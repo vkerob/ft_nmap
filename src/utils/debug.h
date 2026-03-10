@@ -11,6 +11,10 @@ void print_debug_capture_thread_startup(pthread_t phid);
 
 void print_debug_sender_thread_startup(pthread_t phid);
 
+void print_debug_capture_thread_leave(pthread_t phid);
+
+void print_debug_sender_thread_leave(pthread_t phid);
+
 void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv);
 
@@ -46,8 +50,8 @@ void print_debug_udp_header(t_udp_hdr *udp_hdr);
 
 void print_debug_probe_request(t_probe *request);
 
-void print_debug_shared_data_pcap(t_receiver_data *shared_data_pcap);
+void print_debug_receiver_data(t_receiver_data *receiver_data);
 
-void print_debug_shared_data_probe(t_shared_data_probe *shared_data_probe,
-								   t_iface_info		   *ifaces);
+void print_debug_shared_data_probe(t_shared_data_sender *shared_data_probe,
+								   t_iface_info			*ifaces);
 #endif
