@@ -6,6 +6,6 @@
 
 #include <netinet/ip_icmp.h>
 
-void	handle_icmp_response(t_target *target,);
+// void	handle_icmp_response(t_target *target,);
 
 #endif

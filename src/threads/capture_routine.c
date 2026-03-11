@@ -6,6 +6,7 @@
 #include "my_signal.h"
 #include "protocols.h"
 #include "request.h"
+#include "scan.h"
 #include "shared.h"
 #include "tcp.h"
 #include "udp.h"
@@ -45,9 +46,10 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		print_debug_tcp_header(&tcp_hdr);
 		// idenfy response packet
 		// handle if it's the response packet in sent queue
-		handle_tcp_response(sent_list, tcp_hdr.th_flags,
-							determine_tcp_scan_type(tcp_hdr.th_sport),
-							ntohs(tcp_hdr.th_sport), ip_hdr->ip_src);
+		u16			source_port = ntohs(tcp_hdr.th_sport);
+		t_scan_type scan_type = determine_tcp_scan_type(source_port);
+		handle_tcp_response(sent_list, tcp_hdr.th_flags, scan_type, source_port,
+							ip_hdr->ip_src);
 
 		return false;
 
