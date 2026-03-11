@@ -30,7 +30,7 @@ u16 get_random_source_port_in_scantype_interval(t_scan_type scan_type)
 
 t_scan_type determine_tcp_scan_type(u16 source_port)
 {
-	for (u8 i = MAX_SCAN_TYPE_TCP - 1; i >= 0; i--)
+	for (int i = MAX_SCAN_TYPE_TCP - 1; i >= 0; i--)
 	{
 		if (source_port >= g_port_range_tcp[i].min_port_range)
 		{
