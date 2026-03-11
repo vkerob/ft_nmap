@@ -3,11 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-void erase_reference_to_node(t_probe *prev, t_probe *next)
+void erase_reference_to_node(t_probe **head, t_probe *prev, t_probe *next)
 {
 	if (prev)
 	{
 		prev->next = next;
+	}
+	else
+	{
+		// No prev means it was the head
+		*head = next;
 	}
 	if (next)
 	{

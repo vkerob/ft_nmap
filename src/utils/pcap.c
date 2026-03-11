@@ -1,8 +1,9 @@
-#include "setup.h"
+#include "capture.h"
 
 #include <ifaddrs.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define PCAP_SNAPLEN 1024
 #define PCAP_PROMISC 0
@@ -53,7 +54,8 @@ static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return false;
 }
 
-bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
+bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf,
+				const char *ip_src_interface)
 {
 	*handle = pcap_create(iface_name, errbuf);
 	if (!*handle)
@@ -85,7 +87,8 @@ bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 
 	char filter_expr[128];
 
-	snprintf(filter_expr, sizeof(filter_expr), "ip src 192.168.64.11");
+	snprintf(filter_expr, sizeof(filter_expr),
+			 "(tcp or udp or icmp) and dst host %s", ip_src_interface);
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{

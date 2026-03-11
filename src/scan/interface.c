@@ -41,7 +41,6 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 	strncpy((*ifaces)[*iface_count].name, ifname, IFNAMSIZ);
 	(*ifaces)[*iface_count].name[IFNAMSIZ - 1] = '\0';
 	(*ifaces)[*iface_count].ip_addr = local_addr;
-
 	*iface_index = (*iface_count)++;
 	return false;
 }

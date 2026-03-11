@@ -76,7 +76,6 @@ static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	pthread_mutex_lock(&printf_mutex);
 	print_debug_protocol(ip_hdr->ip_p);
 	switch (ip_hdr->ip_p)
 	{
@@ -119,20 +118,15 @@ static bool handle_with_ethernet(const u_char *packet, bpf_u_int32 caplen,
 		return false;
 
 	eth_header = (struct ether_header *)packet;
-	pthread_mutex_lock(&printf_mutex);
 	print_debug_ethernet_type(ntohs(eth_header->ether_type));
-	pthread_mutex_unlock(&printf_mutex);
-
 	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 		return false;
 
 	pkt_ip = (const t_ip *)(packet + l2_len);
 	*ip_hdr = *pkt_ip;
-	pthread_mutex_lock(&printf_mutex);
 
 	print_debug_ethernet_header(eth_header);
 	print_debug_ip_header(ip_hdr);
-	pthread_mutex_unlock(&printf_mutex);
 	l3_caplen = caplen - l2_len;
 	return handle_ip_protocol(pkt_ip, (bpf_u_int32)l3_caplen, hdr);
 }
@@ -142,7 +136,7 @@ static bool parse_datalink_layer(const u_char *packet, bpf_u_int32 caplen,
 								 pcap_t *handle)
 {
 	int datalink_type = pcap_datalink(handle);
-	print_debug_datalink_type(datalink_type);
+	// print_debug_datalink_type(datalink_type);
 
 	if (datalink_type == DLT_EN10MB)
 		return handle_with_ethernet(packet, caplen, ip_hdr, datalink_hdr);
@@ -165,7 +159,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	t_probe		  *tmp = sent_list->head;
 	t_probe		  *prev;
 
-	// print_debug_packet_start();
+	print_debug_packet_start();
 	if (!parse_datalink_layer(packet, header->caplen, &ip_hdr, &hdr,
 							  user_data->handle))
 		return;
@@ -185,10 +179,10 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 
 	t_scan_type scan_type = SCAN_UDP;
 
-	printf("Destination Port: %hu\n", destination_port);
-	printf("Source Port: %hu\n", source_port);
-	printf("Scan type: %u\n", scan_type);
-	printf("IP Address Value: %u\n", ip_hdr.ip_src.s_addr);
+	// printf("Destination Port: %hu\n", destination_port);
+	// printf("Source Port: %hu\n", source_port);
+	// printf("IP Address Value: %u\n", ip_hdr.ip_src.s_addr);
+	// printf("IP Proto: %u\n", ip_hdr.ip_p);
 	if (ip_hdr.ip_p == IPPROTO_TCP)
 	{
 		scan_type = determine_tcp_scan_type(destination_port);
@@ -197,27 +191,33 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 			return;
 		}
 	}
+	// printf("Scan type: %u\n", scan_type);
 	while (tmp)
 	{
-		printf(
-			ANSI_COLOR_CYAN
-			"=============================================\n" ANSI_COLOR_RESET);
-		printf("Probe Destination Port: %hu\n", tmp->port);
-		printf("Probe Target IP Value: %u\n", tmp->target->addr.s_addr);
-		char buf[16];
-		scan_type_to_str(tmp->type, buf);
-		printf("Probe Scan Type: %s\n", buf);
-		printf("Probe Sent Timestamp: %ld.%06d\n", tmp->timestamp.tv_sec,
-			   tmp->timestamp.tv_usec);
+		// printf(
+		// 	ANSI_COLOR_CYAN
+		// 	"=============================================\n" ANSI_COLOR_RESET);
+		// printf("Probe Destination Port: %hu\n", tmp->port);
+		// printf("Probe Target IP Value: %u\n", tmp->target->addr.s_addr);
+		// char buf[16];
+		// scan_type_to_str(tmp->type, buf);
+		// printf("Probe Scan Type: %s\n", buf);
+		// printf("Probe Sent Timestamp: %ld.%06d\n", tmp->timestamp.tv_sec,
+		// 	   tmp->timestamp.tv_usec);
+		// printf(ANSI_COLOR_CYAN "============================================"
+		// 					   "\n\n" ANSI_COLOR_RESET);
 
-		printf(ANSI_COLOR_CYAN "============================================"
-							   "\n\n" ANSI_COLOR_RESET);
+		// printf("port equal: %d\n", source_port == tmp->port);
+		// printf("scan type equal: %d\n", scan_type == tmp->type);
+		// printf("target equal: %d\n",
+
 		if (source_port == tmp->port
 			&& (scan_type == tmp->type || ip_hdr.ip_p == IPPROTO_UDP)
 			&& tmp->target->addr.s_addr == ip_hdr.ip_src.s_addr)
 		{
-			printf(ANSI_BOLD ANSI_COLOR_YELLOW
+			printf(ANSI_BOLD ANSI_COLOR_MAGENTA
 				   "Found target\n" ANSI_COLOR_RESET);
+
 			break;
 		}
 		prev = tmp;
@@ -225,17 +225,25 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	}
 	if (tmp)
 	{
-		print_debug_probe_request(tmp);
-		erase_reference_to_node(prev, tmp->next);
+		// print_debug_probe_request(tmp);
+		erase_reference_to_node(&sent_list->head, prev, tmp->next);
 	}
 	else
 	{
-		sent_list->head = NULL;
+		// Ideally if our filter is precise enough we do not enter this
+		// condition
+		return;
+	}
+	t_probe *tmp_probe = sent_list->head;
+	int		 i = 0;
+	while (tmp_probe)
+	{
+		i++;
+		tmp_probe = tmp_probe->next;
 	}
 
-	// find_corresponding_target();
-	// pop_probe_request();
-	print_debug_packet_end();
+	sync_printf("handle_packet(): New size of sent queue: %d\n", i);
+	// print_debug_packet_end();
 
 	sync_printf(ANSI_COLOR_RED
 				"Thread %lu leave handle_packet()\n" ANSI_COLOR_RESET,
@@ -246,33 +254,37 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 static void purge_timedout_probe_request(t_probe_queue *sent,
 										 t_probe_queue *to_send)
 {
-	time_t	 now;
 	t_probe *tmp = sent->head;
 
 	pthread_mutex_lock(&sent->mut);
 	while (tmp)
 	{
-		now = time(NULL);
+		struct timeval current_time;
+		gettimeofday(&current_time, NULL);
+
 		unsigned long seconds_elapsed
-			= (unsigned long)difftime(now, (time_t)tmp->timestamp.tv_sec);
+			= current_time.tv_sec - tmp->timestamp.tv_sec;
+		// unsigned long microseconds_elapsed
+		// 	= current_time.tv_usec - tmp->timestamp.tv_usec;
+
+		// double time_elapsed = seconds_elapsed + (microseconds_elapsed /
+		// (1e6)); printf("elapsed time seconds: %lu microseconds: %lu\n",
+		// seconds_elapsed, 	   microseconds_elapsed); printf("time elapsed:
+		// %f\n", time_elapsed);
 
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
-			// Pop tmp from the sent list
-			if (tmp->prev)
-			{
-				// Link previous node with next
-				tmp->prev->next = tmp->next;
-				tmp->next->prev = tmp->prev;
-			}
-			else if (tmp->next)
-			{
-				// Update head and erase prev of next
-				tmp->next->prev = NULL;
-				sent->head = tmp->next;
-			}
+			// Erase tmp from the sent list
+			erase_reference_to_node(&sent->head, tmp->prev, tmp->next);
+			// else if (tmp->next)
+			// {
+			// 	// Update head and erase prev of next
 
-			// Update retries and reinject in probe request list
+			// 	tmp->next->prev = NULL;
+			// 	sent->head = tmp->next;
+			// }
+
+			// Update retries and reinject in to_send probe queue
 			if (tmp->retries < MAX_SCAN_RETRIES)
 			{
 				tmp->retries += 1;
@@ -290,7 +302,6 @@ static void purge_timedout_probe_request(t_probe_queue *sent,
 			// update tail to new request
 			to_send->tail = tmp;
 			pthread_mutex_unlock(&to_send->mut);
-			// free probe_request_sent object
 		}
 		tmp = tmp->next;
 	}

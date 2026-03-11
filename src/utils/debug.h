@@ -32,6 +32,8 @@ void print_debug_protocol(int protocol);
 
 void print_debug_ethernet_type(int ether_type);
 
+void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent);
+
 void print_debug_datalink_type(int datalink_type);
 
 void print_debug_parsing_args(t_ctx ctx);

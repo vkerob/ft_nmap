@@ -33,7 +33,8 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 	for (size_t i = 0; i < nb_pcap_thread; i++)
 	{
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&receiver_data[i].handle, ifaces[i].name, errbuf))
+		if (pcap_setup(&receiver_data[i].handle, ifaces[i].name, errbuf,
+					   inet_ntoa(ifaces[i].ip_addr)))
 			return true;
 		print_debug_receiver_data(&receiver_data[i]);
 

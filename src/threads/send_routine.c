@@ -159,19 +159,7 @@ void *send_routine(void *arg)
 		pthread_mutex_lock(
 			&shared_data_probe->sent[request->target->iface_info->iface_index]
 				 .mut);
-		sync_printf("Update sent queue of interface %d\n",
-					request->target->iface_info->iface_index);
 
-		t_probe *tmp
-			= shared_data_probe->sent[request->target->iface_info->iface_index]
-				  .head;
-		int i = 0;
-		while (tmp)
-		{
-			i++;
-			tmp = tmp->next;
-		}
-		sync_printf("New size of sent queue: %d\n", i);
 		if (update_sent_queue(
 				&(shared_data_probe
 					  ->sent[request->target->iface_info->iface_index]
@@ -188,6 +176,10 @@ void *send_routine(void *arg)
 			print_debug_sender_thread_leave(phid);
 			return NULL;
 		}
+		print_debug_sent_queue_state(
+			request->target->iface_info->iface_index,
+			&shared_data_probe->sent[request->target->iface_info->iface_index]);
+
 		shared_data_probe->sent[request->target->iface_info->iface_index]
 			.nb_probe++;
 		pthread_mutex_unlock(
