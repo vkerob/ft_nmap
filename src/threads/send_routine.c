@@ -52,7 +52,8 @@ static void build_scan_packets(t_probe *request, u_char *packet)
 	// assemble_full_packet(packet, &eth_hdr, &ip_hdr, &tcp_hdr, &udp_hdr);
 }
 
-static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
+static bool send_packet(t_socket *socket, u8 *packet,
+						struct timeval *sent_timestamp)
 {
 	if (sendto(socket->sfd, packet, sizeof(struct tcphdr), 0,
 			   (struct sockaddr *)&socket->sin, sizeof(struct sockaddr))
@@ -61,7 +62,7 @@ static bool send_packet(t_socket *socket, u8 *packet, time_t *sent_timestamp)
 		perror("sendto: ");
 		return true;
 	}
-	time(sent_timestamp);
+	gettimeofday(sent_timestamp, NULL);
 	return false;
 }
 
@@ -80,7 +81,7 @@ void *send_routine(void *arg)
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	pthread_t			  phid;
-	time_t				  sent_timestamp;
+	struct timeval		  sent_timestamp;
 
 	phid = pthread_self();
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
@@ -158,6 +159,19 @@ void *send_routine(void *arg)
 		pthread_mutex_lock(
 			&shared_data_probe->sent[request->target->iface_info->iface_index]
 				 .mut);
+		sync_printf("Update sent queue of interface %d\n",
+					request->target->iface_info->iface_index);
+
+		t_probe *tmp
+			= shared_data_probe->sent[request->target->iface_info->iface_index]
+				  .head;
+		int i = 0;
+		while (tmp)
+		{
+			i++;
+			tmp = tmp->next;
+		}
+		sync_printf("New size of sent queue: %d\n", i);
 		if (update_sent_queue(
 				&(shared_data_probe
 					  ->sent[request->target->iface_info->iface_index]
@@ -174,6 +188,8 @@ void *send_routine(void *arg)
 			print_debug_sender_thread_leave(phid);
 			return NULL;
 		}
+		shared_data_probe->sent[request->target->iface_info->iface_index]
+			.nb_probe++;
 		pthread_mutex_unlock(
 			&shared_data_probe->sent[request->target->iface_info->iface_index]
 				 .mut);

@@ -157,15 +157,86 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				pthread_self());
 	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
 	t_receiver_data	 *receiver_data = user_data->receiver_data;
-	t_ip			  ip_hdr = { 0 };
-	t_datalink_hdr	  hdr = { 0 };
 
-	print_debug_packet_start();
+	t_ip		   ip_hdr = { 0 };
+	t_datalink_hdr hdr = { 0 };
+
+	t_probe_queue *sent_list = user_data->receiver_data->sent;
+	t_probe		  *tmp = sent_list->head;
+	t_probe		  *prev;
+
+	// print_debug_packet_start();
 	if (!parse_datalink_layer(packet, header->caplen, &ip_hdr, &hdr,
 							  user_data->handle))
 		return;
 
+	u16 destination_port;
+	u16 source_port;
+	if (ip_hdr.ip_p == IPPROTO_UDP)
+	{
+		destination_port = ntohs(hdr.udp_hdr.uh_dport);
+		source_port = ntohs(hdr.udp_hdr.uh_sport);
+	}
+	else
+	{
+		destination_port = ntohs(hdr.tcp_hdr.th_dport);
+		source_port = ntohs(hdr.tcp_hdr.th_sport);
+	}
+
+	t_scan_type scan_type = SCAN_UDP;
+
+	printf("Destination Port: %hu\n", destination_port);
+	printf("Source Port: %hu\n", source_port);
+	printf("Scan type: %u\n", scan_type);
+	printf("IP Address Value: %u\n", ip_hdr.ip_src.s_addr);
+	if (ip_hdr.ip_p == IPPROTO_TCP)
+	{
+		scan_type = determine_tcp_scan_type(destination_port);
+		if (scan_type == SCAN_UNKNOWN)
+		{
+			return;
+		}
+	}
+	while (tmp)
+	{
+		printf(
+			ANSI_COLOR_CYAN
+			"=============================================\n" ANSI_COLOR_RESET);
+		printf("Probe Destination Port: %hu\n", tmp->port);
+		printf("Probe Target IP Value: %u\n", tmp->target->addr.s_addr);
+		char buf[16];
+		scan_type_to_str(tmp->type, buf);
+		printf("Probe Scan Type: %s\n", buf);
+		printf("Probe Sent Timestamp: %ld.%06d\n", tmp->timestamp.tv_sec,
+			   tmp->timestamp.tv_usec);
+
+		printf(ANSI_COLOR_CYAN "============================================"
+							   "\n\n" ANSI_COLOR_RESET);
+		if (source_port == tmp->port
+			&& (scan_type == tmp->type || ip_hdr.ip_p == IPPROTO_UDP)
+			&& tmp->target->addr.s_addr == ip_hdr.ip_src.s_addr)
+		{
+			printf(ANSI_BOLD ANSI_COLOR_YELLOW
+				   "Found target\n" ANSI_COLOR_RESET);
+			break;
+		}
+		prev = tmp;
+		tmp = tmp->next;
+	}
+	if (tmp)
+	{
+		print_debug_probe_request(tmp);
+		erase_reference_to_node(prev, tmp->next);
+	}
+	else
+	{
+		sent_list->head = NULL;
+	}
+
+	// find_corresponding_target();
+	// pop_probe_request();
 	print_debug_packet_end();
+
 	sync_printf(ANSI_COLOR_RED
 				"Thread %lu leave handle_packet()\n" ANSI_COLOR_RESET,
 				pthread_self());
@@ -183,7 +254,7 @@ static void purge_timedout_probe_request(t_probe_queue *sent,
 	{
 		now = time(NULL);
 		unsigned long seconds_elapsed
-			= (unsigned long)difftime(now, tmp->timestamp);
+			= (unsigned long)difftime(now, (time_t)tmp->timestamp.tv_sec);
 
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
@@ -200,17 +271,12 @@ static void purge_timedout_probe_request(t_probe_queue *sent,
 				tmp->next->prev = NULL;
 				sent->head = tmp->next;
 			}
-			else
-			{
-				// Only one element in the list, reset head and tail
-				sent->head = NULL;
-				sent->tail = NULL;
-			}
+
 			// Update retries and reinject in probe request list
 			if (tmp->retries < MAX_SCAN_RETRIES)
 			{
 				tmp->retries += 1;
-				tmp->timestamp = 0;
+				memset(&tmp->timestamp, 0, sizeof(struct timeval));
 			}
 			pthread_mutex_lock(&to_send->mut);
 			if (to_send->tail)

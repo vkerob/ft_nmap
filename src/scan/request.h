@@ -11,7 +11,7 @@ typedef struct s_probe
 	t_target		*target;
 	u16				 port;
 	enum e_scan_type type;
-	time_t			 timestamp;
+	struct timeval	 timestamp;
 	u32				 id;
 	u8				 retries;
 	u8				 status;
@@ -28,6 +28,8 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 						  u16 port, t_scan_type scan_type, u32 id);
 
 bool update_sent_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
-					   t_probe *request, time_t sent_timestamp);
+					   t_probe *request, struct timeval sent_timestamp);
+
+void erase_reference_to_node(t_probe *prev, t_probe *next);
 
 #endif

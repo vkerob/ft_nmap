@@ -85,7 +85,7 @@ bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf)
 
 	char filter_expr[128];
 
-	snprintf(filter_expr, sizeof(filter_expr), "tcp or udp or icmp");
+	snprintf(filter_expr, sizeof(filter_expr), "ip src 192.168.64.11");
 
 	if (pcap_apply_filter(*handle, filter_expr))
 	{

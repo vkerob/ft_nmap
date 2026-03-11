@@ -3,6 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+void erase_reference_to_node(t_probe *prev, t_probe *next)
+{
+	if (prev)
+	{
+		prev->next = next;
+	}
+	if (next)
+	{
+		next->prev = prev;
+	}
+}
+
 bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 {
 	*popped_request = *tail;
