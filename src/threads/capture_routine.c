@@ -47,7 +47,8 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		// idenfy response packet
 		// handle if it's the response packet in sent queue
 		u16			source_port = ntohs(tcp_hdr.th_sport);
-		t_scan_type scan_type = determine_tcp_scan_type(source_port);
+		t_scan_type scan_type
+			= determine_tcp_scan_type(ntohs(tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, tcp_hdr.th_flags, scan_type, source_port,
 							ip_hdr->ip_src);
 
