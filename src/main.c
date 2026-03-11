@@ -89,6 +89,12 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+	if (link_port_list_to_each_target(&ctx))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
+		return EXIT_FAILURE;
+	}
+
 	free_tabp((void ***)&targets_input, ctx.target_count);
 	if (setup_signal_handlers())
 	{

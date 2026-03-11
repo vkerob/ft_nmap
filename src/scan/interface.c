@@ -25,6 +25,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		*ifaces = realloc(*ifaces, (*iface_count + 1) * sizeof(t_iface_info));
 		if (!*ifaces)
 		{
+			fprintf(stderr, "ft_nmap: realloc failed: %s\n", strerror(errno));
 			return true;
 		}
 	}

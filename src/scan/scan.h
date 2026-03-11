@@ -36,7 +36,7 @@ typedef struct s_target
 {
 	char		  *input;
 	struct in_addr addr;
-	t_port_list	  port_list;
+	t_port_list	   port_list;
 	t_iface_info  *iface_info;
 } t_target;
 
@@ -81,8 +81,10 @@ typedef struct s_ctx
 } t_ctx;
 
 bool init_portlist(t_port_list *port_list, u16 port_count,
-				   u16 ports[MAX_PORT_COUNT], u8 nb_scan_types,
-				   u8 scan_types[MAX_NB_SCAN_TYPE]);
+				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
+				   u8 nb_scan_type);
+
+bool link_port_list_to_each_target(t_ctx *ctx);
 
 void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 
