@@ -44,12 +44,9 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 		// print_debug_probe_request(probe_pending);
 		erase_reference_to_node(&sent_list->head, prev, tmp->next);
 	}
-	else
-	{
-		// Ideally if our filter is precise enough we do not enter this
-		// condition
-		return NULL;
-	}
+	// Ideally if our filter is precise enough we do not enter this
+	// condition
+	return NULL;
 }
 
 void handle_tcp_response(t_probe_queue *sent_list, u8 flags,

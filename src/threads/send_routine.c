@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "ip.h"
+#include "my_signal.h"
 #include "protocols.h"
 #include "send.h"
 #include "shared.h"
@@ -93,9 +94,9 @@ void *send_routine(void *arg)
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
 
-	print_debug_sender_thread_startup(phid);
+	// print_debug_sender_thread_startup(phid);
 
-	while (shared_data_probe->to_send.nb_probe > 0)
+	while (shared_data_probe->to_send.nb_probe > 0 && !g_stop)
 	{
 		pthread_mutex_lock(&shared_data_probe->to_send.mut);
 		if (shared_data_probe->to_send.tail)
@@ -106,7 +107,8 @@ void *send_routine(void *arg)
 		else
 		{
 			pthread_mutex_unlock(&shared_data_probe->to_send.mut);
-			return NULL;
+			usleep(500);
+			continue;
 		}
 		shared_data_probe->to_send.nb_probe--;
 		pthread_mutex_unlock(&shared_data_probe->to_send.mut);
@@ -124,25 +126,26 @@ void *send_routine(void *arg)
 
 		used_socket.sin.sin_port = htons(request->port);
 
-		if (request->type == SCAN_UDP)
-		{
-			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-			// print_debug_udp_header(udp_hdr);
-			(void)udp_hdr;
-		}
-		else
-		{
-			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
-			// print_debug_tcp_header(tcp_hdr);
-			(void)tcp_hdr;
-		}
+		// if (request->type == SCAN_UDP)
+		// {
+		// 	t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
+		// print_debug_udp_header(udp_hdr);
+		// 	(void)udp_hdr;
+		// }
+		// else
+		// {
+		// 	t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
+		// print_debug_tcp_header(tcp_hdr);
+		// 	(void)tcp_hdr;
+		// }
 
 		if (send_packet(&used_socket, packet, &sent_timestamp))
 		{
 			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
 					inet_ntoa(request->target->iface_info->ip_addr));
-			close_sockets(&udp_socket, &tcp_socket);
-			return NULL;
+			continue;
+			// close_sockets(&udp_socket, &tcp_socket);
+			// return NULL;
 		}
 
 		struct timeval tv;
@@ -151,9 +154,10 @@ void *send_routine(void *arg)
 		if (res == -1)
 		{
 			fprintf(stderr, "ft_nmap: gettimeofday: %s\n", strerror(errno));
-			close_sockets(&udp_socket, &tcp_socket);
-			print_debug_sender_thread_leave(phid);
-			return NULL;
+			continue;
+			// close_sockets(&udp_socket, &tcp_socket);
+			// print_debug_thread_leave(phid, __FUNCTION__);
+			// return NULL;
 		}
 		print_debug_sender_thread_proceed_probe(phid, request, &tv);
 		pthread_mutex_lock(
@@ -173,8 +177,9 @@ void *send_routine(void *arg)
 				&shared_data_probe
 					 ->sent[request->target->iface_info->iface_index]
 					 .mut);
-			print_debug_sender_thread_leave(phid);
-			return NULL;
+			// print_debug_thread_leave(phid, __FUNCTION__);
+			continue;
+			// return NULL;
 		}
 		print_debug_sent_queue_state(
 			request->target->iface_info->iface_index,
@@ -187,6 +192,6 @@ void *send_routine(void *arg)
 				 .mut);
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	print_debug_sender_thread_leave(phid);
+	print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

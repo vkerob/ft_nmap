@@ -29,59 +29,46 @@ void sync_printf(const char *format, ...)
 
 void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent)
 {
-	t_probe *tmp = sent->head;
-	u32		 i = 0;
-	while (tmp)
-	{
-		i++;
-		tmp = tmp->next;
-	}
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
-		   "============================================\n\n" ANSI_COLOR_RESET);
+		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_YELLOW
-		   "\nSENT QUEUE %d INTERFACE:\n" ANSI_COLOR_RESET,
+		   "SENT QUEUE %d INTERFACE:\n" ANSI_COLOR_RESET,
 		   iface_index);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW "New size of sent queue: %d\n" ANSI_COLOR_RESET,
-		   i);
+	printf(ANSI_COLOR_YELLOW "Number of probe request: %d\n" ANSI_COLOR_RESET,
+		   sent->nb_probe);
 	printf(ANSI_COLOR_CYAN "============================================"
 						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_capture_thread_startup(pthread_t phid)
+void print_debug_thread_startup(pthread_t phid, const char *func_name)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED
-		   "Thread %lu enter capture_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD STATE\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_RED "Thread %lu enter %s()\n" ANSI_COLOR_RESET,
+		   (unsigned long)phid, (char *)func_name);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_capture_thread_leave(pthread_t phid)
+void print_debug_thread_leave(pthread_t phid, const char *func_name)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED
-		   "Thread %lu leave capture_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
-	pthread_mutex_unlock(&printf_mutex);
-}
-
-void print_debug_sender_thread_startup(pthread_t phid)
-{
-	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED "Thread %lu enter send_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
-	pthread_mutex_unlock(&printf_mutex);
-}
-
-void print_debug_sender_thread_leave(pthread_t phid)
-{
-	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED "Thread %lu leave send_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD STATE\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_RED "Thread %lu leave %s()\n" ANSI_COLOR_RESET,
+		   (unsigned long)phid, func_name);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
@@ -89,6 +76,9 @@ void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv)
 {
 	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD LOG\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_RED

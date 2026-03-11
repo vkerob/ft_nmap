@@ -105,12 +105,13 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
-	sync_printf(ANSI_COLOR_RED
-				"Thread %lu enter handle_packet()\n" ANSI_COLOR_RESET,
-				pthread_self());
+	pthread_t phid = pthread_self();
 
+	print_debug_thread_startup(phid, __FUNCTION__);
 	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
+	t_receiver_data	 *receiver_data = user_data->receiver_data;
 
+	(void)receiver_data;
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
 
 	print_debug_packet_start();
@@ -180,7 +181,7 @@ void *capture_routine(void *arg)
 {
 	pthread_t phid;
 	phid = pthread_self();
-	print_debug_capture_thread_startup(phid);
+	print_debug_thread_startup(phid, __FUNCTION__);
 
 	t_receiver_data *receiver_data = (t_receiver_data *)arg;
 	// TODO: change this
@@ -226,6 +227,6 @@ void *capture_routine(void *arg)
 										 receiver_data->to_send);
 		}
 	}
-	print_debug_capture_thread_leave(phid);
+	print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }
