@@ -1,12 +1,12 @@
+#include "args.h"
 #include "capture.h"
 #include "debug.h"
 #include "ethernet.h"
-#include "icmp.h"
 #include "ip.h"
 #include "my_signal.h"
 #include "protocols.h"
 #include "request.h"
-#include "sll.h"
+#include "shared.h"
 #include "tcp.h"
 #include "udp.h"
 
@@ -17,61 +17,20 @@
 #include <string.h>
 #include <time.h>
 
-// static void handle_with_null_loopback(const u_char *packet)
-// {
-// 	struct ip *ip_hdr = (struct ip *)packet;
-// 	print_debug_ip_header(ip_hdr);
-// 	// handle_ip_protocol(ip_hdr);
-// }
-
-// static void handle_with_linux_sll(const u_char *packet)
-// {
-// 	t_sll_hdr *sll_hdr = (t_sll_hdr *)packet;
-// 	print_debug_sll_protocol((sll_hdr->sll_protocol));
-
-// 	if (ntohs(sll_hdr->sll_protocol) == ETHERTYPE_IP)
-// 	{
-// 		struct ip *ip_hdr = (struct ip *)(packet + sizeof(t_sll_hdr));
-// 		print_debug_sll_header(sll_hdr);
-// 		print_debug_ip_header(ip_hdr);
-// 		// handle_ip_protocol(ip_hdr, t);
-// 	}
-// }
-
-// static bool find_corresponding_target(t_target *targets, size_t
-// targets_count, 									  struct in_addr *src_ip,
-// t_target *target)
-// {
-// 	const char *src_ip_addr = inet_ntoa(*src_ip);
-
-// 	/* Maybe there's a quicker way to find the target back using the long
-// 	value of the IP rather than with the string notation */
-
-// 	for (size_t i = 0; i < targets_count; i++)
-// 	{
-// 		if (strcmp(targets[i].ip, src_ip_addr) == 0)
-// 		{
-// 			target = &targets[i];
-// 			(void)target;
-// 			return true;
-// 		}
-// 	}
-// 	return false;
-// }
-
-static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
-							   t_datalink_hdr *hdr)
+static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
+							   bpf_u_int32 l3_caplen)
 {
 	const u8 *protocol_hdr;
 	size_t	  ip_hlen;
 	size_t	  l4_len;
 
+	print_debug_ip_header(ip_hdr);
 	if (l3_caplen < sizeof(struct ip))
-		return false;
+		return true;
 
 	ip_hlen = (size_t)ip_hdr->ip_hl * 4;
 	if (ip_hlen < sizeof(struct ip) || l3_caplen < ip_hlen)
-		return false;
+		return true;
 
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
@@ -81,35 +40,38 @@ static bool handle_ip_protocol(const t_ip *ip_hdr, bpf_u_int32 l3_caplen,
 	{
 	case IPPROTO_TCP:
 		if (l4_len < sizeof(struct tcphdr))
-			return false;
-		hdr->tcp_hdr = *(const struct tcphdr *)protocol_hdr;
-		print_debug_tcp_header(&hdr->tcp_hdr);
-		pthread_mutex_unlock(&printf_mutex);
+			return true;
+		t_tcp_hdr tcp_hdr = *(const struct tcphdr *)protocol_hdr;
+		print_debug_tcp_header(&tcp_hdr);
+		// idenfy response packet
+		// handle if it's the response packet in sent queue
+		handle_tcp_response(sent_list, tcp_hdr.th_flags,
+							determine_tcp_scan_type(tcp_hdr.th_sport),
+							ntohs(tcp_hdr.th_sport), ip_hdr->ip_src);
 
-		return true;
+		return false;
 
 	case IPPROTO_UDP:
 		if (l4_len < sizeof(struct udphdr))
 			return false;
-		hdr->udp_hdr = *(const struct udphdr *)protocol_hdr;
-		print_debug_udp_header(&hdr->udp_hdr);
-		pthread_mutex_unlock(&printf_mutex);
-		return true;
+		t_udp_hdr udp_hdr = *(const struct udphdr *)protocol_hdr;
+		print_debug_udp_header(&udp_hdr);
+
+		return false;
 
 	case IPPROTO_ICMP:
-		pthread_mutex_unlock(&printf_mutex);
-		return true;
+		return false;
 
 	default:
-		return false;
+		return true;
 	}
 }
 
-static bool handle_with_ethernet(const u_char *packet, bpf_u_int32 caplen,
-								 t_ip *ip_hdr, t_datalink_hdr *hdr)
+static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
+								 bpf_u_int32 caplen)
 {
 	struct ether_header *eth_header;
-	const t_ip			*pkt_ip;
+	t_ip				*pkt_ip;
 	size_t				 l2_len;
 	size_t				 l3_caplen;
 
@@ -122,24 +84,21 @@ static bool handle_with_ethernet(const u_char *packet, bpf_u_int32 caplen,
 	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 		return false;
 
-	pkt_ip = (const t_ip *)(packet + l2_len);
-	*ip_hdr = *pkt_ip;
+	pkt_ip = (t_ip *)(packet + l2_len);
 
 	print_debug_ethernet_header(eth_header);
-	print_debug_ip_header(ip_hdr);
 	l3_caplen = caplen - l2_len;
-	return handle_ip_protocol(pkt_ip, (bpf_u_int32)l3_caplen, hdr);
+	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen);
 }
 
-static bool parse_datalink_layer(const u_char *packet, bpf_u_int32 caplen,
-								 t_ip *ip_hdr, t_datalink_hdr *datalink_hdr,
-								 pcap_t *handle)
+static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
+								 const u_char *packet, bpf_u_int32 caplen)
 {
 	int datalink_type = pcap_datalink(handle);
 	// print_debug_datalink_type(datalink_type);
 
 	if (datalink_type == DLT_EN10MB)
-		return handle_with_ethernet(packet, caplen, ip_hdr, datalink_hdr);
+		return handle_with_ethernet(sent_list, packet, caplen);
 	return false;
 }
 
@@ -149,106 +108,15 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	sync_printf(ANSI_COLOR_RED
 				"Thread %lu enter handle_packet()\n" ANSI_COLOR_RESET,
 				pthread_self());
-	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
-	t_receiver_data	 *receiver_data = user_data->receiver_data;
 
-	t_ip		   ip_hdr = { 0 };
-	t_datalink_hdr hdr = { 0 };
+	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
 
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
-	t_probe		  *tmp = sent_list->head;
-	t_probe		  *prev;
 
 	print_debug_packet_start();
-	if (!parse_datalink_layer(packet, header->caplen, &ip_hdr, &hdr,
-							  user_data->handle))
+	if (!parse_datalink_layer(user_data->handle, sent_list, packet,
+							  header->caplen))
 		return;
-
-	u16 destination_port;
-	u16 source_port;
-	if (ip_hdr.ip_p == IPPROTO_UDP)
-	{
-		destination_port = ntohs(hdr.udp_hdr.uh_dport);
-		source_port = ntohs(hdr.udp_hdr.uh_sport);
-	}
-	else
-	{
-		destination_port = ntohs(hdr.tcp_hdr.th_dport);
-		source_port = ntohs(hdr.tcp_hdr.th_sport);
-	}
-
-	t_scan_type scan_type = SCAN_UDP;
-
-	// printf("Destination Port: %hu\n", destination_port);
-	// printf("Source Port: %hu\n", source_port);
-	// printf("IP Address Value: %u\n", ip_hdr.ip_src.s_addr);
-	// printf("IP Proto: %u\n", ip_hdr.ip_p);
-	if (ip_hdr.ip_p == IPPROTO_TCP)
-	{
-		scan_type = determine_tcp_scan_type(destination_port);
-		if (scan_type == SCAN_UNKNOWN)
-		{
-			return;
-		}
-	}
-	// printf("Scan type: %u\n", scan_type);
-	while (tmp)
-	{
-		// printf(
-		// 	ANSI_COLOR_CYAN
-		// 	"=============================================\n" ANSI_COLOR_RESET);
-		// printf("Probe Destination Port: %hu\n", tmp->port);
-		// printf("Probe Target IP Value: %u\n", tmp->target->addr.s_addr);
-		// char buf[16];
-		// scan_type_to_str(tmp->type, buf);
-		// printf("Probe Scan Type: %s\n", buf);
-		// printf("Probe Sent Timestamp: %ld.%06d\n", tmp->timestamp.tv_sec,
-		// 	   tmp->timestamp.tv_usec);
-		// printf(ANSI_COLOR_CYAN "============================================"
-		// 					   "\n\n" ANSI_COLOR_RESET);
-
-		// printf("port equal: %d\n", source_port == tmp->port);
-		// printf("scan type equal: %d\n", scan_type == tmp->type);
-		// printf("target equal: %d\n",
-
-		if (source_port == tmp->port
-			&& (scan_type == tmp->type || ip_hdr.ip_p == IPPROTO_UDP)
-			&& tmp->target->addr.s_addr == ip_hdr.ip_src.s_addr)
-		{
-			printf(ANSI_BOLD ANSI_COLOR_MAGENTA
-				   "Found target\n" ANSI_COLOR_RESET);
-
-			break;
-		}
-		prev = tmp;
-		tmp = tmp->next;
-	}
-	if (tmp)
-	{
-		// print_debug_probe_request(tmp);
-		erase_reference_to_node(&sent_list->head, prev, tmp->next);
-	}
-	else
-	{
-		// Ideally if our filter is precise enough we do not enter this
-		// condition
-		return;
-	}
-	t_probe *tmp_probe = sent_list->head;
-	int		 i = 0;
-	while (tmp_probe)
-	{
-		i++;
-		tmp_probe = tmp_probe->next;
-	}
-
-	sync_printf("handle_packet(): New size of sent queue: %d\n", i);
-	// print_debug_packet_end();
-
-	sync_printf(ANSI_COLOR_RED
-				"Thread %lu leave handle_packet()\n" ANSI_COLOR_RESET,
-				pthread_self());
-	(void)receiver_data;
 }
 
 static void purge_timedout_probe_request(t_probe_queue *sent,

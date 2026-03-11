@@ -4,7 +4,6 @@
 #include "request.h"
 #include "scan.h"
 #include "shared.h"
-#include "sll.h"
 #include "typesdef.h"
 
 void print_debug_capture_thread_startup(pthread_t phid);
@@ -41,10 +40,6 @@ void print_debug_parsing_args(t_ctx ctx);
 void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count);
 
 void print_debug_tcp_header(t_tcp_hdr *tcp_hdr);
-
-void print_debug_sll_header(t_sll_hdr *sll_hdr);
-
-void print_debug_sll_protocol(int protocol);
 
 void print_debug_ip_header(struct ip *ip_hdr);
 

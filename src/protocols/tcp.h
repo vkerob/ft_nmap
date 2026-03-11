@@ -3,6 +3,8 @@
 #define TCP_H
 
 #include "ip.h"
+#include "request.h"
+#include "shared.h"
 #include "typesdef.h"
 
 #include <stdatomic.h>
@@ -13,7 +15,9 @@ void calculate_tcp_checksum(t_ip_pseudo_hdr *ip_pseudo_hdr,
 void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
 					  t_scan_type scan_type);
 
-void handle_tcp_protocol(t_target *target, t_tcp_hdr *tcp_hdr);
+void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
+						 t_scan_type scan_type, u16 source_port,
+						 struct in_addr ip_src);
 
 void decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr);
 

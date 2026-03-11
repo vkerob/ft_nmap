@@ -2,7 +2,6 @@
 #include "defines.h"
 #include "ip.h"
 #include "scan.h"
-#include "sll.h"
 #include "udp.h"
 
 #include <arpa/inet.h>
@@ -162,24 +161,6 @@ void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
 		   ntohs(tcp_hdr->th_sum));
 	printf(ANSI_COLOR_GREEN "  • Urgent Pointer: %d\n" ANSI_COLOR_RESET,
 		   ntohs(tcp_hdr->th_urp));
-	pthread_mutex_unlock(&printf_mutex);
-}
-
-void print_debug_sll_header(t_sll_hdr *sll_hdr)
-{
-	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_BOLD ANSI_COLOR_MAGENTA "\nSLL Header:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_MAGENTA
-		   "--------------------------------------------\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_MAGENTA "  • Packet Type: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_pkt_type));
-	printf(ANSI_COLOR_MAGENTA "  • Hardware Type: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_hatype));
-	printf(ANSI_COLOR_MAGENTA
-		   "  • Hardware Address Length: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_halen));
-	printf(ANSI_COLOR_MAGENTA "  • Protocol: 0x%04x\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_protocol));
 	pthread_mutex_unlock(&printf_mutex);
 }
 

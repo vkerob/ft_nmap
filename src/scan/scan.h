@@ -36,6 +36,7 @@ typedef struct s_target
 {
 	char		  *input;
 	struct in_addr addr;
+	t_port_list	  port_list;
 	t_iface_info  *iface_info;
 } t_target;
 
