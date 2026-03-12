@@ -11,22 +11,6 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 
 	while (tmp)
 	{
-		// printf(
-		// 	ANSI_COLOR_CYAN
-		// 	"=============================================\n" ANSI_COLOR_RESET);
-		// printf("Probe Destination Port: %hu\n", target->port);
-		// printf("Probe Target IP Value: %u\n", target->target->addr.s_addr);
-		// char buf[16];
-		// scan_type_to_str(target->type, buf);
-		// printf("Probe Scan Type: %s\n", buf);
-		// printf("Probe Sent Timestamp: %ld.%06d\n", target->timestamp.tv_sec,
-		// 	   target->timestamp.tv_usec);
-		// printf(ANSI_COLOR_CYAN "============================================"
-		// 					   "\n\n" ANSI_COLOR_RESET);
-
-		// printf("port equal: %d\n", source_port == target->port);
-		// printf("scan type equal: %d\n", scan_type == target->type);
-		// printf("target equal: %d\n",
 
 		if (source_port == tmp->port && scan_type == tmp->type
 			&& ip_src.s_addr == tmp->target->addr.s_addr)
@@ -41,7 +25,6 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 	}
 	if (tmp)
 	{
-		// print_debug_probe_request(probe_pending);
 		erase_reference_to_node(&sent_list->head, prev, tmp->next);
 	}
 	return tmp;

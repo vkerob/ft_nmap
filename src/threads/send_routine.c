@@ -53,7 +53,7 @@ static void build_scan_packets(t_probe *request, u_char *packet)
 	// assemble_full_packet(packet, &eth_hdr, &ip_hdr, &tcp_hdr, &udp_hdr);
 }
 
-static bool send_packet(t_socket *socket, u8 *packet,
+static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp)
 {
 	if (sendto(socket->sfd, packet, sizeof(struct tcphdr), 0,
@@ -67,7 +67,7 @@ static bool send_packet(t_socket *socket, u8 *packet,
 	return false;
 }
 
-static void close_sockets(t_socket *udp_socket, t_socket *tcp_socket)
+static void close_sockets(const t_socket *udp_socket, const t_socket *tcp_socket)
 {
 	close(udp_socket->sfd);
 	close(tcp_socket->sfd);
@@ -103,6 +103,8 @@ void *send_routine(void *arg)
 		{
 			pop_probe_request(&shared_data_probe->to_send.head,
 							  &shared_data_probe->to_send.tail, &request);
+
+			print_debug_concise_probe(request);
 		}
 		else
 		{
@@ -150,7 +152,7 @@ void *send_routine(void *arg)
 
 		struct timeval tv;
 
-		int res = gettimeofday(&tv, NULL);
+		const int res = gettimeofday(&tv, NULL);
 		if (res == -1)
 		{
 			fprintf(stderr, "ft_nmap: gettimeofday: %s\n", strerror(errno));

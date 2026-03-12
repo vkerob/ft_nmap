@@ -60,7 +60,7 @@ bool nmap_main(t_ctx *ctx)
 	return false;
 }
 
-int main(int argc, char **argv)
+int main(const int argc, char **argv)
 {
 	// if (geteuid() != 0)
 	// {

@@ -10,6 +10,8 @@ void print_debug_thread_startup(pthread_t phid, const char *func_name);
 
 void print_debug_thread_leave(pthread_t phid, const char *func_name);
 
+void print_debug_concise_probe(t_probe *probe);
+
 void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv);
 

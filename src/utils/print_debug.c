@@ -72,6 +72,21 @@ void print_debug_thread_leave(pthread_t phid, const char *func_name)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
+void print_debug_concise_probe(t_probe *probe)
+{
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN "==========================================="
+						   "==\n" ANSI_COLOR_RESET);
+	printf("Probe Destination Port: %hu\n", probe->port);
+	printf("Probe Target IP Value: %u\n", probe->target->addr.s_addr);
+	char buf[16];
+	scan_type_to_str(probe->type, buf);
+	printf("Probe Scan Type: %s\n", buf);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
+	pthread_mutex_unlock(&printf_mutex);
+}
+
 void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv)
 {
