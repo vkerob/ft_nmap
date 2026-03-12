@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-void scan_type_to_str(t_scan_type scan_type, char buf[16])
+void scan_type_to_str(const t_scan_type scan_type, char buf[16])
 {
 	switch (scan_type)
 	{
@@ -13,7 +13,7 @@ void scan_type_to_str(t_scan_type scan_type, char buf[16])
 		strcpy(buf, "NULL");
 		break;
 	case SCAN_ACK:
-		strcpy(buf, "NULL");
+		strcpy(buf, "ACK");
 		break;
 	case SCAN_FIN:
 		strcpy(buf, "FIN");
@@ -21,6 +21,9 @@ void scan_type_to_str(t_scan_type scan_type, char buf[16])
 	case SCAN_UDP:
 		strcpy(buf, "UDP");
 		break;
+	case SCAN_XMAS:
+		strcpy(buf, "XMAS");
+		break ;
 	default:
 		break;
 	}

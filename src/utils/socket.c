@@ -1,9 +1,7 @@
 #include "socket.h"
 #include "scan.h"
-#include "typesdef.h"
 
 #include <errno.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +24,7 @@ void update_socket(struct sockaddr_in *socket, t_target target, u16 port)
 	update_socket_addr(socket, target.addr);
 }
 
-bool init_socket(t_socket *sock, int proto)
+bool init_socket(t_socket *sock, const int proto)
 {
 	sock->sfd = socket(PF_INET, SOCK_RAW, proto);
 	if (sock->sfd < 0)
@@ -36,9 +34,4 @@ bool init_socket(t_socket *sock, int proto)
 		return true;
 	}
 	return false;
-}
-
-void close_socket(t_socket socket)
-{
-	close(socket.sfd);
 }

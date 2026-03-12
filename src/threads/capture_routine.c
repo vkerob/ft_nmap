@@ -25,7 +25,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	size_t	  ip_hlen;
 	size_t	  l4_len;
 
-	print_debug_ip_header(ip_hdr);
+	// print_debug_ip_header(ip_hdr);
 	if (l3_caplen < sizeof(struct ip))
 		return true;
 
@@ -36,14 +36,14 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	print_debug_protocol(ip_hdr->ip_p);
+	// print_debug_protocol(ip_hdr->ip_p);
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
 		if (l4_len < sizeof(struct tcphdr))
 			return true;
 		t_tcp_hdr tcp_hdr = *(const struct tcphdr *)protocol_hdr;
-		print_debug_tcp_header(&tcp_hdr);
+		// print_debug_tcp_header(&tcp_hdr);
 		// idenfy response packet
 		// handle if it's the response packet in sent queue
 		u16			source_port = ntohs(tcp_hdr.th_sport);
@@ -58,7 +58,8 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		if (l4_len < sizeof(struct udphdr))
 			return false;
 		t_udp_hdr udp_hdr = *(const struct udphdr *)protocol_hdr;
-		print_debug_udp_header(&udp_hdr);
+		// print_debug_udp_header(&udp_hdr);
+		(void)udp_hdr;
 
 		return false;
 
@@ -83,13 +84,13 @@ static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
 		return false;
 
 	eth_header = (struct ether_header *)packet;
-	print_debug_ethernet_type(ntohs(eth_header->ether_type));
+	// print_debug_ethernet_type(ntohs(eth_header->ether_type));
 	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 		return false;
 
 	pkt_ip = (t_ip *)(packet + l2_len);
 
-	print_debug_ethernet_header(eth_header);
+	// print_debug_ethernet_header(eth_header);
 	l3_caplen = caplen - l2_len;
 	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen);
 }
@@ -97,7 +98,7 @@ static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen)
 {
-	int datalink_type = pcap_datalink(handle);
+	const int datalink_type = pcap_datalink(handle);
 	// print_debug_datalink_type(datalink_type);
 
 	if (datalink_type == DLT_EN10MB)
@@ -111,19 +112,18 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	pthread_t phid = pthread_self();
 
 	print_debug_thread_startup(phid, __FUNCTION__);
-	t_pcap_user_data *user_data = (t_pcap_user_data *)args;
-	t_receiver_data	 *receiver_data = user_data->receiver_data;
+	const t_pcap_user_data *user_data = (t_pcap_user_data *)args;
+	const t_receiver_data	 *receiver_data = user_data->receiver_data;
 
 	(void)receiver_data;
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
 
-	print_debug_packet_start();
-	if (!parse_datalink_layer(user_data->handle, sent_list, packet,
-							  header->caplen))
-		return;
+	//print_debug_packet_start();
+	parse_datalink_layer(user_data->handle, sent_list, packet,
+							  header->caplen);
 }
 
-static void purge_timedout_probe_request(t_probe_queue *sent,
+void purge_timedout_probe_request(t_probe_queue *sent,
 										 t_probe_queue *to_send)
 {
 	t_probe *tmp = sent->head;
@@ -134,7 +134,7 @@ static void purge_timedout_probe_request(t_probe_queue *sent,
 		struct timeval current_time;
 		gettimeofday(&current_time, NULL);
 
-		unsigned long seconds_elapsed
+		const unsigned long seconds_elapsed
 			= current_time.tv_sec - tmp->timestamp.tv_sec;
 		// unsigned long microseconds_elapsed
 		// 	= current_time.tv_usec - tmp->timestamp.tv_usec;
@@ -182,16 +182,14 @@ static void purge_timedout_probe_request(t_probe_queue *sent,
 
 void *capture_routine(void *arg)
 {
-	pthread_t phid;
-	phid = pthread_self();
+	pthread_t phid = pthread_self();
 	print_debug_thread_startup(phid, __FUNCTION__);
 
-	t_receiver_data *receiver_data = (t_receiver_data *)arg;
+	t_receiver_data *receiver_data = arg;
 	// TODO: change this
 	pcap_t *handle = receiver_data->handle;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
-	int	 ret;
 
 	// sync_printf("test %u\n", pthread_self());
 
@@ -205,7 +203,7 @@ void *capture_routine(void *arg)
 	// 	printf("timeout seconds: %ld\n", timeout->tv_sec);
 	// 	fflush(stdout);
 	// }
-	ret = pcap_setnonblock(handle, 1, errbuf);
+	const int ret = pcap_setnonblock(handle, 1, errbuf);
 	switch (ret)
 	{
 	case PCAP_ERROR_NOT_ACTIVATED:
@@ -227,7 +225,7 @@ void *capture_routine(void *arg)
 		{
 			// sync_printf("Thread %lu: no received packet\n");
 			purge_timedout_probe_request(receiver_data->sent,
-										 receiver_data->to_send);
+									 receiver_data->to_send);
 		}
 	}
 	print_debug_thread_leave(phid, __FUNCTION__);

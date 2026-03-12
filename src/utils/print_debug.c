@@ -72,7 +72,7 @@ void print_debug_thread_leave(pthread_t phid, const char *func_name)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_concise_probe(t_probe *probe)
+void print_debug_concise_probe(const t_probe *probe)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN "==========================================="
