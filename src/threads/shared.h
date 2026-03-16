@@ -57,7 +57,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_iface_info		   *ifaces);
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
-							  pcap_t **handles, t_ctx *ctx);
+							t_ctx *ctx);
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t		   **pcap_threads,

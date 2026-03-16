@@ -71,8 +71,8 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 	return false;
 }
 
-void deinitialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
-									pcap_t **handles, t_ctx *ctx)
+void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
+									t_ctx *ctx)
 {
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
@@ -80,11 +80,6 @@ void deinitialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	}
 	free(shared_data_probe->sent);
 	pthread_mutex_destroy(&shared_data_probe->to_send.mut);
-
-	for (size_t i = 0; i < ctx->iface_count; i++)
-	{
-		pcap_close(handles[i]);
-	}
 }
 
 bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)

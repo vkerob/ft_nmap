@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "send.h"
 #include "shared.h"
+#include "my_signal.h"
 
 #include <errno.h>
 #include <pcap/pcap.h>
@@ -75,6 +76,7 @@ void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 	{
 		pthread_join((*pcap_threads)[i], NULL);
 	}
+	g_stop = 1;
 
 	for (u8 i = 0; i < nb_send_threads; i++)
 	{

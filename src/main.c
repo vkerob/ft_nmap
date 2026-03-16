@@ -55,7 +55,19 @@ bool nmap_main(t_ctx *ctx)
 	join_and_free_threads(&pcap_threads, &send_threads, ctx->args.speed,
 						  ctx->iface_count);
 
-	// deinitialize_shared_data(&shared_data_probe, handles, ctx);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+	{
+		pcap_close(pcap_ctxs[i].handle);
+		//free(pcap_ctxs[i].handle);
+	}
+
+	for (size_t i = 0; i < ctx->target_count; i++)
+	{
+		//free targets portlist 
+	}
+
+
+	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
 }

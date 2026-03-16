@@ -5,6 +5,7 @@
 #include "debug.h"
 
 #include <stdlib.h>
+#include <pthread.h>
 
 static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 								 struct in_addr ip_src, t_scan_type scan_type)
@@ -38,14 +39,22 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 						 struct in_addr ip_src)
 {
 
+	pthread_mutex_lock(&sent_list->mut);
 	t_probe *probe
 		= get_our_response(sent_list, source_port, ip_src, scan_type);
+	pthread_mutex_unlock(&sent_list->mut);
 
 	if (!probe)
 	{
 		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match any pending "
 								 "probe\n" ANSI_COLOR_RESET);
 		return;
+	}
+	else
+	{
+		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response match following pending "
+								 "probe\n" ANSI_COLOR_RESET);
+		print_debug_probe_request(probe);
 	}
 	const int idx = probe->target->port_list.port_map[scan_type][source_port];
 	switch (scan_type)

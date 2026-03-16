@@ -97,7 +97,7 @@ void *send_routine(void *arg)
 	udp_socket.sin.sin_family = AF_INET;
 
 
-	while (shared_data_probe->to_send.nb_probe > 0 && !g_stop)
+	while (!g_stop)
 	{
 		request = NULL;
 		pthread_mutex_lock(&shared_data_probe->to_send.mut);
@@ -185,7 +185,6 @@ void *send_routine(void *arg)
 					 .mut);
 			// print_debug_thread_leave(phid, __FUNCTION__);
 			continue;
-			// return NULL;
 		}
 		print_debug_sent_queue_state(
 			request->target->iface_info->iface_index,
