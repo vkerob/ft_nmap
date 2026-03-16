@@ -14,9 +14,12 @@
 #include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
+
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32 l3_caplen)
@@ -25,7 +28,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	size_t	  ip_hlen;
 	size_t	  l4_len;
 
-	// print_debug_ip_header(ip_hdr);
+	print_debug_ip_header(ip_hdr);
 	if (l3_caplen < sizeof(struct ip))
 		return true;
 
@@ -36,14 +39,15 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	// print_debug_protocol(ip_hdr->ip_p);
+	print_debug_protocol(ip_hdr->ip_p);
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
 		if (l4_len < sizeof(struct tcphdr))
 			return true;
 		t_tcp_hdr tcp_hdr = *(const struct tcphdr *)protocol_hdr;
-		// print_debug_tcp_header(&tcp_hdr);
+		print_debug_tcp_header(&tcp_hdr);
+		print_debug_packet_end();
 		// idenfy response packet
 		// handle if it's the response packet in sent queue
 		u16			source_port = ntohs(tcp_hdr.th_sport);
@@ -58,7 +62,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		if (l4_len < sizeof(struct udphdr))
 			return false;
 		t_udp_hdr udp_hdr = *(const struct udphdr *)protocol_hdr;
-		// print_debug_udp_header(&udp_hdr);
+		print_debug_udp_header(&udp_hdr);
 		(void)udp_hdr;
 
 		return false;
@@ -84,13 +88,13 @@ static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
 		return false;
 
 	eth_header = (struct ether_header *)packet;
-	// print_debug_ethernet_type(ntohs(eth_header->ether_type));
+	print_debug_ethernet_type(ntohs(eth_header->ether_type));
 	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 		return false;
 
 	pkt_ip = (t_ip *)(packet + l2_len);
 
-	// print_debug_ethernet_header(eth_header);
+	print_debug_ethernet_header(eth_header);
 	l3_caplen = caplen - l2_len;
 	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen);
 }
@@ -99,7 +103,7 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen)
 {
 	const int datalink_type = pcap_datalink(handle);
-	// print_debug_datalink_type(datalink_type);
+	print_debug_datalink_type(datalink_type);
 
 	if (datalink_type == DLT_EN10MB)
 		return handle_with_ethernet(sent_list, packet, caplen);
@@ -118,16 +122,21 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	(void)receiver_data;
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
 
-	//print_debug_packet_start();
+	print_debug_packet_start();
 	parse_datalink_layer(user_data->handle, sent_list, packet,
 							  header->caplen);
 }
 
-void purge_timedout_probe_request(t_probe_queue *sent,
+bool purge_timedout_probe_request(t_probe_queue *sent,
 										 t_probe_queue *to_send)
 {
 	t_probe *tmp = sent->head;
+	pthread_t phid = pthread_self();
+	static const long unsigned int scan_timeouts_seconds[3] = {
+		3, 6, 9
+	};
 
+	print_debug_thread_startup(phid, __FUNCTION__);
 	pthread_mutex_lock(&sent->mut);
 	while (tmp)
 	{
@@ -144,27 +153,47 @@ void purge_timedout_probe_request(t_probe_queue *sent,
 		// seconds_elapsed, 	   microseconds_elapsed); printf("time elapsed:
 		// %f\n", time_elapsed);
 
-		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
+
+		if (seconds_elapsed > scan_timeouts_seconds[tmp->retries])
 		{
+			print_debug_probe_exceed_timeout(tmp, &current_time, seconds_elapsed);
+
 			// Erase tmp from the sent list
 			erase_reference_to_node(&sent->head, tmp->prev, tmp->next);
-			// else if (tmp->next)
-			// {
-			// 	// Update head and erase prev of next
 
-			// 	tmp->next->prev = NULL;
-			// 	sent->head = tmp->next;
-			// }
-
-			// Update retries and reinject in to_send probe queue
-			if (tmp->retries < MAX_SCAN_RETRIES)
+			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				tmp->retries += 1;
-				memset(&tmp->timestamp, 0, sizeof(struct timeval));
+				print_debug_max_retries_exceeded(tmp);
+				const int index = tmp->target->port_list.port_map[tmp->type][tmp->port];
+				t_port *state = &tmp->target->port_list.port_map_rev[tmp->type][index];
+				switch (tmp->type)
+				{
+					case SCAN_SYN:
+					case SCAN_ACK:
+						state->port_state = FILTERED;
+						break;
+					case SCAN_FIN:
+					case SCAN_NULL:
+					case SCAN_XMAS:
+						state->port_state = OPEN_FILTERED;
+						break ;
+					default:
+						break ;
+				}
+				t_probe *next = tmp->next;
+				free(tmp);
+				tmp = next;
+				continue ;	
 			}
+			// Update retries and reinject in to_send probe queue
+			tmp->retries += 1;
+			//memset(&tmp->timestamp, 0, sizeof(struct timeval));
 			pthread_mutex_lock(&to_send->mut);
-			if (to_send->tail)
-			{
+	
+			tmp->next = NULL;
+			// update next of current tail or head if list is empty
+			if (to_send->tail){
+				tmp->prev = to_send->tail;
 				to_send->tail->next = tmp;
 			}
 			else
@@ -173,11 +202,23 @@ void purge_timedout_probe_request(t_probe_queue *sent,
 			}
 			// update tail to new request
 			to_send->tail = tmp;
+			//if (to_send->tail)
+			//{
+			//	to_send->tail->next = tmp;
+			//}
+			//else
+			//{
+			//	to_send->head = tmp;
+			//}
+			// update tail to new request
+			//to_send->tail = tmp;
 			pthread_mutex_unlock(&to_send->mut);
 		}
 		tmp = tmp->next;
 	}
 	pthread_mutex_unlock(&sent->mut);
+	print_debug_thread_leave(phid, __FUNCTION__);
+	return false;
 }
 
 void *capture_routine(void *arg)
@@ -224,8 +265,10 @@ void *capture_routine(void *arg)
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
 			// sync_printf("Thread %lu: no received packet\n");
-			purge_timedout_probe_request(receiver_data->sent,
-									 receiver_data->to_send);
+			if (purge_timedout_probe_request(receiver_data->sent,
+									 receiver_data->to_send))
+				return NULL;
+			sleep(1);
 		}
 	}
 	print_debug_thread_leave(phid, __FUNCTION__);

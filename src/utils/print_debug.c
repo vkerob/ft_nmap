@@ -27,6 +27,46 @@ void sync_printf(const char *format, ...)
 	va_end(args);
 }
 
+void print_debug_max_retries_exceeded(t_probe *probe){
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW
+		   "Probe %u exceed the retries: %d\n" ANSI_COLOR_RESET,
+			probe->id, probe->retries);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
+	pthread_mutex_unlock(&printf_mutex);
+}
+
+
+void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval *current_time,
+	const unsigned long seconds_elapsed)
+{
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW
+		   "Probe %u timed out:\n" ANSI_COLOR_RESET, probe->id);
+
+	printf(ANSI_COLOR_YELLOW
+		   "  • Sent at: %ld.%06u\n" ANSI_COLOR_RESET,
+		   probe->timestamp.tv_sec, (unsigned int)probe->timestamp.tv_usec);
+	printf(ANSI_COLOR_YELLOW
+		   "  • Current time: %ld.%06u\n" ANSI_COLOR_RESET,
+		   current_time->tv_sec, (unsigned int)current_time->tv_usec);
+	printf(ANSI_COLOR_YELLOW
+		   "  • Elapsed time: %ld \n" ANSI_COLOR_RESET,
+			seconds_elapsed);
+	printf(ANSI_COLOR_YELLOW
+		   "  • Number of retries: %d\n" ANSI_COLOR_RESET,
+			probe->retries);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
+	pthread_mutex_unlock(&printf_mutex);
+
+}
+
 void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent)
 {
 	pthread_mutex_lock(&printf_mutex);

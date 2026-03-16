@@ -2,6 +2,9 @@
 #include "protocols.h"
 #include "request.h"
 #include "tcp.h"
+#include "debug.h"
+
+#include <stdlib.h>
 
 static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 								 struct in_addr ip_src, t_scan_type scan_type)
@@ -40,11 +43,11 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 
 	if (!probe)
 	{
-		printf(ANSI_COLOR_YELLOW "Received response does not match any pending "
+		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match any pending "
 								 "probe\n" ANSI_COLOR_RESET);
 		return;
 	}
-	int idx = probe->target->port_list.port_map[scan_type][source_port];
+	const int idx = probe->target->port_list.port_map[scan_type][source_port];
 	switch (scan_type)
 	{
 	case SCAN_SYN:
@@ -89,4 +92,5 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 	default:
 		break;
 	}
+	free(probe);
 }

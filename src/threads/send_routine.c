@@ -85,6 +85,7 @@ void *send_routine(void *arg)
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
 	pthread_t phid = pthread_self();
+	print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -134,13 +135,13 @@ void *send_routine(void *arg)
 		if (request->type == SCAN_UDP)
 		{
 			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-		print_debug_udp_header(udp_hdr);
+			print_debug_udp_header(udp_hdr);
 			(void)udp_hdr;
 		}
 		else
 		{
 			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
-		print_debug_tcp_header(tcp_hdr);
+			print_debug_tcp_header(tcp_hdr);
 			(void)tcp_hdr;
 		}
 

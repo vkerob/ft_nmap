@@ -15,6 +15,11 @@ void print_debug_concise_probe(const t_probe *probe);
 void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv);
 
+void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval *current_time,
+	const unsigned long seconds_elapsed);
+
+void print_debug_max_retries_exceeded(t_probe *tmp);
+
 void sync_printf(const char *format, ...);
 
 void print_debug_packet_start();

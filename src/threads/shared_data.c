@@ -102,10 +102,11 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 				if (append_probe_request(&to_send->head, &to_send->tail,
 										 &ctx->targets[i], ctx->args.ports[j],
 										 ctx->args.scan_types[k],
-										 (u32)(i * ctx->args.port_count + j)))
+										 (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k)))
 				{
 					return true;
 				}
+				printf("%u\n", (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k) );
 			}
 		}
 	}
