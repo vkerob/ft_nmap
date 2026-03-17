@@ -32,7 +32,7 @@ bool nmap_main(t_ctx *ctx)
 	t_receiver_data *pcap_ctxs = NULL;
 
 	initialize_receiver_data(&pcap_ctxs, ctx->iface_count, &shared_data_probe,
-							 ctx->ifaces);
+							 ctx->ifaces, &ctx->program_info);
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
@@ -55,12 +55,29 @@ bool nmap_main(t_ctx *ctx)
 	join_and_free_threads(&pcap_threads, &send_threads, ctx->args.speed,
 						  ctx->iface_count);
 
-	// deinitialize_shared_data(&shared_data_probe, handles, ctx);
+	for (size_t i = 0; i < ctx->iface_count; i++)
+	{
+		pcap_close(pcap_ctxs[i].handle);
+	}
+
+	free(pcap_ctxs);
+	for (size_t i = 0; i < ctx->target_count; i++)
+	{
+		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
+		{
+			t_scan_type scan_type = ctx->args.scan_types[j];
+			free(ctx->targets[i].port_list.port_map[scan_type]);
+			free(ctx->targets[i].port_list.port_map_rev[scan_type]);
+		}
+	}
+
+
+	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
 }
 
-int main(int argc, char **argv)
+int main(const int argc, char **argv)
 {
 	// if (geteuid() != 0)
 	// {
@@ -68,11 +85,13 @@ int main(int argc, char **argv)
 	// 	return 1;
 	// }
 
+
 	char **targets_input = NULL;
 	size_t target_count = 0;
 	t_args args = { 0 };
 	t_ctx  ctx = { 0 };
-	// t_iface_info *finfos = NULL;
+
+	gettimeofday(&ctx.program_info.start, NULL);
 
 	if (parse_args(argc, argv, &args, &targets_input, &target_count))
 	{
@@ -86,6 +105,12 @@ int main(int argc, char **argv)
 	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{
 		free_tabp((void ***)&targets_input, ctx.target_count);
+		return EXIT_FAILURE;
+	}
+
+	if (link_port_list_to_each_target(&ctx))
+	{
+		free_targets(&ctx.targets, ctx.target_count);
 		return EXIT_FAILURE;
 	}
 
@@ -103,8 +128,8 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	print_debug_parsing_args(ctx);
-	print_debug_iface_info(ctx.ifaces, ctx.iface_count);
+	//print_debug_parsing_args(ctx);
+	//print_debug_iface_info(ctx.ifaces, ctx.iface_count);
 
 	if (nmap_main(&ctx) == false)
 	{

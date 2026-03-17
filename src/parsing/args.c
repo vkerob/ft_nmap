@@ -242,35 +242,35 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 	if (strcmp(upper_scan_str, "SYN") == 0)
 	{
 		*out = SCAN_SYN;
-		return true;
+		return false;
 	}
 	else if (strcmp(upper_scan_str, "NULL") == 0)
 	{
 		*out = SCAN_NULL;
-		return true;
+		return false;
 	}
 	else if (strcmp(upper_scan_str, "ACK") == 0)
 	{
 		*out = SCAN_ACK;
-		return true;
+		return false;
 	}
 	else if (strcmp(upper_scan_str, "FIN") == 0)
 	{
 		*out = SCAN_FIN;
-		return true;
+		return false;
 	}
 	else if (strcmp(upper_scan_str, "XMAS") == 0)
 	{
 		*out = SCAN_XMAS;
-		return true;
+		return false;
 	}
 	else if (strcmp(upper_scan_str, "UDP") == 0)
 	{
 		*out = SCAN_UDP;
-		return true;
+		return false;
 	}
 	fprintf(stderr, "ft_nmap: invalid scan type: '%s'\n", scan_str);
-	return false;
+	return true;
 }
 
 bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
@@ -284,22 +284,22 @@ bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
 		if (saveptr == NULL)
 		{
 			token = strtok_r(scan_str, ",", &saveptr);
-			if (token == NULL && saveptr != NULL)
-			{
-				token = saveptr;
-			}
 		}
 		else
 		{
-			token = strtok_r(saveptr, ",", &saveptr);
+			token = strtok_r(NULL, ",", &saveptr);
 		}
-		if (parse_scan_type(token, &scan_type))
+		if (token)
 		{
+			if (parse_scan_type(token, &scan_type))
+			{
+				return true;
+			}
 			(*out)[*nb_scan_types] = scan_type;
 		}
-		else
+		else if (token == NULL)
 		{
-			return true;
+			return *nb_scan_types == 0;
 		}
 		(*nb_scan_types)++;
 	} while (saveptr != NULL);
@@ -397,7 +397,9 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_SCAN_TYPE);
 			if (parse_scan_types(optarg, &args->scan_types,
 								 &args->nb_scan_types))
+			{
 				return true;
+			}
 			break;
 
 		case SPEED:

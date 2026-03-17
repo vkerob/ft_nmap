@@ -1,7 +1,7 @@
 #include "request.h"
+#include "debug.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 void erase_reference_to_node(t_probe **head, t_probe *prev, t_probe *next)
 {
@@ -32,13 +32,16 @@ bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 	else
 	{
 		*head = NULL;
+		*tail = NULL;
+		// print_debug_concise_probe(*popped_request);
 	}
 	// print_debug_probe_request(*popped_request);
 	return true;
 }
 
 bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
-						  u16 port, t_scan_type scan_type, u32 id)
+						  const u16 port, const t_scan_type scan_type,
+						  const u32 id)
 {
 	t_probe *new_request = malloc(sizeof(t_probe));
 	if (!new_request)
@@ -62,7 +65,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 	// update tail to new request
 	*tail = new_request;
 
-	print_debug_probe_request(new_request);
+	//print_debug_probe_request(new_request);
 
 	return false;
 }

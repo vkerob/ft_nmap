@@ -2,7 +2,6 @@
 #include "defines.h"
 #include "ip.h"
 #include "scan.h"
-#include "sll.h"
 #include "udp.h"
 
 #include <arpa/inet.h>
@@ -12,6 +11,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -28,61 +28,133 @@ void sync_printf(const char *format, ...)
 	va_end(args);
 }
 
-void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent)
+void print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+							 t_datalink_hdr *datalink_hdr)
 {
-	t_probe *tmp = sent->head;
-	u32		 i = 0;
-	while (tmp)
+	char *target = inet_ntoa(probe->target->addr);
+	target = strdup(target);
+
+	char *src = inet_ntoa(probe->target->iface_info->ip_addr);
+
+	// print_debug_probe_request(probe);
+	printf("SENT (%ld.%06d) %s > %s ", relative_sent_time->tv_sec,
+		   relative_sent_time->tv_usec, src, target);
+	if (probe->type != SCAN_UDP)
 	{
-		i++;
-		tmp = tmp->next;
+		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
+			printf("URG ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
+			printf("ACK ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_PUSH)
+			printf("PUSH ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_RST)
+			printf("RST ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_SYN)
+			printf("SYN ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
+			printf("FIN ");
+		printf("src_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_sport));
+		printf("dest_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_dport));
+		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
+		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
+		printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
+			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
+}
+
+void print_debug_max_retries_exceeded(t_probe *probe)
+{
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
-		   "============================================\n\n" ANSI_COLOR_RESET);
+		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_YELLOW
-		   "\nSENT QUEUE %d INTERFACE:\n" ANSI_COLOR_RESET,
-		   iface_index);
-	printf(ANSI_COLOR_CYAN
-		   "============================================\n\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_YELLOW "New size of sent queue: %d\n" ANSI_COLOR_RESET,
-		   i);
+		   "Probe %u exceed the retries: %d\n" ANSI_COLOR_RESET,
+		   probe->id, probe->retries);
 	printf(ANSI_COLOR_CYAN "============================================"
 						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_capture_thread_startup(pthread_t phid)
+void print_debug_probe_exceed_timeout(const t_probe		   *probe,
+									  const struct timeval *current_time,
+									  const unsigned long	seconds_elapsed)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED
-		   "Thread %lu enter capture_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW "Probe %u timed out:\n" ANSI_COLOR_RESET,
+		   probe->id);
+
+	printf(ANSI_COLOR_YELLOW "  • Sent at: %ld.%06u\n" ANSI_COLOR_RESET,
+		   probe->timestamp.tv_sec, (unsigned int)probe->timestamp.tv_usec);
+	printf(ANSI_COLOR_YELLOW "  • Current time: %ld.%06u\n" ANSI_COLOR_RESET,
+		   current_time->tv_sec, (unsigned int)current_time->tv_usec);
+	printf(ANSI_COLOR_YELLOW "  • Elapsed time: %ld \n" ANSI_COLOR_RESET,
+		   seconds_elapsed);
+	printf(ANSI_COLOR_YELLOW "  • Number of retries: %d\n" ANSI_COLOR_RESET,
+		   probe->retries);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_capture_thread_leave(pthread_t phid)
+void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED
-		   "Thread %lu leave capture_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_YELLOW
+		   "SENT QUEUE %d INTERFACE:\n" ANSI_COLOR_RESET,
+		   iface_index);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_YELLOW "Number of probe request: %d\n" ANSI_COLOR_RESET,
+		   sent->nb_probe);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sender_thread_startup(pthread_t phid)
+void print_debug_thread_startup(pthread_t phid, const char *func_name)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED "Thread %lu enter send_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD STATE\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_RED "Thread %lu enter %s()\n" ANSI_COLOR_RESET,
+		   (unsigned long)phid, (char *)func_name);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sender_thread_leave(pthread_t phid)
+void print_debug_thread_leave(pthread_t phid, const char *func_name)
 {
 	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_COLOR_RED "Thread %lu leave send_routine()\n" ANSI_COLOR_RESET,
-		   (unsigned long)phid);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD STATE\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_RED "Thread %lu leave %s()\n" ANSI_COLOR_RESET,
+		   (unsigned long)phid, func_name);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
+	pthread_mutex_unlock(&printf_mutex);
+}
+
+void print_debug_concise_probe(const t_probe *probe)
+{
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN "==========================================="
+						   "==\n" ANSI_COLOR_RESET);
+	printf("Probe Destination Port: %hu\n", probe->port);
+	printf("Probe Target IP Value: %u\n", probe->target->addr.s_addr);
+	char buf[16];
+	scan_type_to_str(probe->type, buf);
+	printf("Probe Scan Type: %s\n", buf);
+	printf(ANSI_COLOR_CYAN "============================================"
+						   "\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
 }
 
@@ -90,6 +162,9 @@ void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv)
 {
 	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_COLOR_CYAN
+		   "============================================\n" ANSI_COLOR_RESET);
+	printf(ANSI_BOLD ANSI_COLOR_RED "THREAD LOG\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_RED
@@ -162,24 +237,6 @@ void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
 		   ntohs(tcp_hdr->th_sum));
 	printf(ANSI_COLOR_GREEN "  • Urgent Pointer: %d\n" ANSI_COLOR_RESET,
 		   ntohs(tcp_hdr->th_urp));
-	pthread_mutex_unlock(&printf_mutex);
-}
-
-void print_debug_sll_header(t_sll_hdr *sll_hdr)
-{
-	pthread_mutex_lock(&printf_mutex);
-	printf(ANSI_BOLD ANSI_COLOR_MAGENTA "\nSLL Header:\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_MAGENTA
-		   "--------------------------------------------\n" ANSI_COLOR_RESET);
-	printf(ANSI_COLOR_MAGENTA "  • Packet Type: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_pkt_type));
-	printf(ANSI_COLOR_MAGENTA "  • Hardware Type: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_hatype));
-	printf(ANSI_COLOR_MAGENTA
-		   "  • Hardware Address Length: %d\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_halen));
-	printf(ANSI_COLOR_MAGENTA "  • Protocol: 0x%04x\n" ANSI_COLOR_RESET,
-		   ntohs(sll_hdr->sll_protocol));
 	pthread_mutex_unlock(&printf_mutex);
 }
 

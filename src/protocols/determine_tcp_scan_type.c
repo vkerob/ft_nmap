@@ -23,9 +23,8 @@ u16 get_random_source_port_in_scantype_interval(t_scan_type scan_type)
 {
 	t_port_range_scan_type port_range = g_port_range_tcp[scan_type];
 
-	return rand()
-		   % (port_range.min_port_range
-			  + (port_range.max_port_range - port_range.min_port_range));
+	return port_range.min_port_range
+		   + rand() % (port_range.max_port_range - port_range.min_port_range);
 }
 
 t_scan_type determine_tcp_scan_type(u16 source_port)

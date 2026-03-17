@@ -1,0 +1,31 @@
+FROM alpine:latest
+
+RUN apk add --no-cache \
+    # build tools
+    gcc g++ make cmake musl-dev linux-headers \
+    # network libs
+    libpcap-dev \
+    # shells & editors
+    bash vim \
+    # network debug & sniffing
+    tcpdump \
+    net-tools \
+    iproute2 \
+    iputils \
+    ethtool \
+    nmap \
+    # connectivity
+    curl wget \
+    netcat-openbsd \
+    socat \
+    bind-tools \
+    iperf3 \
+    # process & system debug
+    strace \
+    lsof \
+    procps \
+    htop
+
+WORKDIR /app
+
+CMD ["tail", "-f", "/dev/null"]

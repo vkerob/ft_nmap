@@ -35,6 +35,7 @@ typedef struct s_shared_data_probe
 
 	// one for each interface
 	t_probe_queue *sent;
+	t_program_info *program_info;
 } t_shared_data_sender;
 
 typedef struct s_receiver_data
@@ -47,6 +48,8 @@ typedef struct s_receiver_data
 	// reference of sent request list
 	t_probe_queue *sent;
 
+	t_program_info *program_info;
+
 } t_receiver_data;
 
 bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
@@ -54,10 +57,11 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 
 bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_shared_data_sender *shared_data_probe,
-							  t_iface_info		   *ifaces);
+							  t_iface_info		   *ifaces,
+								t_program_info *program_info);
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
-							  pcap_t **handles, t_ctx *ctx);
+							t_ctx *ctx);
 
 bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 								   pthread_t		   **pcap_threads,

@@ -1,0 +1,40 @@
+FROM alpine:latest
+
+RUN apk add --no-cache \
+    # shells & editors
+    bash vim \
+    # network debug & sniffing
+    tcpdump \
+    net-tools \
+    iproute2 \
+    iputils \
+    ethtool \
+    nmap \
+    # connectivity
+    curl wget \
+    netcat-openbsd \
+    socat \
+    bind-tools \
+    iperf3 \
+    # process & system debug
+    strace \
+    lsof \
+    procps \
+    htop \
+    # services (open ports to scan)
+    openssh \
+    nginx
+
+# SSH setup
+RUN ssh-keygen -A \
+    && echo "root:root" | chpasswd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# nginx setup
+RUN mkdir -p /run/nginx
+
+EXPOSE 22 80
+
+# launch both SSH and nginx, then keep alive
+CMD ["/bin/sh", "-c", "/usr/sbin/sshd && nginx -g 'daemon off;'"]

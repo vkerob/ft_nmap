@@ -4,19 +4,25 @@
 #include "request.h"
 #include "scan.h"
 #include "shared.h"
-#include "sll.h"
+#include "protocols.h"
 #include "typesdef.h"
 
-void print_debug_capture_thread_startup(pthread_t phid);
+void print_debug_thread_startup(pthread_t phid, const char *func_name);
 
-void print_debug_sender_thread_startup(pthread_t phid);
+void print_debug_thread_leave(pthread_t phid, const char *func_name);
 
-void print_debug_capture_thread_leave(pthread_t phid);
-
-void print_debug_sender_thread_leave(pthread_t phid);
+void print_debug_concise_probe(const t_probe *probe);
 
 void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 											 struct timeval *tv);
+
+void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval *current_time,
+	const unsigned long seconds_elapsed);
+
+void print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+		t_datalink_hdr *datalink_hdr);
+
+void print_debug_max_retries_exceeded(t_probe *tmp);
 
 void sync_printf(const char *format, ...);
 
@@ -41,10 +47,6 @@ void print_debug_parsing_args(t_ctx ctx);
 void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count);
 
 void print_debug_tcp_header(t_tcp_hdr *tcp_hdr);
-
-void print_debug_sll_header(t_sll_hdr *sll_hdr);
-
-void print_debug_sll_protocol(int protocol);
 
 void print_debug_ip_header(struct ip *ip_hdr);
 
