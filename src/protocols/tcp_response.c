@@ -50,13 +50,10 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 		//						 "probe\n" ANSI_COLOR_RESET);
 		return;
 	}
-	else
-	{
-		//printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response match following pending "
-		//						 "probe\n" ANSI_COLOR_RESET);
-		//print_debug_probe_request(probe);
-	}
-	const int idx = probe->target->port_list.port_map[scan_type][source_port];
+	// printf(ANSI_BOLD ANSI_COLOR_GREEN
+	// 	   "Received response for target %s:%d\n" ANSI_COLOR_RESET,
+	// 	   inet_ntoa(probe->target->addr), probe->port);
+	int idx = probe->target->port_list.port_map[scan_type][source_port];
 	switch (scan_type)
 	{
 	case SCAN_SYN:

@@ -1,24 +1,24 @@
 #include "ip.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-void	build_pseudo_ip_header(
-	t_ip_pseudo_hdr *ip_pseudo_hdr,
-	const char *dst_addr,
-	const char *src_addr)
+void build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
+							const char *dst_addr, const char *src_addr)
 {
-(void)src_addr;
-	if (inet_pton(AF_INET, "192.168.64.1", &ip_pseudo_hdr->ip_src) == 0) {
+	(void)src_addr;
+	if (inet_pton(AF_INET, src_addr, &ip_pseudo_hdr->ip_src) == 0)
+	{
 		fprintf(stderr, "Invalid source address\n");
-		//TODO: not exit
+		// TODO: not exit
 		exit(EXIT_FAILURE);
 	}
 
-	if (inet_pton(AF_INET, dst_addr, &ip_pseudo_hdr->ip_dst) == 0) {
+	if (inet_pton(AF_INET, dst_addr, &ip_pseudo_hdr->ip_dst) == 0)
+	{
 		fprintf(stderr, "Invalid source address\n");
-		//TODO: not exit
+		// TODO: not exit
 		exit(EXIT_FAILURE);
 	}
 

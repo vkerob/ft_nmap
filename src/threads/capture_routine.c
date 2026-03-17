@@ -117,7 +117,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 
 	//print_debug_thread_startup(phid, __FUNCTION__);
 	const t_pcap_user_data *user_data = (t_pcap_user_data *)args;
-	const t_receiver_data	 *receiver_data = user_data->receiver_data;
+	const t_receiver_data  *receiver_data = user_data->receiver_data;
 
 	(void)receiver_data;
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
@@ -266,10 +266,8 @@ void *capture_routine(void *arg)
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
 			// sync_printf("Thread %lu: no received packet\n");
-			if (purge_timedout_probe_request(receiver_data->sent,
-									 receiver_data->to_send))
-				return NULL;
-			sleep(1);
+			purge_timedout_probe_request(receiver_data->sent,
+										 receiver_data->to_send);
 		}
 	}
 	//print_debug_thread_leave(phid, __FUNCTION__);

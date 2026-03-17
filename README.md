@@ -2,7 +2,7 @@
 
 ## Usage
 
-In the main directory run
+Build on the host machine (macOS):
 
 ```bash
 cmake -B build; cmake --build build
@@ -10,23 +10,82 @@ cmake -B build; cmake --build build
 
 ## Docker
 
-Start the container:
+The Docker setup provides two containers on a fully isolated network:
+
+- **source** (`192.168.100.10`) — runs ft_nmap
+- **target** (`192.168.100.20`) — machine to scan (SSH open on port 22)
+
+Build the images (only needed once, or after any Dockerfile change):
+
+```bash
+docker compose build
+```
+
+Start both containers:
 
 ```bash
 docker compose up -d
 ```
 
-Enter the container:
+Enter the **source** container:
 
 ```bash
-docker exec -it ft_nmap_container bash
+docker exec -it ft_nmap_source bash
 ```
 
-Stop the container:
+Enter the **target** container:
+
+```bash
+docker exec -it ft_nmap_target sh
+```
+
+Stop the containers:
 
 ```bash
 docker compose down
 ```
+
+### Building inside the container
+
+The binary compiled on macOS won't run inside the container (different architecture). Build from inside the source container instead.
+
+If a `build/` folder already exists from a host build, delete it first:
+
+```bash
+rm -rf build
+```
+
+Then build with sanitizers disabled (not supported on Alpine/musl):
+
+```bash
+cmake -B build -DFT_NMAP_SANITIZERS=OFF && cmake --build build
+```
+
+---
+
+## Sniffing network traffic
+
+Open two terminals and enter the source container in each.
+
+**Terminal 1 — live packet capture:**
+
+```bash
+tcpdump -i eth0 -n -vv
+```
+
+**Terminal 2 — run ft_nmap against the target:**
+
+```bash
+./ft_nmap --ip 192.168.100.20 --ports 
+```
+
+Save the capture as a `.pcap` file to open in Wireshark:
+
+```bash
+tcpdump -i eth0 -w /app/capture.pcap
+```
+
+The `capture.pcap` file will be available directly in the project folder.
 
 ## Testing
 

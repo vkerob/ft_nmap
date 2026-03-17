@@ -29,9 +29,12 @@ static void build_scan_packets(const t_probe *request, u_char *packet)
 	// &shared_data_probe->id);
 
 	// Use to compute the tcp checksum
-	const char *src_ip = inet_ntoa(request->target->iface_info->ip_addr);
-	build_pseudo_ip_header(&ip_pseudo_hdr, inet_ntoa(request->target->addr),
-						   src_ip);
+	char src_ip_buf[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &request->target->iface_info->ip_addr, src_ip_buf,
+			  sizeof(src_ip_buf));
+	char dst_ip_buf[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &request->target->addr, dst_ip_buf, sizeof(dst_ip_buf));
+	build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf);
 
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
@@ -54,26 +57,25 @@ static void build_scan_packets(const t_probe *request, u_char *packet)
 
 static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp,
-						const size_t nb_bytes_sent)
+						const size_t	nb_bytes_sent)
 {
-	const ssize_t res = sendto(socket->sfd, packet, nb_bytes_sent, 0,
-			   (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
+	const ssize_t res
+		= sendto(socket->sfd, packet, nb_bytes_sent, 0,
+				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
 
-	if (res	< 0)
+	if (res < 0)
 	{
 		perror("sendto: ");
 		return true;
 	}
-
-
-
 
 	// sync_printf("Number of bytes sent: %d\n", res);
 	gettimeofday(sent_timestamp, NULL);
 	return false;
 }
 
-static void close_sockets(const t_socket *udp_socket, const t_socket *tcp_socket)
+static void close_sockets(const t_socket *udp_socket,
+						  const t_socket *tcp_socket)
 {
 	close(udp_socket->sfd);
 	close(tcp_socket->sfd);
@@ -88,8 +90,8 @@ void *send_routine(void *arg)
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
-	//pthread_t phid = pthread_self();
-	//print_debug_thread_startup(phid, __FUNCTION__);
+	// pthread_t phid = pthread_self();
+	// print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -99,7 +101,6 @@ void *send_routine(void *arg)
 	memset(packet, 0, sizeof(packet));
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
-
 
 	while (!g_stop)
 	{
@@ -123,7 +124,7 @@ void *send_routine(void *arg)
 		{
 			nb_bytes_sent = sizeof(t_udp_hdr);
 			used_socket = udp_socket;
-			continue ;
+			continue;
 		}
 		else
 		{
@@ -133,34 +134,26 @@ void *send_routine(void *arg)
 		used_socket.sin.sin_addr = request->target->addr;
 		build_scan_packets(request, packet);
 
-
 		used_socket.sin.sin_port = htons(request->port);
 		t_datalink_hdr datalink_hdr = { 0 };
 
 		if (request->type == SCAN_UDP)
 		{
 			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-			//print_debug_udp_header(udp_hdr);
+			// print_debug_udp_header(udp_hdr);
 			datalink_hdr.udp_hdr = *udp_hdr;
 			(void)udp_hdr;
 		}
 		else
 		{
 			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
-			//print_debug_tcp_header(tcp_hdr);
+			// print_debug_tcp_header(tcp_hdr);
 			datalink_hdr.tcp_hdr = *tcp_hdr;
 			(void)tcp_hdr;
 		}
 
-		if (send_packet(&used_socket, packet, &sent_timestamp, nb_bytes_sent))
-		{
-			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
-					inet_ntoa(request->target->iface_info->ip_addr));
-			continue;
-			// close_sockets(&udp_socket, &tcp_socket);
-			// return NULL;
-		}
-
+		// Set timestamp now so the sent queue has a valid time reference
+		gettimeofday(&sent_timestamp, NULL);
 
 		const unsigned long seconds_elapsed
 			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
@@ -168,10 +161,8 @@ void *send_routine(void *arg)
 		const unsigned long microseconds_elapsed
 			= sent_timestamp.tv_usec - shared_data->program_info->start.tv_usec;
 
-		struct timeval relative_sent_time = {
-			.tv_sec = seconds_elapsed,
-			.tv_usec = microseconds_elapsed
-		};
+		struct timeval relative_sent_time
+			= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
 		print_debug_packet_send(request, &relative_sent_time, &datalink_hdr);
 
 		struct timeval tv;
@@ -187,37 +178,41 @@ void *send_routine(void *arg)
 		}
 		// print_debug_sender_thread_proceed_probe(phid, request, &tv);
 		pthread_mutex_lock(
-			&shared_data->sent[request->target->iface_info->iface_index]
-				 .mut);
+			&shared_data->sent[request->target->iface_info->iface_index].mut);
 
 		if (update_sent_queue(
-				&(shared_data
-					  ->sent[request->target->iface_info->iface_index]
+				&(shared_data->sent[request->target->iface_info->iface_index]
 					  .head),
-				&shared_data
-					 ->sent[request->target->iface_info->iface_index]
+				&shared_data->sent[request->target->iface_info->iface_index]
 					 .tail,
 				request, sent_timestamp))
 		{
 			pthread_mutex_unlock(
-				&shared_data
-					 ->sent[request->target->iface_info->iface_index]
+				&shared_data->sent[request->target->iface_info->iface_index]
 					 .mut);
-			// print_debug_thread_leave(phid, __FUNCTION__);
 			continue;
 		}
-	//	print_debug_sent_queue_state(
-	//		request->target->iface_info->iface_index,
-	//		&shared_data->sent[request->target->iface_info->iface_index]);
+		//	print_debug_sent_queue_state(
+		//		request->target->iface_info->iface_index,
+		//		&shared_data->sent[request->target->iface_info->iface_index]);
 
-		shared_data->sent[request->target->iface_info->iface_index]
-			.nb_probe++;
+		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
 		pthread_mutex_unlock(
-			&shared_data->sent[request->target->iface_info->iface_index]
-				 .mut);
+			&shared_data->sent[request->target->iface_info->iface_index].mut);
+
+		print_debug_sent_queue_state(
+			request->target->iface_info->iface_index,
+			&shared_data->sent[request->target->iface_info->iface_index]);
+
+		if (send_packet(&used_socket, packet, &sent_timestamp, nb_bytes_sent))
+		{
+			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
+					inet_ntoa(request->target->iface_info->ip_addr));
+			// TODO: remove probe from sent queue on send failure
+			continue;
+		}
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }
-
