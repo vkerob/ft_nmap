@@ -12,8 +12,8 @@ typedef struct s_pcap_user_data
 	t_receiver_data *receiver_data;
 } t_pcap_user_data;
 
-bool pcap_setup(pcap_t **handle, const char *iface_name, char *errbuf,
-				const char *ip_src_interface);
+bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
+				size_t target_count);
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet);

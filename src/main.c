@@ -45,9 +45,8 @@ bool nmap_main(t_ctx *ctx)
 	shared_data_probe.to_send.nb_probe
 		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
-	if (initialize_and_launch_threads(
-			ctx->iface_count, ctx->args.speed, &pcap_threads, &send_threads,
-			&shared_data_probe, pcap_ctxs, ctx->ifaces))
+	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
+									  &shared_data_probe, pcap_ctxs))
 	{
 		return true;
 	}
@@ -71,7 +70,6 @@ bool nmap_main(t_ctx *ctx)
 		}
 	}
 
-
 	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
@@ -84,7 +82,6 @@ int main(const int argc, char **argv)
 	// 	fprintf(stderr, "ft_nmap: You must be root to run this program.\n");
 	// 	return 1;
 	// }
-
 
 	char **targets_input = NULL;
 	size_t target_count = 0;
@@ -128,8 +125,8 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	//print_debug_parsing_args(ctx);
-	//print_debug_iface_info(ctx.ifaces, ctx.iface_count);
+	// print_debug_parsing_args(ctx);
+	// print_debug_iface_info(ctx.ifaces, ctx.iface_count);
 
 	if (nmap_main(&ctx) == false)
 	{

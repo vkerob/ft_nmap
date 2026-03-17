@@ -1,8 +1,8 @@
 #include "capture.h"
 #include "debug.h"
+#include "my_signal.h"
 #include "send.h"
 #include "shared.h"
-#include "my_signal.h"
 
 #include <errno.h>
 #include <pcap/pcap.h>
@@ -10,20 +10,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
-								   pthread_t		   **pcap_threads,
+bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								   pthread_t		   **send_threads,
 								   t_shared_data_sender *shared_data_probe,
-								   t_receiver_data		*receiver_data,
-								   t_iface_info			*ifaces)
+								   t_receiver_data		*pcap_ctxs)
 {
-	*pcap_threads = calloc(nb_pcap_thread, sizeof(pthread_t));
+	*pcap_threads = calloc(ctx->iface_count, sizeof(pthread_t));
 	if (*pcap_threads == NULL)
 	{
 		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
-	*send_threads = calloc(nb_send_thread, sizeof(pthread_t));
+	*send_threads = calloc(ctx->args.speed, sizeof(pthread_t));
 	if (*send_threads == NULL)
 	{
 		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
@@ -31,16 +29,15 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 		return true;
 	}
 	// launch thread to handle captured packets
-	for (size_t i = 0; i < nb_pcap_thread; i++)
+	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
 		char errbuf[PCAP_ERRBUF_SIZE];
-		if (pcap_setup(&receiver_data[i].handle, ifaces[i].name, errbuf,
-					   inet_ntoa(ifaces[i].ip_addr)))
+		if (pcap_setup(&pcap_ctxs[i], errbuf, ctx->targets, ctx->target_count))
 			return true;
-		//print_debug_receiver_data(&receiver_data[i]);
+		// print_debug_receiver_data(&receiver_data[i]);
 
 		int ret = pthread_create(&(*pcap_threads)[i], NULL, capture_routine,
-								 &receiver_data[i]);
+								 &pcap_ctxs[i]);
 		if (ret != 0)
 		{
 			free(*send_threads);
@@ -51,9 +48,9 @@ bool initialize_and_launch_threads(size_t nb_pcap_thread, u8 nb_send_thread,
 		}
 	}
 
-	//print_debug_shared_data_probe(shared_data_probe, ifaces);
+	// print_debug_shared_data_probe(shared_data_probe, ifaces);
 
-	for (u8 i = 0; i < nb_send_thread; i++)
+	for (u8 i = 0; i < ctx->args.speed; i++)
 	{
 		int ret = pthread_create(&(*send_threads)[i], NULL, send_routine,
 								 shared_data_probe);
