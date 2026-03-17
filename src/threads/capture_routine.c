@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
-							   bpf_u_int32 l3_caplen)
+							   bpf_u_int32 l3_caplen, struct timeval *relative_recv_time)
 {
 	const u8 *protocol_hdr;
 	size_t	  ip_hlen;
@@ -54,7 +54,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			= determine_tcp_scan_type(ntohs(tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, tcp_hdr.th_flags, scan_type, source_port,
 							ip_hdr->ip_src);
-
+		print_debug_packet_recv(ip_hdr, &tcp_hdr, relative_recv_time);
 		return false;
 
 	case IPPROTO_UDP:
@@ -75,7 +75,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 }
 
 static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
-								 bpf_u_int32 caplen)
+								 bpf_u_int32 caplen, struct timeval *relative_recv_time)
 {
 	struct ether_header *eth_header;
 	t_ip				*pkt_ip;
@@ -95,17 +95,17 @@ static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
 
 	// print_debug_ethernet_header(eth_header);
 	l3_caplen = caplen - l2_len;
-	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen);
+	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen, relative_recv_time);
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
-								 const u_char *packet, bpf_u_int32 caplen)
+								 const u_char *packet, bpf_u_int32 caplen, struct timeval *relative_recv_time)
 {
 	const int datalink_type = pcap_datalink(handle);
 	// print_debug_datalink_type(datalink_type);
 
 	if (datalink_type == DLT_EN10MB)
-		return handle_with_ethernet(sent_list, packet, caplen);
+		return handle_with_ethernet(sent_list, packet, caplen, relative_recv_time);
 	return false;
 }
 
@@ -119,11 +119,26 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	const t_receiver_data  *receiver_data = user_data->receiver_data;
 
 	(void)receiver_data;
+
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
+	t_program_info *program_info = receiver_data->program_info;
+
+	struct timeval recv_timestamp;
+	gettimeofday(&recv_timestamp, NULL);
+
+	const unsigned long seconds_elapsed
+		= recv_timestamp.tv_sec - program_info->start.tv_sec;
+
+	const unsigned long microseconds_elapsed
+		= recv_timestamp.tv_usec - program_info->start.tv_usec;
+
+	struct timeval relative_recv_time
+		= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
 
 	// print_debug_packet_start();
-	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen);
-	// print_debug_thread_leave(phid, __FUNCTION__);
+	parse_datalink_layer(user_data->handle, sent_list, packet,
+							  header->caplen, &relative_recv_time);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 }
 
 bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
@@ -167,7 +182,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				print_debug_max_retries_exceeded(tmp);
+				//print_debug_max_retries_exceeded(tmp);
 				const int index
 					= tmp->target->port_list.port_map[tmp->type][tmp->port];
 				t_port *state

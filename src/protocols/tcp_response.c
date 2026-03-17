@@ -21,7 +21,7 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 	}
 	if (tmp)
 	{
-		erase_reference_to_node(&sent_list->head, &sent_list->tail, tmp);
+		erase_reference_to_node(&sent_list->head, &sent_list->tail, tmp, &sent_list->nb_probe);
 		sent_list->nb_probe--;
 	}
 	return tmp;
