@@ -64,6 +64,10 @@ static bool send_packet(t_socket *socket, const u8 *packet,
 		perror("sendto: ");
 		return true;
 	}
+
+
+
+
 	// sync_printf("Number of bytes sent: %d\n", res);
 	gettimeofday(sent_timestamp, NULL);
 	return false;
@@ -77,15 +81,15 @@ static void close_sockets(const t_socket *udp_socket, const t_socket *tcp_socket
 
 void *send_routine(void *arg)
 {
-	t_shared_data_sender *shared_data_probe = arg;
+	t_shared_data_sender *shared_data = arg;
 	u8					  packet[4096];
 	t_socket			  tcp_socket;
 	t_socket			  udp_socket;
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
-	pthread_t phid = pthread_self();
-	print_debug_thread_startup(phid, __FUNCTION__);
+	//pthread_t phid = pthread_self();
+	//print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -100,20 +104,20 @@ void *send_routine(void *arg)
 	while (!g_stop)
 	{
 		request = NULL;
-		pthread_mutex_lock(&shared_data_probe->to_send.mut);
-		if (shared_data_probe->to_send.tail)
+		pthread_mutex_lock(&shared_data->to_send.mut);
+		if (shared_data->to_send.tail)
 		{
-			pop_probe_request(&shared_data_probe->to_send.head,
-							  &shared_data_probe->to_send.tail, &request);
+			pop_probe_request(&shared_data->to_send.head,
+							  &shared_data->to_send.tail, &request);
 		}
 		else
 		{
-			pthread_mutex_unlock(&shared_data_probe->to_send.mut);
+			pthread_mutex_unlock(&shared_data->to_send.mut);
 			usleep(500);
 			continue;
 		}
-		shared_data_probe->to_send.nb_probe--;
-		pthread_mutex_unlock(&shared_data_probe->to_send.mut);
+		shared_data->to_send.nb_probe--;
+		pthread_mutex_unlock(&shared_data->to_send.mut);
 		size_t nb_bytes_sent;
 		if (request->type == SCAN_UDP)
 		{
@@ -131,17 +135,20 @@ void *send_routine(void *arg)
 
 
 		used_socket.sin.sin_port = htons(request->port);
+		t_datalink_hdr datalink_hdr = { 0 };
 
 		if (request->type == SCAN_UDP)
 		{
 			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-			print_debug_udp_header(udp_hdr);
+			//print_debug_udp_header(udp_hdr);
+			datalink_hdr.udp_hdr = *udp_hdr;
 			(void)udp_hdr;
 		}
 		else
 		{
 			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
-			print_debug_tcp_header(tcp_hdr);
+			//print_debug_tcp_header(tcp_hdr);
+			datalink_hdr.tcp_hdr = *tcp_hdr;
 			(void)tcp_hdr;
 		}
 
@@ -153,6 +160,19 @@ void *send_routine(void *arg)
 			// close_sockets(&udp_socket, &tcp_socket);
 			// return NULL;
 		}
+
+
+		const unsigned long seconds_elapsed
+			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
+
+		const unsigned long microseconds_elapsed
+			= sent_timestamp.tv_usec - shared_data->program_info->start.tv_usec;
+
+		struct timeval relative_sent_time = {
+			.tv_sec = seconds_elapsed,
+			.tv_usec = microseconds_elapsed
+		};
+		print_debug_packet_send(request, &relative_sent_time, &datalink_hdr);
 
 		struct timeval tv;
 
@@ -167,36 +187,37 @@ void *send_routine(void *arg)
 		}
 		// print_debug_sender_thread_proceed_probe(phid, request, &tv);
 		pthread_mutex_lock(
-			&shared_data_probe->sent[request->target->iface_info->iface_index]
+			&shared_data->sent[request->target->iface_info->iface_index]
 				 .mut);
 
 		if (update_sent_queue(
-				&(shared_data_probe
+				&(shared_data
 					  ->sent[request->target->iface_info->iface_index]
 					  .head),
-				&shared_data_probe
+				&shared_data
 					 ->sent[request->target->iface_info->iface_index]
 					 .tail,
 				request, sent_timestamp))
 		{
 			pthread_mutex_unlock(
-				&shared_data_probe
+				&shared_data
 					 ->sent[request->target->iface_info->iface_index]
 					 .mut);
 			// print_debug_thread_leave(phid, __FUNCTION__);
 			continue;
 		}
-		print_debug_sent_queue_state(
-			request->target->iface_info->iface_index,
-			&shared_data_probe->sent[request->target->iface_info->iface_index]);
+	//	print_debug_sent_queue_state(
+	//		request->target->iface_info->iface_index,
+	//		&shared_data->sent[request->target->iface_info->iface_index]);
 
-		shared_data_probe->sent[request->target->iface_info->iface_index]
+		shared_data->sent[request->target->iface_info->iface_index]
 			.nb_probe++;
 		pthread_mutex_unlock(
-			&shared_data_probe->sent[request->target->iface_info->iface_index]
+			&shared_data->sent[request->target->iface_info->iface_index]
 				 .mut);
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	print_debug_thread_leave(phid, __FUNCTION__);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }
+

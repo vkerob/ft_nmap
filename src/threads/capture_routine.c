@@ -113,9 +113,9 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
-	pthread_t phid = pthread_self();
+	//pthread_t phid = pthread_self();
 
-	print_debug_thread_startup(phid, __FUNCTION__);
+	//print_debug_thread_startup(phid, __FUNCTION__);
 	const t_pcap_user_data *user_data = (t_pcap_user_data *)args;
 	const t_receiver_data	 *receiver_data = user_data->receiver_data;
 
@@ -125,7 +125,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	// print_debug_packet_start();
 	parse_datalink_layer(user_data->handle, sent_list, packet,
 							  header->caplen);
-	print_debug_thread_leave(phid, __FUNCTION__);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 }
 
 bool purge_timedout_probe_request(t_probe_queue *sent,
@@ -134,10 +134,10 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 	t_probe *tmp = sent->head;
 	t_probe *next = NULL;
 
-	pthread_t phid = pthread_self();
+	//pthread_t phid = pthread_self();
 
 
-	print_debug_thread_startup(phid, __FUNCTION__);
+//	print_debug_thread_startup(phid, __FUNCTION__);
 	pthread_mutex_lock(&sent->mut);
 	while (tmp)
 	{
@@ -156,11 +156,11 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 
 		next = tmp->next;
 
-		print_debug_probe_request(tmp);
+		//print_debug_probe_request(tmp);
 
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
-			print_debug_probe_exceed_timeout(tmp, &current_time, seconds_elapsed);
+			//print_debug_probe_exceed_timeout(tmp, &current_time, seconds_elapsed);
 
 			// Erase tmp from the sent list
 			erase_reference_to_node(&sent->head, tmp->prev, tmp->next);
@@ -190,8 +190,8 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 
 				free(tmp);
 				tmp = next;
-				sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of sent queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
-				sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of to_send queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
+				//sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of sent queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
+				//sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of to_send queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
 				continue ;	
 			}
 			memset(&tmp->timestamp, 0, sizeof(struct timeval));
@@ -211,21 +211,21 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 			to_send->nb_probe++;
 			pthread_mutex_unlock(&to_send->mut);
 		}
-		else
-		{
-			sync_printf(ANSI_BOLD ANSI_COLOR_BLUE "Probe %d did not timeout\n" ANSI_COLOR_RESET, tmp->id);
-		}
+		//else
+		//{
+		//	sync_printf(ANSI_BOLD ANSI_COLOR_BLUE "Probe %d did not timeout\n" ANSI_COLOR_RESET, tmp->id);
+		//}
 		tmp = next;
 	}
 	pthread_mutex_unlock(&sent->mut);
-	print_debug_thread_leave(phid, __FUNCTION__);
+//	print_debug_thread_leave(phid, __FUNCTION__);
 	return false;
 }
 
 void *capture_routine(void *arg)
 {
-	pthread_t phid = pthread_self();
-	print_debug_thread_startup(phid, __FUNCTION__);
+	//pthread_t phid = pthread_self();
+	//print_debug_thread_startup(phid, __FUNCTION__);
 
 	t_receiver_data *receiver_data = arg;
 	// TODO: change this
@@ -272,6 +272,6 @@ void *capture_routine(void *arg)
 			sleep(1);
 		}
 	}
-	print_debug_thread_leave(phid, __FUNCTION__);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

@@ -46,15 +46,15 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 
 	if (!probe)
 	{
-		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match any pending "
-								 "probe\n" ANSI_COLOR_RESET);
+		//printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match any pending "
+		//						 "probe\n" ANSI_COLOR_RESET);
 		return;
 	}
 	else
 	{
-		printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response match following pending "
-								 "probe\n" ANSI_COLOR_RESET);
-		print_debug_probe_request(probe);
+		//printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response match following pending "
+		//						 "probe\n" ANSI_COLOR_RESET);
+		//print_debug_probe_request(probe);
 	}
 	const int idx = probe->target->port_list.port_map[scan_type][source_port];
 	switch (scan_type)

@@ -65,7 +65,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 	// update tail to new request
 	*tail = new_request;
 
-	print_debug_probe_request(new_request);
+	//print_debug_probe_request(new_request);
 
 	return false;
 }

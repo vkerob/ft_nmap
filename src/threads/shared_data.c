@@ -36,6 +36,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	shared_data_probe->to_send.head = NULL;
 	shared_data_probe->to_send.tail = NULL;
 	shared_data_probe->to_send.nb_probe = 0;
+	shared_data_probe->program_info = &ctx->program_info;
 
 	atomic_init(&shared_data_probe->id, 1);
 	atomic_init(&shared_data_probe->base_seq, rand());
@@ -52,7 +53,8 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 
 bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_shared_data_sender *shared_data_probe,
-							  t_iface_info		   *ifaces)
+							  t_iface_info		   *ifaces,
+								t_program_info *program_info)
 {
 	*pcap_ctxs = calloc(iface_count, sizeof(t_receiver_data));
 	if (!*pcap_ctxs)
@@ -67,6 +69,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 		(*pcap_ctxs)[i].to_send = &shared_data_probe->to_send;
 		(*pcap_ctxs)[i].sent = &shared_data_probe->sent[i];
 		(*pcap_ctxs)[i].handle = NULL;
+		(*pcap_ctxs)[i].program_info = program_info;
 	}
 	return false;
 }
@@ -101,7 +104,7 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 				{
 					return true;
 				}
-				printf("%u\n", (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k) );
+				//printf("%u\n", (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k) );
 			}
 		}
 	}

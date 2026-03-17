@@ -4,6 +4,7 @@
 #include "args.h"
 #include "defines.h"
 #include "typesdef.h"
+#include "program_info.h"
 
 #include <net/if.h>
 #include <netinet/in.h>
@@ -76,7 +77,7 @@ typedef struct s_ctx
 	t_iface_info *ifaces;
 	size_t		  iface_count;
 	t_args		  args;
-
+	t_program_info program_info;
 	pcap_t **handles;
 } t_ctx;
 

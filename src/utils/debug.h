@@ -4,6 +4,7 @@
 #include "request.h"
 #include "scan.h"
 #include "shared.h"
+#include "protocols.h"
 #include "typesdef.h"
 
 void print_debug_thread_startup(pthread_t phid, const char *func_name);
@@ -17,6 +18,9 @@ void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
 
 void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval *current_time,
 	const unsigned long seconds_elapsed);
+
+void print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+		t_datalink_hdr *datalink_hdr);
 
 void print_debug_max_retries_exceeded(t_probe *tmp);
 

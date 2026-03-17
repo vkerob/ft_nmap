@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <string.h>
 
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -25,6 +26,47 @@ void sync_printf(const char *format, ...)
 	pthread_mutex_unlock(&printf_mutex);
 
 	va_end(args);
+}
+
+void print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+		t_datalink_hdr *datalink_hdr)
+{
+	char *target = inet_ntoa(probe->target->addr);
+	target = strdup(target);
+
+	char *src = inet_ntoa(probe->target->iface_info->ip_addr);
+
+	//print_debug_probe_request(probe);
+	printf("SENT (%ld.%06ld) %s > %s ",
+			relative_sent_time->tv_sec,
+			relative_sent_time->tv_usec,
+			src,
+			target);
+	if (probe->type != SCAN_UDP)
+	{
+		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
+			printf("URG ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
+			printf("ACK ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_PUSH)
+			printf("PUSH ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_RST)
+			printf("RST ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_SYN)
+			printf("SYN ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
+			printf("FIN ");
+		printf("src_port: %d ",
+				 ntohs(datalink_hdr->tcp_hdr.th_sport));
+		printf("dest_port: %d ",
+				 ntohs(datalink_hdr->tcp_hdr.th_dport));
+		printf("seq: %u ",
+				 ntohl(datalink_hdr->tcp_hdr.th_seq));
+		printf("win: %d ",
+				 ntohs(datalink_hdr->tcp_hdr.th_win));
+		printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
+				 ntohs(datalink_hdr->tcp_hdr.th_sum));
+	}
 }
 
 void print_debug_max_retries_exceeded(t_probe *probe){
