@@ -200,9 +200,9 @@ void *send_routine(void *arg)
 		pthread_mutex_unlock(
 			&shared_data->sent[request->target->iface_info->iface_index].mut);
 
-		print_debug_sent_queue_state(
-			request->target->iface_info->iface_index,
-			&shared_data->sent[request->target->iface_info->iface_index]);
+		// print_debug_sent_queue_state(
+		// 	request->target->iface_info->iface_index,
+		// 	&shared_data->sent[request->target->iface_info->iface_index]);
 
 		if (send_packet(&used_socket, packet, &sent_timestamp, nb_bytes_sent))
 		{
