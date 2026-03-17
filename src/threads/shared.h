@@ -21,7 +21,7 @@ typedef struct s_probe_queue
 	t_probe		   *head;
 	t_probe		   *tail;
 	pthread_mutex_t mut;
-	u8				nb_probe;
+	u16				nb_probe;
 } t_probe_queue;
 
 typedef struct s_shared_data_probe

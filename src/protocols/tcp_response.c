@@ -11,25 +11,18 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 								 struct in_addr ip_src, t_scan_type scan_type)
 {
 	t_probe *tmp = sent_list->head;
-	t_probe *prev = NULL;
 
 	while (tmp)
 	{
-
 		if (source_port == tmp->port && scan_type == tmp->type
 			&& ip_src.s_addr == tmp->target->addr.s_addr)
-		{
-			// printf(ANSI_BOLD ANSI_COLOR_MAGENTA
-			// 	   "Found target\n" ANSI_COLOR_RESET);
-
 			break;
-		}
-		prev = tmp;
 		tmp = tmp->next;
 	}
 	if (tmp)
 	{
-		erase_reference_to_node(&sent_list->head, prev, tmp->next);
+		erase_reference_to_node(&sent_list->head, &sent_list->tail, tmp);
+		sent_list->nb_probe--;
 	}
 	return tmp;
 }

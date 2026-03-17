@@ -3,21 +3,23 @@
 
 #include <stdlib.h>
 
-void erase_reference_to_node(t_probe **head, t_probe *prev, t_probe *next)
+void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node, u16 *nb_probe)
 {
-	if (prev)
-	{
-		prev->next = next;
-	}
+	if (node->prev)
+		node->prev->next = node->next;
 	else
-	{
-		// No prev means it was the head
-		*head = next;
-	}
-	if (next)
-	{
-		next->prev = prev;
-	}
+		*head = node->next;
+
+	if (node->next)
+		node->next->prev = node->prev;
+
+	// Keep tail consistent: if we removed the tail, update it
+	if (*tail == node)
+		*tail = node->prev;
+
+	node->next = NULL;
+	node->prev = NULL;
+	(*nb_probe)--;
 }
 
 bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
@@ -65,7 +67,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 	// update tail to new request
 	*tail = new_request;
 
-	//print_debug_probe_request(new_request);
+	// print_debug_probe_request(new_request);
 
 	return false;
 }

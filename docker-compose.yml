@@ -33,7 +33,7 @@ services:
 networks:
   isolated_net:
     driver: bridge
-    internal: true        # fully isolated, no internet access
+    # internal: true        # fully isolated, no internet access
     ipam:
       config:
         - subnet: 192.168.100.0/24

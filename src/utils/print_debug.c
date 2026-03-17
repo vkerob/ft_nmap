@@ -37,8 +37,8 @@ void print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	char *src = inet_ntoa(probe->target->iface_info->ip_addr);
 
 	// print_debug_probe_request(probe);
-	printf("SENT (%ld.%06d) %s > %s ", relative_sent_time->tv_sec,
-		   relative_sent_time->tv_usec, src, target);
+	printf("SENT (%ld.%06lu) %s > %s ", relative_sent_time->tv_sec,
+		   (unsigned long)relative_sent_time->tv_usec, src, target);
 	if (probe->type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)

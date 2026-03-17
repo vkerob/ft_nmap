@@ -14,12 +14,11 @@
 #include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <stdlib.h>
-
+#include <unistd.h>
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32 l3_caplen)
@@ -113,9 +112,9 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
-	//pthread_t phid = pthread_self();
+	// pthread_t phid = pthread_self();
 
-	//print_debug_thread_startup(phid, __FUNCTION__);
+	// print_debug_thread_startup(phid, __FUNCTION__);
 	const t_pcap_user_data *user_data = (t_pcap_user_data *)args;
 	const t_receiver_data  *receiver_data = user_data->receiver_data;
 
@@ -123,22 +122,19 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	t_probe_queue *sent_list = user_data->receiver_data->sent;
 
 	// print_debug_packet_start();
-	parse_datalink_layer(user_data->handle, sent_list, packet,
-							  header->caplen);
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 }
 
-bool purge_timedout_probe_request(t_probe_queue *sent,
-										 t_probe_queue *to_send)
+bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 {
-	t_probe *tmp = sent->head;
 	t_probe *next = NULL;
 
-	//pthread_t phid = pthread_self();
+	// pthread_t phid = pthread_self();
 
-
-//	print_debug_thread_startup(phid, __FUNCTION__);
+	//	print_debug_thread_startup(phid, __FUNCTION__);
 	pthread_mutex_lock(&sent->mut);
+	t_probe *tmp = sent->head;
 	while (tmp)
 	{
 		struct timeval current_time;
@@ -156,49 +152,54 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 
 		next = tmp->next;
 
-		//print_debug_probe_request(tmp);
+		// print_debug_probe_request(tmp);
 
 		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
 		{
-			//print_debug_probe_exceed_timeout(tmp, &current_time, seconds_elapsed);
+			// print_debug_probe_exceed_timeout(tmp, &current_time,
+			// seconds_elapsed);
 
 			// Erase tmp from the sent list
-			erase_reference_to_node(&sent->head, tmp->prev, tmp->next);
+			erase_reference_to_node(&sent->head, &sent->tail, tmp, &sent->nb_probe);
 			// Update retries and reinject in to_send probe queue
-			sent->nb_probe--;
+
 			tmp->retries++;
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
 				print_debug_max_retries_exceeded(tmp);
-				const int index = tmp->target->port_list.port_map[tmp->type][tmp->port];
-				t_port *state = &tmp->target->port_list.port_map_rev[tmp->type][index];
+				const int index
+					= tmp->target->port_list.port_map[tmp->type][tmp->port];
+				t_port *state
+					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
 				{
-					case SCAN_SYN:
-					case SCAN_ACK:
-						state->port_state = FILTERED;
-						break;
-					case SCAN_FIN:
-					case SCAN_NULL:
-					case SCAN_XMAS:
-						state->port_state = OPEN_FILTERED;
-						break ;
-					default:
-						break ;
+				case SCAN_SYN:
+				case SCAN_ACK:
+					state->port_state = FILTERED;
+					break;
+				case SCAN_FIN:
+				case SCAN_NULL:
+				case SCAN_XMAS:
+					state->port_state = OPEN_FILTERED;
+					break;
+				default:
+					break;
 				}
 
 				free(tmp);
 				tmp = next;
-				//sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of sent queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
-				//sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of to_send queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
-				continue ;	
+				// sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of sent queue
+				// %d\n" ANSI_COLOR_RESET, sent->nb_probe);
+				// sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of to_send
+				// queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
+				continue;
 			}
 			memset(&tmp->timestamp, 0, sizeof(struct timeval));
 			pthread_mutex_lock(&to_send->mut);
-			tmp->next = NULL;
 			// update next of current tail or head if list is empty
-			if (to_send->tail){
+			if (to_send->tail)
+			{
 				tmp->prev = to_send->tail;
 				to_send->tail->next = tmp;
 			}
@@ -211,21 +212,22 @@ bool purge_timedout_probe_request(t_probe_queue *sent,
 			to_send->nb_probe++;
 			pthread_mutex_unlock(&to_send->mut);
 		}
-		//else
+		// else
 		//{
-		//	sync_printf(ANSI_BOLD ANSI_COLOR_BLUE "Probe %d did not timeout\n" ANSI_COLOR_RESET, tmp->id);
-		//}
+		//	sync_printf(ANSI_BOLD ANSI_COLOR_BLUE "Probe %d did not timeout\n"
+		// ANSI_COLOR_RESET, tmp->id);
+		// }
 		tmp = next;
 	}
 	pthread_mutex_unlock(&sent->mut);
-//	print_debug_thread_leave(phid, __FUNCTION__);
+	//	print_debug_thread_leave(phid, __FUNCTION__);
 	return false;
 }
 
 void *capture_routine(void *arg)
 {
-	//pthread_t phid = pthread_self();
-	//print_debug_thread_startup(phid, __FUNCTION__);
+	// pthread_t phid = pthread_self();
+	// print_debug_thread_startup(phid, __FUNCTION__);
 
 	t_receiver_data *receiver_data = arg;
 	// TODO: change this
@@ -258,7 +260,9 @@ void *capture_routine(void *arg)
 		break;
 	}
 
-	while (!g_stop && (receiver_data->sent->nb_probe != 0 || receiver_data->to_send->nb_probe != 0))
+	while (!g_stop
+		   && (receiver_data->sent->nb_probe != 0
+			   || receiver_data->to_send->nb_probe != 0))
 	{
 		t_pcap_user_data user_data
 			= { .handle = handle, .receiver_data = receiver_data };
@@ -270,6 +274,6 @@ void *capture_routine(void *arg)
 										 receiver_data->to_send);
 		}
 	}
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

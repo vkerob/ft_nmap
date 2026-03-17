@@ -54,7 +54,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_shared_data_sender *shared_data_probe,
 							  t_iface_info		   *ifaces,
-								t_program_info *program_info)
+							  t_program_info	   *program_info)
 {
 	*pcap_ctxs = calloc(iface_count, sizeof(t_receiver_data));
 	if (!*pcap_ctxs)
@@ -75,7 +75,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 }
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
-									t_ctx *ctx)
+							  t_ctx				   *ctx)
 {
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
@@ -97,14 +97,15 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 			{
 				// Create and initialize a probe request for targets[i] and
 				// ports[j] Append it to the linked list
-				if (append_probe_request(&to_send->head, &to_send->tail,
-										 &ctx->targets[i], ctx->args.ports[j],
-										 ctx->args.scan_types[k],
-										 (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k)))
+				if (append_probe_request(
+						&to_send->head, &to_send->tail, &ctx->targets[i],
+						ctx->args.ports[j], ctx->args.scan_types[k],
+						(u32)(i * ctx->args.port_count
+							  + j * ctx->args.nb_scan_types + k)))
 				{
 					return true;
 				}
-				//printf("%u\n", (u32)(i * ctx->args.port_count + j * ctx->args.nb_scan_types + k) );
+				to_send->nb_probe++;
 			}
 		}
 	}

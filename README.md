@@ -36,7 +36,7 @@ docker exec -it ft_nmap_source bash
 Enter the **target** container:
 
 ```bash
-docker exec -it ft_nmap_target sh
+docker exec -it ft_nmap_target bash
 ```
 
 Stop the containers:

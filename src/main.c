@@ -42,8 +42,8 @@ bool nmap_main(t_ctx *ctx)
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
-	shared_data_probe.to_send.nb_probe
-		= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
+	// shared_data_probe.to_send.nb_probe
+	// 	= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
 									  &shared_data_probe, pcap_ctxs))
