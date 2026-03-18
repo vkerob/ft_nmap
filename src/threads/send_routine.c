@@ -154,11 +154,17 @@ void *send_routine(void *arg)
 		// Set timestamp now so the sent queue has a valid time reference
 		gettimeofday(&sent_timestamp, NULL);
 
-		const unsigned long seconds_elapsed
+		long seconds_elapsed
 			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
 
-		const unsigned long microseconds_elapsed
+		long microseconds_elapsed
 			= sent_timestamp.tv_usec - shared_data->program_info->start.tv_usec;
+
+		if (microseconds_elapsed < 0)
+		{
+			seconds_elapsed--;
+			microseconds_elapsed += 1000000;
+		}
 
 		struct timeval relative_sent_time
 			= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
