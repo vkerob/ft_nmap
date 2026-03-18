@@ -106,7 +106,7 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
 	}
 
 	pthread_mutex_lock(&printf_mutex);
-	printf("RCVD (%ld.%06lu) %s %s:%d > %s:%d ", relative_recv_time->tv_sec,
+	printf("RCVD (%ld.%06lu) %s %s:%d < %s:%d ", relative_recv_time->tv_sec,
 		   (unsigned long)relative_recv_time->tv_usec,
 			ip_hdr->ip_p == IPPROTO_UDP ? "UDP" : "TCP",
 		   src,
