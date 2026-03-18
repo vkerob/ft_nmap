@@ -21,7 +21,8 @@
 #include <unistd.h>
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
-							   bpf_u_int32 l3_caplen, struct timeval *relative_recv_time)
+							   bpf_u_int32	   l3_caplen,
+							   struct timeval *relative_recv_time)
 {
 	const u8 *protocol_hdr;
 	size_t	  ip_hlen;
@@ -75,11 +76,12 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
-								 const u_char *packet, bpf_u_int32 caplen, struct timeval *relative_recv_time)
+								 const u_char *packet, bpf_u_int32 caplen,
+								 struct timeval *relative_recv_time)
 {
-	const int	 datalink_type = pcap_datalink(handle);
+	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
-	bpf_u_int32	 l3_caplen = 0;
+	bpf_u_int32	  l3_caplen = 0;
 
 	// print_debug_datalink_type(datalink_type);
 
@@ -110,7 +112,7 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 			return false;
 
 		uint32_t af_type;
-		memcpy(&af_type, packet, 4);	// no ntohl: already in host byte order
+		memcpy(&af_type, packet, 4); // no ntohl: already in host byte order
 		if (af_type != AF_INET)
 			return false;
 
@@ -131,7 +133,8 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 		return false;
 	}
 
-	return handle_ip_protocol(sent_list, (t_ip *)ip_start, l3_caplen, relative_recv_time);
+	return handle_ip_protocol(sent_list, (t_ip *)ip_start, l3_caplen,
+							  relative_recv_time);
 }
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
@@ -145,25 +148,29 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 
 	(void)receiver_data;
 
-	t_probe_queue *sent_list = user_data->receiver_data->sent;
+	t_probe_queue  *sent_list = user_data->receiver_data->sent;
 	t_program_info *program_info = receiver_data->program_info;
 
 	struct timeval recv_timestamp;
 	gettimeofday(&recv_timestamp, NULL);
 
-	const unsigned long seconds_elapsed
-		= recv_timestamp.tv_sec - program_info->start.tv_sec;
-
-	const unsigned long microseconds_elapsed
+	long seconds_elapsed = recv_timestamp.tv_sec - program_info->start.tv_sec;
+	long microseconds_elapsed
 		= recv_timestamp.tv_usec - program_info->start.tv_usec;
+
+	if (microseconds_elapsed < 0)
+	{
+		seconds_elapsed--;
+		microseconds_elapsed += 1000000;
+	}
 
 	struct timeval relative_recv_time
 		= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
 
 	// print_debug_packet_start();
-	parse_datalink_layer(user_data->handle, sent_list, packet,
-							  header->caplen, &relative_recv_time);
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen,
+						 &relative_recv_time);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 }
 
 bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
@@ -208,7 +215,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				//print_debug_max_retries_exceeded(tmp);
+				// print_debug_max_retries_exceeded(tmp);
 				const int index
 					= tmp->target->port_list.port_map[tmp->type][tmp->port];
 				t_port *state
