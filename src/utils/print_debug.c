@@ -5,6 +5,7 @@
 #include "udp.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <pcap/pcap.h>
@@ -13,7 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <errno.h>
 
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -38,19 +38,24 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 
 	// print_debug_probe_request(probe);
 	static int domain = AF_INET;
-	if (inet_ntop(domain, (const void *)&probe->target->addr, target, sizeof(src)) == NULL)
+	if (inet_ntop(domain, (const void *)&probe->target->addr, target,
+				  sizeof(src))
+		== NULL)
 	{
 		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
-	if (inet_ntop(domain, (const void *)&probe->target->iface_info->ip_addr, src, sizeof(target)) == NULL)
+	if (inet_ntop(domain, (const void *)&probe->target->iface_info->ip_addr,
+				  src, sizeof(target))
+		== NULL)
 	{
 		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 	printf("SENT (%ld.%06lu) %s:%d > %s:%d ", relative_sent_time->tv_sec,
-		   (unsigned long)relative_sent_time->tv_usec, src, ntohs(datalink_hdr->tcp_hdr.th_sport),
-			 target, ntohs(datalink_hdr->tcp_hdr.th_dport));
+		   (unsigned long)relative_sent_time->tv_usec, src,
+		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
+		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 	if (probe->type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
@@ -65,8 +70,8 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 			printf("SYN ");
 		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
 			printf("FIN ");
-//		printf("src_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_sport));
-//		printf("dest_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_dport));
+		//		printf("src_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_sport));
+		//		printf("dest_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_dport));
 		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
 		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
 		printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
@@ -75,26 +80,29 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	return false;
 }
 
-bool print_debug_packet_recv(const struct ip *ip_hdr, 
-		const t_tcp_hdr *tcp_hdr, const struct timeval *relative_recv_time)
+bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
+							 const struct timeval *relative_recv_time)
 {
-	char src[32];
-	char dst[32];
+	char	   src[32];
+	char	   dst[32];
 	static int domain = AF_INET;
 
-	if (inet_ntop(domain, (const void *)&ip_hdr->ip_src, dst, sizeof(src)) == NULL)
+	if (inet_ntop(domain, (const void *)&ip_hdr->ip_src, src, sizeof(src))
+		== NULL)
 	{
 		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
-	if (inet_ntop(domain, (const void *)&ip_hdr->ip_dst, src, sizeof(dst)) == NULL)
+	if (inet_ntop(domain, (const void *)&ip_hdr->ip_dst, dst, sizeof(dst))
+		== NULL)
 	{
 		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 
 	printf("RCVD (%ld.%06lu) %s:%d > %s:%d ", relative_recv_time->tv_sec,
-		   relative_recv_time->tv_usec, src, ntohs(tcp_hdr->th_sport), dst, ntohs(tcp_hdr->th_dport));
+		   (unsigned long)relative_recv_time->tv_usec, src,
+		   ntohs(tcp_hdr->th_sport), dst, ntohs(tcp_hdr->th_dport));
 	if (tcp_hdr->th_flags & TH_URG)
 		printf("URG ");
 	if (tcp_hdr->th_flags & TH_ACK)
@@ -110,12 +118,12 @@ bool print_debug_packet_recv(const struct ip *ip_hdr,
 	if (tcp_hdr->th_flags & 0x00)
 		printf(". ");
 	printf("\n");
-	//printf("src_port: %d ", ntohs(tcp_hdr->th_sport));
-	//printf("dest_port: %d ", ntohs(tcp_hdr->th_dport));
-		//printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr->th_seq));
-		//printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-		//printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
-		//	   ntohs(datalink_hdr->tcp_hdr.th_sum));
+	// printf("src_port: %d ", ntohs(tcp_hdr->th_sport));
+	// printf("dest_port: %d ", ntohs(tcp_hdr->th_dport));
+	// printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr->th_seq));
+	// printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
+	// printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
+	//	   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	return false;
 }
 

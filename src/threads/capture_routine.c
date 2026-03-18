@@ -74,39 +74,64 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	}
 }
 
-static bool handle_with_ethernet(t_probe_queue *sent_list, const u_char *packet,
-								 bpf_u_int32 caplen, struct timeval *relative_recv_time)
-{
-	struct ether_header *eth_header;
-	t_ip				*pkt_ip;
-	size_t				 l2_len;
-	size_t				 l3_caplen;
-
-	l2_len = sizeof(struct ether_header);
-	if (caplen < l2_len + sizeof(struct ip))
-		return false;
-
-	eth_header = (struct ether_header *)packet;
-	// print_debug_ethernet_type(ntohs(eth_header->ether_type));
-	if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
-		return false;
-
-	pkt_ip = (t_ip *)(packet + l2_len);
-
-	// print_debug_ethernet_header(eth_header);
-	l3_caplen = caplen - l2_len;
-	return handle_ip_protocol(sent_list, pkt_ip, (bpf_u_int32)l3_caplen, relative_recv_time);
-}
-
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen, struct timeval *relative_recv_time)
 {
-	const int datalink_type = pcap_datalink(handle);
+	const int	 datalink_type = pcap_datalink(handle);
+	const u_char *ip_start = NULL;
+	bpf_u_int32	 l3_caplen = 0;
+
 	// print_debug_datalink_type(datalink_type);
 
-	if (datalink_type == DLT_EN10MB)
-		return handle_with_ethernet(sent_list, packet, caplen, relative_recv_time);
-	return false;
+	switch (datalink_type)
+	{
+	case DLT_EN10MB:
+	{
+		// [6 dst MAC][6 src MAC][2 EtherType] + IP...
+		const size_t l2_len = sizeof(struct ether_header);
+		if (caplen < l2_len + sizeof(struct ip))
+			return false;
+
+		struct ether_header *eth_header = (struct ether_header *)packet;
+		// print_debug_ethernet_type(ntohs(eth_header->ether_type));
+		// print_debug_ethernet_header(eth_header);
+		if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
+			return false;
+
+		ip_start = packet + l2_len;
+		l3_caplen = caplen - (bpf_u_int32)l2_len;
+		break;
+	}
+	case DLT_NULL:
+	{
+		// [4 bytes AF_family in host byte order] + IP...
+		const bpf_u_int32 l2_len = 4;
+		if (caplen < l2_len + sizeof(struct ip))
+			return false;
+
+		uint32_t af_type;
+		memcpy(&af_type, packet, 4);	// no ntohl: already in host byte order
+		if (af_type != AF_INET)
+			return false;
+
+		ip_start = packet + l2_len;
+		l3_caplen = caplen - l2_len;
+		break;
+	}
+	case DLT_RAW:
+		// no datalink header, packet starts directly at the IP header
+		if (caplen < sizeof(struct ip))
+			return false;
+
+		ip_start = packet;
+		l3_caplen = caplen;
+		break;
+
+	default:
+		return false;
+	}
+
+	return handle_ip_protocol(sent_list, (t_ip *)ip_start, l3_caplen, relative_recv_time);
 }
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
