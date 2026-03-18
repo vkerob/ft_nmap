@@ -74,15 +74,49 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 	return false;
 }
 
+
+static void free_probes(t_probe *head)
+{
+		t_probe *tmp = head;
+		t_probe *next;
+
+		while (tmp)
+		{
+			next = tmp->next;
+			free(tmp);
+			tmp = next;
+		}
+}
+
+static void free_sent_queues(size_t iface_count, t_probe_queue *sent_queues)
+{
+	for (size_t i = 0; i < iface_count; i++)
+	{
+		// If we stopped the program before it ends, sent list may contain t_probe objects
+		if (sent_queues[i].nb_probe > 0)
+		{
+			free_probes(sent_queues[i].head);
+		}
+		pthread_mutex_destroy(&sent_queues[i].mut);
+
+	}
+	free(sent_queues);
+}
+
+static void free_to_send_queue(t_probe_queue *to_send_queue)
+{
+	if (to_send_queue->nb_probe > 0)
+	{
+		free_probes(to_send_queue->head);
+	}
+	pthread_mutex_destroy(&to_send_queue->mut);
+}
+
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
 							  t_ctx				   *ctx)
 {
-	for (size_t i = 0; i < ctx->iface_count; i++)
-	{
-		pthread_mutex_destroy(&shared_data_probe->sent[i].mut);
-	}
-	free(shared_data_probe->sent);
-	pthread_mutex_destroy(&shared_data_probe->to_send.mut);
+	free_sent_queues(ctx->iface_count, shared_data_probe->sent);
+	free_to_send_queue(&shared_data_probe->to_send);
 }
 
 bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)

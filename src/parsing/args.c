@@ -433,7 +433,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 	if (!HAS(args->flags, F_SCAN_TYPE))
 	{
-		args->nb_scan_types = MAX_NB_SCAN_TYPE;
+		args->nb_scan_types = MAX_NB_SCAN_TYPE - 1;
 		for (u8 i = 0; i < args->nb_scan_types; i++)
 		{
 			args->scan_types[i] = i;

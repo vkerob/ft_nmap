@@ -90,8 +90,8 @@ void *send_routine(void *arg)
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
-	// pthread_t phid = pthread_self();
-	// print_debug_thread_startup(phid, __FUNCTION__);
+	//pthread_t phid = pthread_self();
+	//print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -102,7 +102,7 @@ void *send_routine(void *arg)
 	tcp_socket.sin.sin_family = AF_INET;
 	udp_socket.sin.sin_family = AF_INET;
 
-	while (!g_stop)
+	while (g_stop != 1)
 	{
 		request = NULL;
 		pthread_mutex_lock(&shared_data->to_send.mut);
@@ -139,7 +139,7 @@ void *send_routine(void *arg)
 		if (request->type == SCAN_UDP)
 		{
 			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
-			// print_debug_udp_header(udp_hdr);
+			//print_debug_udp_header(udp_hdr);
 			datalink_hdr.udp_hdr = *udp_hdr;
 			(void)udp_hdr;
 		}
@@ -168,7 +168,10 @@ void *send_routine(void *arg)
 
 		struct timeval relative_sent_time
 			= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
-		print_debug_packet_send(request, &relative_sent_time, &datalink_hdr);
+		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr))
+		{
+			return NULL;
+		}
 
 		struct timeval tv;
 
@@ -218,6 +221,6 @@ void *send_routine(void *arg)
 		}
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	// print_debug_thread_leave(phid, __FUNCTION__);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

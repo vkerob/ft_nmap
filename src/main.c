@@ -70,6 +70,8 @@ bool nmap_main(t_ctx *ctx)
 		}
 	}
 
+	
+
 	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;

@@ -73,6 +73,8 @@ void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 	{
 		pthread_join((*pcap_threads)[i], NULL);
 	}
+	
+	// Once all capture threads have stopped we set g_stop to 1 to stop the senders threads
 	g_stop = 1;
 
 	for (u8 i = 0; i < nb_send_threads; i++)

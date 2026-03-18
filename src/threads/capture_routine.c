@@ -55,7 +55,10 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			= determine_tcp_scan_type(ntohs(tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, tcp_hdr.th_flags, scan_type, source_port,
 							ip_hdr->ip_src);
-		print_debug_packet_recv(ip_hdr, &tcp_hdr, relative_recv_time);
+		if (print_debug_packet_recv(ip_hdr, &tcp_hdr, relative_recv_time))
+		{
+			return true;
+		}
 		return false;
 
 	case IPPROTO_UDP:
@@ -274,8 +277,8 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 void *capture_routine(void *arg)
 {
-	// pthread_t phid = pthread_self();
-	// print_debug_thread_startup(phid, __FUNCTION__);
+	//pthread_t phid = pthread_self();
+	//print_debug_thread_startup(phid, __FUNCTION__);
 
 	t_receiver_data *receiver_data = arg;
 	// TODO: change this
@@ -308,7 +311,7 @@ void *capture_routine(void *arg)
 		break;
 	}
 
-	while (!g_stop
+	while (g_stop != 1
 		   && (receiver_data->sent->nb_probe != 0
 			   || receiver_data->to_send->nb_probe != 0))
 	{
@@ -322,6 +325,6 @@ void *capture_routine(void *arg)
 										 receiver_data->to_send);
 		}
 	}
-	// print_debug_thread_leave(phid, __FUNCTION__);
+	//print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

@@ -52,8 +52,12 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
-	printf("SENT (%ld.%06lu) %s:%d > %s:%d ", relative_sent_time->tv_sec,
-		   (unsigned long)relative_sent_time->tv_usec, src,
+
+	pthread_mutex_lock(&printf_mutex);
+	printf("SENT (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
+		   (unsigned long)relative_sent_time->tv_usec,
+			probe->type == SCAN_UDP ? "UDP" : "TCP",
+		   src,
 		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
 		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 	if (probe->type != SCAN_UDP)
@@ -77,6 +81,7 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
 			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
+	pthread_mutex_unlock(&printf_mutex);
 	return false;
 }
 
@@ -100,8 +105,11 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
 		return true;
 	}
 
-	printf("RCVD (%ld.%06lu) %s:%d > %s:%d ", relative_recv_time->tv_sec,
-		   (unsigned long)relative_recv_time->tv_usec, src,
+	pthread_mutex_lock(&printf_mutex);
+	printf("RCVD (%ld.%06lu) %s %s:%d > %s:%d ", relative_recv_time->tv_sec,
+		   (unsigned long)relative_recv_time->tv_usec,
+			ip_hdr->ip_p == IPPROTO_UDP ? "UDP" : "TCP",
+		   src,
 		   ntohs(tcp_hdr->th_sport), dst, ntohs(tcp_hdr->th_dport));
 	if (tcp_hdr->th_flags & TH_URG)
 		printf("URG ");
@@ -124,6 +132,7 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
 	// printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
 	// printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
 	//	   ntohs(datalink_hdr->tcp_hdr.th_sum));
+	pthread_mutex_unlock(&printf_mutex);
 	return false;
 }
 
