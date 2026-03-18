@@ -22,8 +22,8 @@ void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval
 bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 							 t_datalink_hdr *datalink_hdr);
 
-bool print_debug_packet_recv(const struct ip *ip_hdr, 
-		const t_tcp_hdr *tcp_hdr, const struct timeval *relative_recv_time);
+bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
+							 const struct timeval *relative_recv_time);
 
 void print_debug_max_retries_exceeded(t_probe *tmp);
 

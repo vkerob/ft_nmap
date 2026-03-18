@@ -55,11 +55,12 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 
 	pthread_mutex_lock(&printf_mutex);
 	printf("SENT (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
-		   (unsigned long)relative_sent_time->tv_usec,
+		  (unsigned long)relative_sent_time->tv_usec,
 			probe->type == SCAN_UDP ? "UDP" : "TCP",
-		   src,
-		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
-		   ntohs(datalink_hdr->tcp_hdr.th_dport));
+		  src,
+		  ntohs(datalink_hdr->tcp_hdr.th_sport),
+			target,
+		  ntohs(datalink_hdr->tcp_hdr.th_dport));
 	if (probe->type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
@@ -78,14 +79,15 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		//		printf("dest_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_dport));
 		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
 		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-		printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
+		printf("cksum: 0x%04x" ANSI_COLOR_RESET,
 			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
+	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);
 	return false;
 }
 
-bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
+bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
 							 const struct timeval *relative_recv_time)
 {
 	char	   src[32];
@@ -106,32 +108,47 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_tcp_hdr *tcp_hdr,
 	}
 
 	pthread_mutex_lock(&printf_mutex);
-	printf("RCVD (%ld.%06lu) %s %s:%d < %s:%d ", relative_recv_time->tv_sec,
-		   (unsigned long)relative_recv_time->tv_usec,
-			ip_hdr->ip_p == IPPROTO_UDP ? "UDP" : "TCP",
+	printf("RCVD (%ld.%06lu) ", relative_recv_time->tv_sec,
+		   (unsigned long)relative_recv_time->tv_usec );
+
+	if (ip_hdr->ip_p == IPPROTO_TCP)
+	{
+		printf("TCP %s:%d > %s:%d ",
 		   src,
-		   ntohs(tcp_hdr->th_sport), dst, ntohs(tcp_hdr->th_dport));
-	if (tcp_hdr->th_flags & TH_URG)
-		printf("URG ");
-	if (tcp_hdr->th_flags & TH_ACK)
-		printf("ACK ");
-	if (tcp_hdr->th_flags & TH_PUSH)
-		printf("PUSH ");
-	if (tcp_hdr->th_flags & TH_RST)
-		printf("RST ");
-	if (tcp_hdr->th_flags & TH_SYN)
-		printf("SYN ");
-	if (tcp_hdr->th_flags & TH_FIN)
-		printf("FIN ");
-	if (tcp_hdr->th_flags & 0x00)
-		printf(". ");
+		   ntohs(datalink_hdr->tcp_hdr.th_sport), dst, ntohs(datalink_hdr->tcp_hdr.th_dport));
+		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
+			printf("URG ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
+			printf("ACK ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_PUSH)
+			printf("PUSH ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_RST)
+			printf("RST ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_SYN)
+			printf("SYN ");
+		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
+			printf("FIN ");
+		if (datalink_hdr->tcp_hdr.th_flags & 0x00)
+			printf(". ");
+	 printf("ttl: %d ", ntohs(ip_hdr->ip_ttl));
+	 printf("id: %d ", ntohs(ip_hdr->ip_id));
+		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
+	 printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
+	 printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
+	 printf("cksum: 0x%04x " ANSI_COLOR_RESET,
+		   ntohs(datalink_hdr->tcp_hdr.th_sum));
+	}
+	if (ip_hdr->ip_p == IPPROTO_UDP)
+	{
+		printf("UDP %s:%d > %s:%d ",
+		   src,
+		   ntohs(datalink_hdr->udp_hdr.uh_sport), dst, ntohs(datalink_hdr->udp_hdr.uh_dport));
+		printf("ttl: %d ", ntohs(ip_hdr->ip_ttl));
+		printf("id: %d ", ntohs(ip_hdr->ip_id));
+		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
+		
+	}
 	printf("\n");
-	// printf("src_port: %d ", ntohs(tcp_hdr->th_sport));
-	// printf("dest_port: %d ", ntohs(tcp_hdr->th_dport));
-	// printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr->th_seq));
-	// printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-	// printf("cksum: 0x%04x\n" ANSI_COLOR_RESET,
-	//	   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	pthread_mutex_unlock(&printf_mutex);
 	return false;
 }

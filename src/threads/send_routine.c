@@ -47,7 +47,6 @@ static void build_scan_packets(const t_probe *request, u_char *packet)
 	}
 	else if (request->type == SCAN_UDP)
 	{
-		// build UDP header
 		build_udp_header(&hdr.udp_hdr, request->port);
 		memcpy(packet, &hdr.udp_hdr, sizeof(hdr.udp_hdr));
 	}
@@ -123,7 +122,6 @@ void *send_routine(void *arg)
 		{
 			nb_bytes_sent = sizeof(t_udp_hdr);
 			used_socket = udp_socket;
-			continue;
 		}
 		else
 		{

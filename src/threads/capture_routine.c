@@ -25,6 +25,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   struct timeval *relative_recv_time)
 {
 	const u8 *protocol_hdr;
+	t_datalink_hdr datalink_hdr;
 	size_t	  ip_hlen;
 	size_t	  l4_len;
 
@@ -45,37 +46,32 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	case IPPROTO_TCP:
 		if (l4_len < sizeof(struct tcphdr))
 			return true;
-		t_tcp_hdr tcp_hdr = *(const struct tcphdr *)protocol_hdr;
+		datalink_hdr.tcp_hdr = *(const struct tcphdr *)protocol_hdr;
 		// print_debug_tcp_header(&tcp_hdr);
 		// print_debug_packet_end();
 		// identify response packet
 		// handle if it's the response packet in sent queue
-		u16			source_port = ntohs(tcp_hdr.th_sport);
+		u16			source_port = ntohs(datalink_hdr.tcp_hdr.th_sport);
 		t_scan_type scan_type
-			= determine_tcp_scan_type(ntohs(tcp_hdr.th_dport));
-		handle_tcp_response(sent_list, tcp_hdr.th_flags, scan_type, source_port,
+			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
+		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type, source_port,
 							ip_hdr->ip_src);
-		if (print_debug_packet_recv(ip_hdr, &tcp_hdr, relative_recv_time))
-		{
-			return true;
-		}
-		return false;
+		break ;
 
 	case IPPROTO_UDP:
 		if (l4_len < sizeof(struct udphdr))
 			return false;
-		t_udp_hdr udp_hdr = *(const struct udphdr *)protocol_hdr;
+		datalink_hdr.udp_hdr = *(const struct udphdr *)protocol_hdr;
 		// print_debug_udp_header(&udp_hdr);
-		(void)udp_hdr;
-
-		return false;
+		break ;
 
 	case IPPROTO_ICMP:
-		return false;
+		break ;
 
 	default:
 		return true;
 	}
+	return print_debug_packet_recv(ip_hdr, &datalink_hdr, relative_recv_time);
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,

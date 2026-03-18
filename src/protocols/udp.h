@@ -8,6 +8,6 @@
 
 void	print_debug_udp_header(t_udp_hdr *udp_hdr);
 
-void	build_udp_header(struct udphdr *udp_hdr, uint16_t dest_port);
+void	build_udp_header(struct udphdr *udp_hdr, u16 dest_port);
 
 #endif
