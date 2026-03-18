@@ -157,11 +157,11 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 		const unsigned long seconds_elapsed
 			= current_time.tv_sec - tmp->timestamp.tv_sec;
-		// unsigned long microseconds_elapsed
-		// 	= current_time.tv_usec - tmp->timestamp.tv_usec;
+		unsigned long microseconds_elapsed
+			= current_time.tv_usec - tmp->timestamp.tv_usec;
 
-		// double time_elapsed = seconds_elapsed + (microseconds_elapsed /
-		// (1e6)); printf("elapsed time seconds: %lu microseconds: %lu\n",
+		double time_elapsed = seconds_elapsed + (microseconds_elapsed / (1e6));
+		// printf("elapsed time seconds: %lu microseconds: %lu\n",
 		// seconds_elapsed, 	   microseconds_elapsed); printf("time elapsed:
 		// %f\n", time_elapsed);
 
@@ -169,13 +169,14 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 		// print_debug_probe_request(tmp);
 
-		if (seconds_elapsed > TIMEOUT_DELAY_SECONDS)
+		if (time_elapsed > TIMEOUT_DELAY)
 		{
 			// print_debug_probe_exceed_timeout(tmp, &current_time,
 			// seconds_elapsed);
 
 			// Erase tmp from the sent list
-			erase_reference_to_node(&sent->head, &sent->tail, tmp, &sent->nb_probe);
+			erase_reference_to_node(&sent->head, &sent->tail, tmp,
+									&sent->nb_probe);
 			// Update retries and reinject in to_send probe queue
 
 			tmp->retries++;

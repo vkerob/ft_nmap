@@ -114,7 +114,6 @@ void *send_routine(void *arg)
 		else
 		{
 			pthread_mutex_unlock(&shared_data->to_send.mut);
-			usleep(500);
 			continue;
 		}
 		shared_data->to_send.nb_probe--;

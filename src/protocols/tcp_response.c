@@ -1,11 +1,11 @@
 
+#include "debug.h"
 #include "protocols.h"
 #include "request.h"
 #include "tcp.h"
-#include "debug.h"
 
-#include <stdlib.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 								 struct in_addr ip_src, t_scan_type scan_type)
@@ -21,8 +21,8 @@ static t_probe *get_our_response(t_probe_queue *sent_list, u16 source_port,
 	}
 	if (tmp)
 	{
-		erase_reference_to_node(&sent_list->head, &sent_list->tail, tmp, &sent_list->nb_probe);
-		sent_list->nb_probe--;
+		erase_reference_to_node(&sent_list->head, &sent_list->tail, tmp,
+								&sent_list->nb_probe);
 	}
 	return tmp;
 }
@@ -39,8 +39,8 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 
 	if (!probe)
 	{
-		//printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match any pending "
-		//						 "probe\n" ANSI_COLOR_RESET);
+		// printf(ANSI_BOLD ANSI_COLOR_YELLOW "Received response does not match
+		// any pending " 						 "probe\n" ANSI_COLOR_RESET);
 		return;
 	}
 	// printf(ANSI_BOLD ANSI_COLOR_GREEN
