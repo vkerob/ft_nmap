@@ -23,8 +23,6 @@ void decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr);
 
 void update_port_tcp_header(struct tcphdr *tcp_hdr, u16 port);
 
-void print_debug_tcp_header(t_tcp_hdr *tcp_hdr);
-
 t_scan_type determine_tcp_scan_type(u16 source_port);
 
 u16 get_random_source_port_in_scantype_interval(t_scan_type scan_type);

@@ -33,5 +33,13 @@ bool init_socket(t_socket *sock, const int proto)
 				strerror(errno));
 		return true;
 	}
+	const int opt = 1;
+	if (setsockopt(sock->sfd, IPPROTO_IP, IP_HDRINCL, &opt, sizeof(opt)) == -1)
+	{
+		fprintf(stderr, "ft_nmap: %s\n",
+				strerror(errno));
+		return true;
+	}
 	return false;
 }
+

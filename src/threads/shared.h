@@ -24,7 +24,7 @@ typedef struct s_probe_queue
 	u16				nb_probe;
 } t_probe_queue;
 
-typedef struct s_shared_data_probe
+typedef struct s_shared_data_sender
 {
 	_Atomic u16 id;
 	_Atomic u16 base_seq;

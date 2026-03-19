@@ -3,9 +3,12 @@
 
 #include "scan.h"
 #include "typesdef.h"
+#include "scan.h"
+#include "request.h"
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <stdatomic.h>
 
 typedef struct s_ip_pseudo_hdr
 {
@@ -18,4 +21,8 @@ typedef struct s_ip_pseudo_hdr
 void build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
 							const char *dst_addr, const char *src_addr);
 
+void build_ip_header(t_ip *ip_hdr, const t_probe *request,
+					 _Atomic uint16_t *id_counter);
+
+u16	calculate_checksum(void *buffer, int len);
 #endif

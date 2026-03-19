@@ -16,3 +16,4 @@ void	calculate_tcp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr, struct tcphdr 
 		sizeof(t_tcp_hdr) + sizeof(t_ip_pseudo_hdr)
 	);
 }
+

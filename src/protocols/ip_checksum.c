@@ -1,3 +1,4 @@
+#include "ip.h"
 #include "typesdef.h"
 
 u16	calculate_checksum(void *buffer, int len)
@@ -21,3 +22,4 @@ u16	calculate_checksum(void *buffer, int len)
 
 	return (u16)~checksum;
 }
+
