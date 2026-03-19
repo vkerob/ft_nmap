@@ -36,11 +36,11 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 			  sizeof(src_ip_buf));
 	char dst_ip_buf[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &request->target->addr, dst_ip_buf, sizeof(dst_ip_buf));
-	build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf);
 
 	t_ip ip_hdr;
 	build_ip_header(&ip_hdr, request, id);
 
+	build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf, ip_hdr.ip_p);
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
 		|| request->type == SCAN_NULL)

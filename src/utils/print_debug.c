@@ -149,6 +149,10 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
 		
 	}
+	if (ip_hdr->ip_p == IPPROTO_ICMP)
+	{
+		printf("ICMP");
+	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);
 	return false;

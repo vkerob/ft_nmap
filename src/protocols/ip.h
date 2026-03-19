@@ -15,14 +15,16 @@ typedef struct s_ip_pseudo_hdr
 	struct in_addr ip_src, ip_dst;
 	u8			   zero;
 	u8			   protocol;
-	u16			   tcp_length;
+	u16			   length;
 } t_ip_pseudo_hdr;
 
 void build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
-							const char *dst_addr, const char *src_addr);
+							const char *dst_addr, const char *src_addr, u8 protocol);
 
 void build_ip_header(t_ip *ip_hdr, const t_probe *request,
 					 _Atomic uint16_t *id_counter);
 
 u16	calculate_checksum(void *buffer, int len);
+
+
 #endif

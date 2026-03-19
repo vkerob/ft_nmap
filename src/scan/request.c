@@ -71,3 +71,24 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 
 	return false;
 }
+
+t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
+								 struct in_addr ip_src, t_scan_type scan_type, u16 *nb_probes)
+{
+	t_probe *tmp = *head;
+
+	while (tmp)
+	{
+		if (source_port == tmp->port && scan_type == tmp->type
+			&& ip_src.s_addr == tmp->target->addr.s_addr)
+			break;
+		tmp = tmp->next;
+	}
+	if (tmp)
+	{
+		erase_reference_to_node(head, tail, tmp,
+								nb_probes);
+	}
+	return tmp;
+}
+

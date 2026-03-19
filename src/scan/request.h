@@ -32,4 +32,7 @@ bool update_sent_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
 
 void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
 							 u16 *nb_probe);
+
+t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
+								 struct in_addr ip_src, t_scan_type scan_type, u16 *nb_probes);
 #endif

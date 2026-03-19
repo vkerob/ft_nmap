@@ -3,9 +3,8 @@
 #include "scan.h"
 #include "protocols.h"
 
-/* Can either be UDP or TCP protocol */
-// void	handle_icmp_response(t_target *target,)
-// {
+/* Can either be from a UDP or TCP probe */
+void	handle_icmp_response()
+{
 
-	
-// }
+}

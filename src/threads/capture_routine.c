@@ -19,6 +19,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <netinet/ip_icmp.h>
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32	   l3_caplen,
@@ -40,7 +41,9 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
+	//printf("%d\n", ip_hdr->ip_p);
 	// print_debug_protocol(ip_hdr->ip_p);
+	u16 source_port;
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
@@ -51,7 +54,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		// print_debug_packet_end();
 		// identify response packet
 		// handle if it's the response packet in sent queue
-		u16			source_port = ntohs(datalink_hdr.tcp_hdr.th_sport);
+		source_port = ntohs(datalink_hdr.tcp_hdr.th_sport);
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type, source_port,
@@ -61,11 +64,15 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	case IPPROTO_UDP:
 		if (l4_len < sizeof(struct udphdr))
 			return false;
+		source_port = ntohs(datalink_hdr.udp_hdr.uh_sport);
 		datalink_hdr.udp_hdr = *(const struct udphdr *)protocol_hdr;
-		// print_debug_udp_header(&udp_hdr);
+		handle_udp_response(sent_list, source_port, ip_hdr->ip_src);
 		break ;
 
 	case IPPROTO_ICMP:
+		if (l4_len < sizeof(struct icmp))
+			return false;
+		datalink_hdr.icmp_hdr = *(const struct icmp *)protocol_hdr;
 		break ;
 
 	default:

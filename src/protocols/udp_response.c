@@ -1,10 +1,27 @@
 #include "udp.h"
-
+#include "debug.h"
+#include "protocols.h"
+#include "request.h"
 #include "scan.h"
 
-//TODO: replace tcp hdr by udp hdr when we have the right header file
-void	handle_udp_response(t_target *target, t_udp_hdr *udp_hdr)
+#include <pthread.h>
+#include <stdlib.h>
+
+void	handle_udp_response(t_probe_queue *sent_list, u16 source_port, struct in_addr ip_src)
 {
-	(void)target;
-	(void)udp_hdr;
+
+	pthread_mutex_lock(&sent_list->mut);
+
+	t_probe *probe = get_our_probe_request(&sent_list->head, &sent_list->tail, source_port, ip_src, SCAN_UDP,
+					&sent_list->nb_probe);
+	pthread_mutex_unlock(&sent_list->mut);
+	if (!probe)
+	{
+		return;
+	}
+	const int idx = probe->target->port_list.port_map[SCAN_UDP][source_port];
+	probe->target->port_list.port_map_rev[SCAN_UDP][idx].port_state
+				= OPEN;
+	free(probe);
 }
+

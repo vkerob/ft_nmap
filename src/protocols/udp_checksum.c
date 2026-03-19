@@ -13,7 +13,7 @@ void	calculate_udp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
 
 	udp_hdr->uh_sum = calculate_checksum(
 		buffer,
-		sizeof(t_tcp_hdr) + sizeof(t_ip_pseudo_hdr)
+		sizeof(struct udphdr) + sizeof(t_ip_pseudo_hdr)
 	);
 }
 
