@@ -30,7 +30,7 @@ void sync_printf(const char *format, ...)
 }
 
 bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr)
+							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr)
 {
 
 	char src[32];
@@ -61,6 +61,10 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		  ntohs(datalink_hdr->tcp_hdr.th_sport),
 			target,
 		  ntohs(datalink_hdr->tcp_hdr.th_dport));
+
+	printf("ttl: %d ", ip_hdr->ip_ttl);
+	printf("id: %d ", ntohs(ip_hdr->ip_id));
+	printf("iplen: %d ", ntohs(ip_hdr->ip_len));
 	if (probe->type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)

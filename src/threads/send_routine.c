@@ -152,14 +152,14 @@ void *send_routine(void *arg)
 
 		if (request->type == SCAN_UDP)
 		{
-			t_udp_hdr *udp_hdr = (t_udp_hdr *)packet;
+			t_udp_hdr *udp_hdr = (t_udp_hdr *)(packet + packet_len - (sizeof(t_udp_hdr)));
 			//print_debug_udp_header(udp_hdr);
 			datalink_hdr.udp_hdr = *udp_hdr;
 			(void)udp_hdr;
 		}
 		else
 		{
-			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)packet;
+			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)(packet + packet_len - (sizeof(t_tcp_hdr)));
 			// print_debug_tcp_header(tcp_hdr);
 			datalink_hdr.tcp_hdr = *tcp_hdr;
 			(void)tcp_hdr;
@@ -195,8 +195,6 @@ void *send_routine(void *arg)
 			// return NULL;
 		}
 
-		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr))
-			return NULL;
 		// print_debug_sender_thread_proceed_probe(phid, request, &tv);
 		pthread_mutex_lock(
 			&shared_data->sent[request->target->iface_info->iface_index].mut);
@@ -219,6 +217,15 @@ void *send_routine(void *arg)
 
 		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
 
+	t_ip *ip_hdr = (t_ip *)packet;
+		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr, ip_hdr))
+			return NULL;
+		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
+		{
+			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
+					inet_ntoa(request->target->addr));
+			continue;
+		}
 		pthread_mutex_unlock(
 			&shared_data->sent[request->target->iface_info->iface_index].mut);
 
@@ -226,12 +233,6 @@ void *send_routine(void *arg)
 		// 	request->target->iface_info->iface_index,
 		// 	&shared_data->sent[request->target->iface_info->iface_index]);
 
-		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
-		{
-			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
-					inet_ntoa(request->target->addr));
-			continue;
-		}
 	}
 	close_sockets(&udp_socket, &tcp_socket);
 	//print_debug_thread_leave(phid, __FUNCTION__);

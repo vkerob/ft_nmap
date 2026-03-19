@@ -20,7 +20,7 @@ void print_debug_probe_exceed_timeout(const t_probe *probe, const struct timeval
 	const unsigned long seconds_elapsed);
 
 bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr);
+							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr);
 
 bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
 							 const struct timeval *relative_recv_time);
