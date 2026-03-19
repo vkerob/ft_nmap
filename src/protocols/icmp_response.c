@@ -2,9 +2,41 @@
 #include "tcp.h"
 #include "scan.h"
 #include "protocols.h"
+#include "request.h"
+#include "debug.h"
+
+#include <pthread.h>
+#include <stdlib.h>
 
 /* Can either be from a UDP or TCP probe */
-void	handle_icmp_response()
+void handle_icmp_response(t_probe_queue *sent_list, u16 source_port, struct in_addr ip_src,
+	u8 code, t_scan_type scan_type)
 {
+	static u8 icmp_error_codes[6] = {
+		1, 2, 3, 9, 10, 13	
+	};
 
+	pthread_mutex_lock(&sent_list->mut);
+	t_probe *probe = get_our_probe_request(&sent_list->head, &sent_list->tail, source_port, ip_src,
+		scan_type, &sent_list->nb_probe);
+	if (!probe)
+	{
+		pthread_mutex_unlock(&sent_list->mut);
+		sync_printf("Probe not found\n");
+		return;
+	}
+	const int idx = probe->target->port_list.port_map[scan_type][source_port];
+
+	for (u8 i = 0; i < sizeof(icmp_error_codes); i++)
+	{
+		if (code == icmp_error_codes[i])
+		{
+			probe->target->port_list.port_map_rev[scan_type][idx].port_state = FILTERED;
+			break ;
+		}
+	}
+	
+	pthread_mutex_unlock(&sent_list->mut);
+	free(probe);
 }
+

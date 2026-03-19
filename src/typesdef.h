@@ -12,4 +12,4 @@ typedef struct ip			t_ip;
 typedef struct tcphdr		t_tcp_hdr;
 typedef struct udphdr		t_udp_hdr;
 typedef struct ether_header t_eth_hdr;
-typedef struct icmp			t_icmp_hdr;
+typedef struct icmphdr t_icmp_hdr;

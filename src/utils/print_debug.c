@@ -151,7 +151,9 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 	}
 	if (ip_hdr->ip_p == IPPROTO_ICMP)
 	{
-		printf("ICMP");
+		printf("ICMP [%s > %s (type=%d/code=%d) ] IP [ ttl=%d id=%d iplen=%d ]", src,
+				dst, datalink_hdr->icmp_hdr.type, datalink_hdr->icmp_hdr.code,
+				ntohs(ip_hdr->ip_ttl), ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);

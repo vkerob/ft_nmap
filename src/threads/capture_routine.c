@@ -10,6 +10,7 @@
 #include "shared.h"
 #include "tcp.h"
 #include "udp.h"
+#include "icmp.h"
 
 #include <netinet/in.h>
 #include <pcap/pcap.h>
@@ -21,7 +22,7 @@
 #include <unistd.h>
 #include <netinet/ip_icmp.h>
 
-static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
+ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32	   l3_caplen,
 							   struct timeval *relative_recv_time)
 {
@@ -41,8 +42,6 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	//printf("%d\n", ip_hdr->ip_p);
-	// print_debug_protocol(ip_hdr->ip_p);
 	u16 source_port;
 	switch (ip_hdr->ip_p)
 	{
@@ -70,9 +69,36 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		break ;
 
 	case IPPROTO_ICMP:
-		if (l4_len < sizeof(struct icmp))
+		if (l4_len < sizeof(struct icmphdr))
 			return false;
-		datalink_hdr.icmp_hdr = *(const struct icmp *)protocol_hdr;
+		datalink_hdr.icmp_hdr = *(const struct icmphdr *)protocol_hdr;
+
+		// 8 bytes is the size of icmp header
+		t_ip *nested_ip_header = NULL;
+		nested_ip_header = (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
+		//print_debug_ip_header(nested_ip_header);
+		int ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
+		u8 *protocol = (u8 *)nested_ip_header + ip2_hlen;
+		t_datalink_hdr nested_header = { 0 };
+		
+		switch (nested_ip_header->ip_p)
+		{
+			case IPPROTO_TCP:
+				nested_header.tcp_hdr = *(t_tcp_hdr *)protocol;				
+				source_port = ntohs(nested_header.tcp_hdr.th_sport);
+				//print_debug_tcp_header(nested_header->tcp_hdr);
+				t_scan_type scan_type
+					= determine_tcp_scan_type(ntohs(nested_header.tcp_hdr.th_dport));
+				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, scan_type);
+				break;
+			case IPPROTO_UDP:
+				nested_header.udp_hdr = *(t_udp_hdr *)protocol;
+				source_port = ntohs(nested_header.udp_hdr.uh_dport);
+				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, SCAN_UDP);
+				break;
+			default:
+				return true;
+		}
 		break ;
 
 	default:
