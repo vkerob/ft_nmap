@@ -36,7 +36,6 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	char src[32];
 	char target[32];
 
-	// print_debug_probe_request(probe);
 	static int domain = AF_INET;
 	if (inet_ntop(domain, (const void *)&probe->target->addr, target,
 				  sizeof(src))
@@ -79,8 +78,6 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 			printf("SYN ");
 		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
 			printf("FIN ");
-		//		printf("src_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_sport));
-		//		printf("dest_port: %d ", ntohs(datalink_hdr->tcp_hdr.th_dport));
 		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
 		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
 		printf("cksum: 0x%04x" ANSI_COLOR_RESET,
@@ -134,7 +131,7 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 			printf("FIN ");
 		if (datalink_hdr->tcp_hdr.th_flags & 0x00)
 			printf(". ");
-	 printf("ttl: %d ", ntohs(ip_hdr->ip_ttl));
+	 printf("ttl: %d ", ip_hdr->ip_ttl);
 	 printf("id: %d ", ntohs(ip_hdr->ip_id));
 		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
 	 printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
