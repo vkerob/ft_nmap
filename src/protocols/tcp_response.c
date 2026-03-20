@@ -16,6 +16,8 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port, ip_src, scan_type,
 					&sent_list->nb_probe);
 	pthread_mutex_unlock(&sent_list->mut);
+	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x probe=%s\n",
+		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
 
 	if (!probe)
 	{
@@ -25,20 +27,19 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 	switch (scan_type)
 	{
 	case SCAN_SYN:
-		if (flags & (TH_RST | TH_ACK))
+		if ((flags & TH_RST) && (flags & TH_ACK))
 		{
-
 			probe->target->port_list.port_map_rev[scan_type][idx].port_state
 				= CLOSE;
 		}
-		else if (flags & (TH_SYN | TH_ACK))
+		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
 			probe->target->port_list.port_map_rev[scan_type][idx].port_state
 				= OPEN;
 		}
 		break;
 	case SCAN_ACK:
-		if (flags & (TH_RST | TH_ACK))
+		if (flags & TH_RST)
 		{
 			probe->target->port_list.port_map_rev[scan_type][idx].port_state
 				= UNFILTERED;
@@ -52,7 +53,7 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 	case SCAN_FIN:
 	case SCAN_NULL:
 	case SCAN_XMAS:
-		if (flags & (TH_RST | TH_ACK))
+		if (flags & TH_RST)
 		{
 			probe->target->port_list.port_map_rev[scan_type][idx].port_state
 				= CLOSE;

@@ -224,12 +224,16 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 		struct timeval current_time;
 		gettimeofday(&current_time, NULL);
 
-		const unsigned long seconds_elapsed
-			= current_time.tv_sec - tmp->timestamp.tv_sec;
-		unsigned long microseconds_elapsed
+		long seconds_elapsed = current_time.tv_sec - tmp->timestamp.tv_sec;
+		long microseconds_elapsed
 			= current_time.tv_usec - tmp->timestamp.tv_usec;
 
-		double time_elapsed = seconds_elapsed + (microseconds_elapsed / (1e6));
+		if (microseconds_elapsed < 0)
+		{
+			seconds_elapsed--;
+			microseconds_elapsed += 1000000;
+		}
+		double time_elapsed = seconds_elapsed + (microseconds_elapsed / 1e6);
 		// printf("elapsed time seconds: %lu microseconds: %lu\n",
 		// seconds_elapsed, 	   microseconds_elapsed); printf("time elapsed:
 		// %f\n", time_elapsed);

@@ -3,8 +3,8 @@
 
 #include "args.h"
 #include "defines.h"
-#include "typesdef.h"
 #include "program_info.h"
+#include "typesdef.h"
 
 #include <net/if.h>
 #include <netinet/in.h>
@@ -72,13 +72,13 @@ typedef enum e_port_state
 
 typedef struct s_ctx
 {
-	t_target	 *targets;
-	size_t		  target_count;
-	t_iface_info *ifaces;
-	size_t		  iface_count;
-	t_args		  args;
+	t_target	  *targets;
+	size_t		   target_count;
+	t_iface_info  *ifaces;
+	size_t		   iface_count;
+	t_args		   args;
 	t_program_info program_info;
-	pcap_t **handles;
+	pcap_t		 **handles;
 } t_ctx;
 
 bool init_portlist(t_port_list *port_list, u16 port_count,
@@ -91,5 +91,7 @@ void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 
 bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count);
+
+void print_scan_results(t_ctx *ctx);
 
 #endif

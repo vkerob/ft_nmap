@@ -59,7 +59,10 @@ bool nmap_main(t_ctx *ctx)
 		pcap_close(pcap_ctxs[i].handle);
 	}
 
+	print_scan_results(ctx);
+
 	free(pcap_ctxs);
+
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
 		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
@@ -129,6 +132,12 @@ int main(const int argc, char **argv)
 
 	// print_debug_parsing_args(ctx);
 	// print_debug_iface_info(ctx.ifaces, ctx.iface_count);
+
+	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
+	char   date_buf[64];
+	time_t t = (time_t)ctx.program_info.start.tv_sec;
+	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
+	printf("Starting ft_nmap at %s\n", date_buf);
 
 	if (nmap_main(&ctx) == false)
 	{
