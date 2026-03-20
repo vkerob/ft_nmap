@@ -43,6 +43,9 @@
 	l4_len = l3_caplen - ip_hlen;
 
 	u16 source_port;
+	t_datalink_hdr nested_datalink_header = { 0 };
+	t_ip *nested_ip_header = NULL;
+
 	switch (ip_hdr->ip_p)
 	{
 	case IPPROTO_TCP:
@@ -74,26 +77,24 @@
 		datalink_hdr.icmp_hdr = *(const struct icmphdr *)protocol_hdr;
 
 		// 8 bytes is the size of icmp header
-		t_ip *nested_ip_header = NULL;
 		nested_ip_header = (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
 		//print_debug_ip_header(nested_ip_header);
 		int ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
 		u8 *protocol = (u8 *)nested_ip_header + ip2_hlen;
-		t_datalink_hdr nested_header = { 0 };
 		
 		switch (nested_ip_header->ip_p)
 		{
 			case IPPROTO_TCP:
-				nested_header.tcp_hdr = *(t_tcp_hdr *)protocol;				
-				source_port = ntohs(nested_header.tcp_hdr.th_sport);
-				//print_debug_tcp_header(nested_header->tcp_hdr);
+				nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)protocol;				
+				source_port = ntohs(nested_datalink_header.tcp_hdr.th_sport);
+				//print_debug_tcp_header(nested_datalink_header->tcp_hdr);
 				t_scan_type scan_type
-					= determine_tcp_scan_type(ntohs(nested_header.tcp_hdr.th_dport));
+					= determine_tcp_scan_type(ntohs(nested_datalink_header.tcp_hdr.th_dport));
 				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, scan_type);
 				break;
 			case IPPROTO_UDP:
-				nested_header.udp_hdr = *(t_udp_hdr *)protocol;
-				source_port = ntohs(nested_header.udp_hdr.uh_dport);
+				nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
+				source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, SCAN_UDP);
 				break;
 			default:
@@ -104,7 +105,11 @@
 	default:
 		return true;
 	}
-	return print_debug_packet_recv(ip_hdr, &datalink_hdr, relative_recv_time);
+	// When we receive an ICMP response there is the header which mimics the one we send in our probe
+	// following the ICMP header: [IP Header + UDP/TCP Header] which contains the error code of why
+	// it fails to returns us a proper UPD / TCP response instead
+	return print_debug_packet_recv(ip_hdr, &datalink_hdr,
+			&nested_datalink_header, nested_ip_header, relative_recv_time);
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,

@@ -89,7 +89,8 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 }
 
 bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
-							 const struct timeval *relative_recv_time)
+			const t_datalink_hdr *nested_datalink_hdr, const struct ip *nested_ip_hdr, const
+			struct timeval *relative_recv_time)
 {
 	char	   src[32];
 	char	   dst[32];
@@ -151,9 +152,22 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 	}
 	if (ip_hdr->ip_p == IPPROTO_ICMP)
 	{
-		printf("ICMP [%s > %s (type=%d/code=%d) ] IP [ ttl=%d id=%d iplen=%d ]", src,
-				dst, datalink_hdr->icmp_hdr.type, datalink_hdr->icmp_hdr.code,
-				ntohs(ip_hdr->ip_ttl), ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
+		u16 source_port;
+		u16 dest_port;
+
+		if (nested_ip_hdr->ip_p == IPPROTO_UDP){
+			source_port = ntohs(nested_datalink_hdr->udp_hdr.uh_sport);
+			dest_port = ntohs(nested_datalink_hdr->udp_hdr.uh_dport);
+		}
+		else if (nested_ip_hdr->ip_p == IPPROTO_TCP)
+		{
+			source_port = ntohs(nested_datalink_hdr->tcp_hdr.th_sport);
+			dest_port = ntohs(nested_datalink_hdr->tcp_hdr.th_dport);
+		}
+
+		printf("ICMP [%s:%d > %s:%d (type=%d/code=%d) ] IP [ ttl=%d id=%d iplen=%d ]", src, dest_port,
+				dst, source_port, datalink_hdr->icmp_hdr.type, datalink_hdr->icmp_hdr.code,
+				ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);

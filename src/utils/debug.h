@@ -23,7 +23,8 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr);
 
 bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
-							 const struct timeval *relative_recv_time);
+			const t_datalink_hdr *nested_datalink_hdr, const struct ip *nested_ip_hdr, const
+			struct timeval *relative_recv_time);
 
 void print_debug_max_retries_exceeded(t_probe *tmp);
 
