@@ -27,7 +27,7 @@ bool pop_probe_request(t_probe **head, t_probe **tail,
 bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 						  u16 port, t_scan_type scan_type, u32 id);
 
-bool update_sent_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
+bool add_to_probe_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
 					   t_probe *request, struct timeval sent_timestamp);
 
 void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,

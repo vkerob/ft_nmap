@@ -358,7 +358,6 @@ void *capture_routine(void *arg)
 		/* Returns 0 if no packet to read */
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
-			// sync_printf("Thread %lu: no received packet\n");
 			purge_timedout_probe_request(receiver_data->sent,
 										 receiver_data->to_send);
 		}

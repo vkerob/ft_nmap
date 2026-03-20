@@ -133,7 +133,6 @@ void *send_routine(void *arg)
 			pthread_mutex_unlock(&shared_data->to_send.mut);
 			continue;
 		}
-		shared_data->to_send.nb_probe--;
 		pthread_mutex_unlock(&shared_data->to_send.mut);
 		if (request->type == SCAN_UDP)
 		{
@@ -199,7 +198,7 @@ void *send_routine(void *arg)
 		pthread_mutex_lock(
 			&shared_data->sent[request->target->iface_info->iface_index].mut);
 
-		if (update_sent_queue(
+		if (add_to_probe_queue(
 				&(shared_data->sent[request->target->iface_info->iface_index]
 					  .head),
 				&shared_data->sent[request->target->iface_info->iface_index]
@@ -216,10 +215,12 @@ void *send_routine(void *arg)
 		//		&shared_data->sent[request->target->iface_info->iface_index]);
 
 		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
+		shared_data->to_send.nb_probe--;
 
-	t_ip *ip_hdr = (t_ip *)packet;
+		t_ip *ip_hdr = (t_ip *)packet;
 		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr, ip_hdr))
 			return NULL;
+
 		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
 		{
 			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",

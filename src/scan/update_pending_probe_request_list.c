@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-bool update_sent_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
+bool add_to_probe_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
 					   t_probe *request, struct timeval sent_timestamp)
 {
 	request->timestamp = sent_timestamp;

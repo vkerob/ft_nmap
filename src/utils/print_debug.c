@@ -155,7 +155,8 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 		u16 source_port;
 		u16 dest_port;
 
-		if (nested_ip_hdr->ip_p == IPPROTO_UDP){
+		if (nested_ip_hdr->ip_p == IPPROTO_UDP)
+		{
 			source_port = ntohs(nested_datalink_hdr->udp_hdr.uh_sport);
 			dest_port = ntohs(nested_datalink_hdr->udp_hdr.uh_dport);
 		}
