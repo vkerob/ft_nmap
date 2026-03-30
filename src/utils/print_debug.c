@@ -152,8 +152,8 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 	}
 	if (ip_hdr->ip_p == IPPROTO_ICMP)
 	{
-		u16 source_port;
-		u16 dest_port;
+		u16 source_port = 0;
+		u16 dest_port = 0;
 
 		if (nested_ip_hdr->ip_p == IPPROTO_UDP)
 		{
@@ -167,7 +167,7 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 		}
 
 		printf("ICMP [%s:%d > %s:%d (type=%d/code=%d) ] IP [ ttl=%d id=%d iplen=%d ]", src, dest_port,
-				dst, source_port, datalink_hdr->icmp_hdr.type, datalink_hdr->icmp_hdr.code,
+				dst, source_port, ICMP_TYPE(datalink_hdr->icmp_hdr), ICMP_CODE(datalink_hdr->icmp_hdr),
 				ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
 	printf("\n");

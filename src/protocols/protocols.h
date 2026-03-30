@@ -9,14 +9,14 @@
 #include "tcp.h"
 #include "udp.h"
 
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
-#include <netinet/udp.h>
 
 typedef union u_datalink_hdr
 {
-	t_tcp_hdr		tcp_hdr;
-	t_udp_hdr		udp_hdr;
-	t_icmp_hdr	icmp_hdr;
+	t_tcp_hdr  tcp_hdr;
+	t_udp_hdr  udp_hdr;
+	t_icmp_hdr icmp_hdr;
 } t_datalink_hdr;
 
 u16 calculate_checksum(void *buffer, int len);

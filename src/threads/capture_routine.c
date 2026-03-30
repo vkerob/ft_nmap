@@ -72,9 +72,9 @@
 		break ;
 
 	case IPPROTO_ICMP:
-		if (l4_len < sizeof(struct icmphdr))
+		if (l4_len < sizeof(t_icmp_hdr))
 			return false;
-		datalink_hdr.icmp_hdr = *(const struct icmphdr *)protocol_hdr;
+		datalink_hdr.icmp_hdr = *(const t_icmp_hdr *)protocol_hdr;
 
 		// 8 bytes is the size of icmp header
 		nested_ip_header = (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
@@ -90,12 +90,12 @@
 				//print_debug_tcp_header(nested_datalink_header->tcp_hdr);
 				t_scan_type scan_type
 					= determine_tcp_scan_type(ntohs(nested_datalink_header.tcp_hdr.th_dport));
-				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, scan_type);
+				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, ICMP_CODE(datalink_hdr.icmp_hdr), scan_type);
 				break;
 			case IPPROTO_UDP:
 				nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
 				source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
-				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, datalink_hdr.icmp_hdr.code, SCAN_UDP);
+				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP);
 				break;
 			default:
 				return true;

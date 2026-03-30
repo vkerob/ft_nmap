@@ -10,12 +10,12 @@
 
 #include <errno.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdatomic.h>
 
 static void build_scan_packets(const t_probe *request, u_char *packet,
-	_Atomic u16 *id, u32 *packet_len)
+							   _Atomic u16 *id, u32 *packet_len)
 {
 	// struct ether_header	eth_hdr;
 	t_ip_pseudo_hdr ip_pseudo_hdr;
@@ -59,6 +59,10 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 	*packet_len = ip_hdr.ip_len;
 	ip_hdr.ip_len = htons(ip_hdr.ip_len);
 	ip_hdr.ip_sum = calculate_checksum(&ip_hdr, ip_hdr.ip_hl * 4);
+#ifdef __APPLE__
+	// macOS IP_HDRINCL requires ip_len in host byte order
+	ip_hdr.ip_len = ntohs(ip_hdr.ip_len);
+#endif
 
 	memcpy(packet, &ip_hdr, sizeof(ip_hdr));
 	if (request->type == SCAN_UDP)
@@ -69,13 +73,15 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 	{
 		memcpy(packet + sizeof(ip_hdr), &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
 	}
-	//print_debug_ip_header(&ip_hdr);
-	// assemble_full_packet(packet, &eth_hdr, &ip_hdr, &tcp_hdr, &udp_hdr);
+	// print_debug_ip_header(&ip_hdr);
+	//  assemble_full_packet(packet, &eth_hdr, &ip_hdr, &tcp_hdr, &udp_hdr);
 }
 
 static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp, u32 packet_len)
 {
+	printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
+		   ntohs(socket->sin.sin_port));
 	const ssize_t res
 		= sendto(socket->sfd, packet, packet_len, 0,
 				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
@@ -107,8 +113,8 @@ void *send_routine(void *arg)
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
-	//pthread_t phid = pthread_self();
-	//print_debug_thread_startup(phid, __FUNCTION__);
+	// pthread_t phid = pthread_self();
+	// print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -151,14 +157,16 @@ void *send_routine(void *arg)
 
 		if (request->type == SCAN_UDP)
 		{
-			t_udp_hdr *udp_hdr = (t_udp_hdr *)(packet + packet_len - (sizeof(t_udp_hdr)));
-			//print_debug_udp_header(udp_hdr);
+			t_udp_hdr *udp_hdr
+				= (t_udp_hdr *)(packet + packet_len - (sizeof(t_udp_hdr)));
+			// print_debug_udp_header(udp_hdr);
 			datalink_hdr.udp_hdr = *udp_hdr;
 			(void)udp_hdr;
 		}
 		else
 		{
-			t_tcp_hdr *tcp_hdr = (t_tcp_hdr *)(packet + packet_len - (sizeof(t_tcp_hdr)));
+			t_tcp_hdr *tcp_hdr
+				= (t_tcp_hdr *)(packet + packet_len - (sizeof(t_tcp_hdr)));
 			// print_debug_tcp_header(tcp_hdr);
 			datalink_hdr.tcp_hdr = *tcp_hdr;
 			(void)tcp_hdr;
@@ -216,11 +224,10 @@ void *send_routine(void *arg)
 
 		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
 		shared_data->to_send.nb_probe--;
-
 		t_ip *ip_hdr = (t_ip *)packet;
-		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr, ip_hdr))
+		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr,
+									ip_hdr))
 			return NULL;
-
 		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
 		{
 			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
@@ -233,10 +240,8 @@ void *send_routine(void *arg)
 		// print_debug_sent_queue_state(
 		// 	request->target->iface_info->iface_index,
 		// 	&shared_data->sent[request->target->iface_info->iface_index]);
-
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }
-
