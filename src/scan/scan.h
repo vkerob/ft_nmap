@@ -1,28 +1,43 @@
 #ifndef SCAN_H
 #define SCAN_H
 
+#define HIGHEST_PORT_STATE 5
+
 #include "args.h"
 #include "defines.h"
-#include "program_info.h"
 #include "typesdef.h"
 
 #include <net/if.h>
 #include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <stdbool.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
+
+typedef enum e_port_state
+{
+	OPEN = 1,
+	CLOSE,
+	FILTERED,
+	UNFILTERED,
+	OPEN_FILTERED,
+	UNKNOWN,
+} t_port_state;
 
 typedef struct s_port
 {
-	u16 port_number;
-	u8	port_state;
+	u16				port_number;
+	t_port_state	port_state;
 } t_port;
 
 typedef struct s_port_list
 {
-	u16	   *port_map[MAX_NB_SCAN_TYPE];
+	/* Store the index of the port inside port_map_rev array and port_final_state array or 0 if the port is not scanned */
+	u16	   *port_map;
+	/* Store the state of each port for each type of scan*/
 	t_port *port_map_rev[MAX_NB_SCAN_TYPE];
+	/* Store the final state of each port */
+	t_port_state *port_final_state;
+	/* Number of port in each state (open, filtered, ...) */
+	int state_count[HIGHEST_PORT_STATE];
 } t_port_list;
 
 typedef struct s_iface_info
@@ -32,6 +47,13 @@ typedef struct s_iface_info
 	struct ether_addr mac_addr;	   // not defined yet, mac of the interface.
 	u8				  iface_index; // index of the interface
 } t_iface_info;
+
+typedef struct s_program_info
+{
+	struct timeval start;
+} t_program_info;
+
+
 
 typedef struct s_target
 {
@@ -58,17 +80,6 @@ typedef struct s_port_range_scan_type
 	u16			min_port_range;
 	u16			max_port_range;
 } t_port_range_scan_type;
-
-typedef enum e_port_state
-{
-	OPEN = 1,
-	CLOSE,
-	FILTERED,
-	UNFILTERED,
-	OPEN_FILTERED,
-	CLOSE_FILTERED,
-	UNKNOWN,
-} t_port_state;
 
 typedef struct s_ctx
 {

@@ -7,10 +7,11 @@
 
 #include <pthread.h>
 #include <stdlib.h>
+#define ICMP_ERROR_HIGHEST_IDX 6
 
 /* Can either be from a UDP or TCP probe */
-void handle_icmp_response(t_probe_queue *sent_list, u16 source_port, struct in_addr ip_src,
-	u8 code, t_scan_type scan_type)
+void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const struct in_addr ip_src,
+	const u8 code, const t_scan_type scan_type)
 {
 	static u8 icmp_error_codes[6] = {
 		1, 2, 3, 9, 10, 13	
@@ -25,9 +26,9 @@ void handle_icmp_response(t_probe_queue *sent_list, u16 source_port, struct in_a
 		sync_printf("Probe not found\n");
 		return;
 	}
-	const int idx = probe->target->port_list.port_map[scan_type][source_port];
+	const int idx = probe->target->port_list.port_map[source_port];
 
-	for (u8 i = 0; i < sizeof(icmp_error_codes); i++)
+	for (u8 i = 0; i < ICMP_ERROR_HIGHEST_IDX; i++)
 	{
 		if (code == icmp_error_codes[i])
 		{

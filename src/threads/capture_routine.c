@@ -2,6 +2,7 @@
 #include "capture.h"
 #include "debug.h"
 #include "ethernet.h"
+#include "icmp.h"
 #include "ip.h"
 #include "my_signal.h"
 #include "protocols.h"
@@ -10,26 +11,24 @@
 #include "shared.h"
 #include "tcp.h"
 #include "udp.h"
-#include "icmp.h"
 
 #include <netinet/in.h>
+#include <netinet/ip_icmp.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
-#include <netinet/ip_icmp.h>
 
- static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
+static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32	   l3_caplen,
-							   struct timeval *relative_recv_time)
+							   struct timeval *relative_recv_time, u8 flags)
 {
-	const u8 *protocol_hdr;
-	t_datalink_hdr datalink_hdr;
-	size_t	  ip_hlen;
-	size_t	  l4_len;
+	const u8	  *protocol_hdr;
+	t_datalink_hdr datalink_hdr = { 0 };
+	size_t		   ip_hlen;
+	size_t		   l4_len;
 
 	// print_debug_ip_header(ip_hdr);
 	if (l3_caplen < sizeof(struct ip))
@@ -42,9 +41,9 @@
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	u16 source_port;
+	u16			   source_port;
 	t_datalink_hdr nested_datalink_header = { 0 };
-	t_ip *nested_ip_header = NULL;
+	t_ip		  *nested_ip_header = NULL;
 
 	switch (ip_hdr->ip_p)
 	{
@@ -52,16 +51,14 @@
 		if (l4_len < sizeof(struct tcphdr))
 			return true;
 		datalink_hdr.tcp_hdr = *(const struct tcphdr *)protocol_hdr;
-		// print_debug_tcp_header(&tcp_hdr);
-		// print_debug_packet_end();
 		// identify response packet
 		// handle if it's the response packet in sent queue
 		source_port = ntohs(datalink_hdr.tcp_hdr.th_sport);
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
-		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type, source_port,
-							ip_hdr->ip_src);
-		break ;
+		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type,
+							source_port, ip_hdr->ip_src);
+		break;
 
 	case IPPROTO_UDP:
 		if (l4_len < sizeof(struct udphdr))
@@ -69,7 +66,7 @@
 		source_port = ntohs(datalink_hdr.udp_hdr.uh_sport);
 		datalink_hdr.udp_hdr = *(const struct udphdr *)protocol_hdr;
 		handle_udp_response(sent_list, source_port, ip_hdr->ip_src);
-		break ;
+		break;
 
 	case IPPROTO_ICMP:
 		if (l4_len < sizeof(t_icmp_hdr))
@@ -77,44 +74,53 @@
 		datalink_hdr.icmp_hdr = *(const t_icmp_hdr *)protocol_hdr;
 
 		// 8 bytes is the size of icmp header
-		nested_ip_header = (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
-		//print_debug_ip_header(nested_ip_header);
+		nested_ip_header
+			= (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
+		// print_debug_ip_header(nested_ip_header);
 		int ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
 		u8 *protocol = (u8 *)nested_ip_header + ip2_hlen;
-		
+
 		switch (nested_ip_header->ip_p)
 		{
-			case IPPROTO_TCP:
-				nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)protocol;				
-				source_port = ntohs(nested_datalink_header.tcp_hdr.th_sport);
-				//print_debug_tcp_header(nested_datalink_header->tcp_hdr);
-				t_scan_type scan_type
-					= determine_tcp_scan_type(ntohs(nested_datalink_header.tcp_hdr.th_dport));
-				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, ICMP_CODE(datalink_hdr.icmp_hdr), scan_type);
-				break;
-			case IPPROTO_UDP:
-				nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
-				source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
-				handle_icmp_response(sent_list, source_port, ip_hdr->ip_src, ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP);
-				break;
-			default:
-				return true;
+		case IPPROTO_TCP:
+			nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)protocol;
+			source_port = ntohs(nested_datalink_header.tcp_hdr.th_sport);
+			// print_debug_tcp_header(nested_datalink_header->tcp_hdr);
+			t_scan_type scan_type = determine_tcp_scan_type(
+				ntohs(nested_datalink_header.tcp_hdr.th_dport));
+			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
+								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type);
+			break;
+		case IPPROTO_UDP:
+			nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
+			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
+			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
+								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP);
+			break;
+		default:
+			return true;
 		}
-		break ;
+		break;
 
 	default:
 		return true;
 	}
-	// When we receive an ICMP response there is the header which mimics the one we send in our probe
-	// following the ICMP header: [IP Header + UDP/TCP Header] which contains the error code of why
-	// it fails to returns us a proper UPD / TCP response instead
-	return print_debug_packet_recv(ip_hdr, &datalink_hdr,
-			&nested_datalink_header, nested_ip_header, relative_recv_time);
+	// When we receive an ICMP response there is the header which mimics the one
+	// we send in our probe following the ICMP header: [IP Header + UDP/TCP
+	// Header] which contains the error code of why it fails to returns us a
+	// proper UPD / TCP response instead
+
+	if (HAS(flags, F_PACKET_TRACE)) {
+		return print_debug_packet_recv(ip_hdr, &datalink_hdr,
+									   &nested_datalink_header, nested_ip_header,
+									   relative_recv_time);
+	}
+	return false;
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen,
-								 struct timeval *relative_recv_time)
+								 struct timeval *relative_recv_time, const u8 flags)
 {
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
@@ -171,10 +177,10 @@ static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 	}
 
 	return handle_ip_protocol(sent_list, (t_ip *)ip_start, l3_caplen,
-							  relative_recv_time);
+							  relative_recv_time, flags);
 }
 
-void handle_packet(u_char *args, const struct pcap_pkthdr *header,
+void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 				   const u_char *packet)
 {
 	// pthread_t phid = pthread_self();
@@ -186,7 +192,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 	(void)receiver_data;
 
 	t_probe_queue  *sent_list = user_data->receiver_data->sent;
-	t_program_info *program_info = receiver_data->program_info;
+	const t_program_info *program_info = receiver_data->program_info;
 
 	struct timeval recv_timestamp;
 	gettimeofday(&recv_timestamp, NULL);
@@ -206,7 +212,7 @@ void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 
 	// print_debug_packet_start();
 	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen,
-						 &relative_recv_time);
+						 &relative_recv_time,  receiver_data->flags);
 	// print_debug_thread_leave(phid, __FUNCTION__);
 }
 
@@ -258,7 +264,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 			{
 				// print_debug_max_retries_exceeded(tmp);
 				const int index
-					= tmp->target->port_list.port_map[tmp->type][tmp->port];
+					= tmp->target->port_list.port_map[tmp->port];
 				t_port *state
 					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
@@ -315,8 +321,8 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 void *capture_routine(void *arg)
 {
-	//pthread_t phid = pthread_self();
-	//print_debug_thread_startup(phid, __FUNCTION__);
+	// pthread_t phid = pthread_self();
+	// print_debug_thread_startup(phid, __FUNCTION__);
 
 	t_receiver_data *receiver_data = arg;
 	// TODO: change this
@@ -362,6 +368,6 @@ void *capture_routine(void *arg)
 										 receiver_data->to_send);
 		}
 	}
-	//print_debug_thread_leave(phid, __FUNCTION__);
+	// print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

@@ -4,17 +4,8 @@
 #include "parsing.h"
 #include "request.h"
 #include "scan.h"
-#include "typesdef.h"
 
 #include <pcap/pcap.h>
-
-// typedef struct s_sent_queue
-// {
-// 	t_probe		   *head;
-// 	t_probe		   *tail;
-// 	pthread_mutex_t mut;
-// 	u8				nb_sent_requests;
-// } t_sent_queue;
 
 typedef struct s_probe_queue
 {
@@ -23,6 +14,7 @@ typedef struct s_probe_queue
 	pthread_mutex_t mut;
 	u16				nb_probe;
 } t_probe_queue;
+
 
 typedef struct s_shared_data_sender
 {
@@ -36,7 +28,9 @@ typedef struct s_shared_data_sender
 	// one for each interface
 	t_probe_queue  *sent;
 	t_program_info *program_info;
+	u8				flags;
 } t_shared_data_sender;
+
 
 typedef struct s_receiver_data
 {
@@ -48,6 +42,7 @@ typedef struct s_receiver_data
 	// reference of sent request list
 	t_probe_queue *sent;
 
+	u8				flags;
 	t_program_info *program_info;
 
 } t_receiver_data;

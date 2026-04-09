@@ -30,6 +30,18 @@ services:
       - NET_RAW
     privileged: true
 
+  target2:
+    build:
+      context: .
+      dockerfile: Dockerfile.target
+    container_name: ft_nmap_target2
+    networks:
+      isolated_net:
+        ipv4_address: 192.168.100.21
+    cap_add:
+      - NET_RAW
+    privileged: true
+
 networks:
   isolated_net:
     driver: bridge

@@ -19,7 +19,7 @@ typedef struct s_probe
 	struct s_probe	*next;
 } t_probe;
 
-void print_debug_probe_request(t_probe *request);
+void print_debug_probe_request(const t_probe *request);
 
 bool pop_probe_request(t_probe **head, t_probe **tail,
 					   t_probe **popped_request);

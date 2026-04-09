@@ -12,6 +12,32 @@
 
 sig_atomic_t volatile g_stop = 0;
 
+static void print_usage() {
+	printf("Usage:\n");
+	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS [--speedup [NUMBER]] [--scan [TYPE]]\n");
+	printf("or\n");
+	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE [--speedup [NUMBER]] [--scan [TYPE]]\n");
+	printf("\nSCAN TECHNIQUES: \n");
+	printf(" If no scan types are specified all will be run\n");
+	printf(" --scan <SYN, ACK, XMAS, NULL, URG, UDP>\n");
+	printf(" Ex: --scan SYN --scan SYN,XMAS \n");
+	printf("\nPORT SPECIFICATION: \n");
+	printf(" The number of port specified cannot exceed 1024\n");
+	printf(" --ports <port ranges | port number>\n");
+	printf("  Ex: --ports 22-32 --ports 22\n");
+	printf("\nIP SPECIFICATION: \n");
+	printf(" All ip must be provided in their IPV4 format: \n");
+	printf(" --ip <ip address or hostname>\n");
+	printf("  Ex: --ip 192.168.100.20 --ip google.com\n");
+	printf(" --file <source file containing list of ip>\n");
+	printf("\nSCAN SPECIFICATION: \n");
+	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
+	printf("\nOUTPUT: \n");
+	printf(" --packet-trace: Show all packets sent and received\n");
+	printf("\nHELP: \n");
+	printf(" --help: Display this menu\n");
+}
+
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
@@ -65,10 +91,11 @@ bool nmap_main(t_ctx *ctx)
 
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
+		free(ctx->targets[i].port_list.port_map);
+		free(ctx->targets[i].port_list.port_final_state);
 		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
 		{
-			t_scan_type scan_type = ctx->args.scan_types[j];
-			free(ctx->targets[i].port_list.port_map[scan_type]);
+			const t_scan_type scan_type = ctx->args.scan_types[j];
 			free(ctx->targets[i].port_list.port_map_rev[scan_type]);
 		}
 	}
@@ -89,20 +116,20 @@ int main(const int argc, char **argv)
 	// }
 
 	char **targets_input = NULL;
-	size_t target_count = 0;
-	t_args args = { 0 };
 	t_ctx  ctx = { 0 };
 
 	gettimeofday(&ctx.program_info.start, NULL);
 
-	if (parse_args(argc, argv, &args, &targets_input, &target_count))
+	if (parse_args(argc, argv, &ctx.args, &targets_input, &ctx.target_count))
 	{
-		free_tabp((void ***)&targets_input, target_count);
+		free_tabp((void ***)&targets_input, ctx.target_count);
 		return EXIT_FAILURE;
 	}
 
-	ctx.target_count = target_count;
-	ctx.args = args;
+	if (HAS(ctx.args.flags, F_HELP)) {
+		print_usage();
+		return EXIT_SUCCESS;
+	}
 
 	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{
@@ -130,12 +157,9 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	// print_debug_parsing_args(ctx);
-	// print_debug_iface_info(ctx.ifaces, ctx.iface_count);
-
 	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
 	char   date_buf[64];
-	time_t t = (time_t)ctx.program_info.start.tv_sec;
+	const time_t t = ctx.program_info.start.tv_sec;
 	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
 	printf("Starting ft_nmap at %s\n", date_buf);
 

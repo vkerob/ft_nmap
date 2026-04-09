@@ -6,9 +6,9 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
-						 t_scan_type scan_type, u16 source_port,
-						 struct in_addr ip_src)
+void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
+						 const t_scan_type scan_type, const u16 source_port,
+						 const struct in_addr ip_src)
 {
 
 	pthread_mutex_lock(&sent_list->mut);
@@ -16,14 +16,14 @@ void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port, ip_src, scan_type,
 					&sent_list->nb_probe);
 	pthread_mutex_unlock(&sent_list->mut);
-	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x probe=%s\n",
-		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
+//	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x probe=%s\n",
+//		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
 
 	if (!probe)
 	{
 		return;
 	}
-	const int idx = probe->target->port_list.port_map[scan_type][source_port];
+	const int idx = probe->target->port_list.port_map[source_port];
 	switch (scan_type)
 	{
 	case SCAN_SYN:

@@ -225,9 +225,11 @@ void *send_routine(void *arg)
 		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
 		shared_data->to_send.nb_probe--;
 		t_ip *ip_hdr = (t_ip *)packet;
-		if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr,
+		if (HAS(shared_data->flags, F_PACKET_TRACE)) {
+			if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr,
 									ip_hdr))
 			return NULL;
+		}
 		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
 		{
 			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",

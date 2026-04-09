@@ -7,6 +7,7 @@
 #define PORTS 1003
 #define SCAN 1004
 #define SPEED 1005
+#define PACKET_TRACE 1007
 #define MIN_PORT_NUMBER 1
 #define SCAN_INVALID 255
 #define SPEED_MAX 250
@@ -20,6 +21,7 @@
 #define MAX_PROTO_COUNT 3
 #define MAX_NB_SCAN_TYPE 6
 #define MAX_SCAN_TYPE_TCP 5
+#define HIGHEST_PORT_STATE 5
 #define IP_VERSION 4
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64

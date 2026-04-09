@@ -175,7 +175,7 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 	return false;
 }
 
-void print_debug_max_retries_exceeded(t_probe *probe)
+void print_debug_max_retries_exceeded(const t_probe *probe)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -211,7 +211,7 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sent_queue_state(u8 iface_index, t_probe_queue *sent)
+void print_debug_sent_queue_state(const u8 iface_index, const t_probe_queue *sent)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -271,8 +271,8 @@ void print_debug_concise_probe(const t_probe *probe)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sender_thread_proceed_probe(pthread_t phid, t_probe *request,
-											 struct timeval *tv)
+void print_debug_sender_thread_proceed_probe(pthread_t phid, const t_probe *request,
+											 const struct timeval *tv)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -353,7 +353,7 @@ void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sll_protocol(int protocol)
+void print_debug_sll_protocol(const int protocol)
 {
 	pthread_mutex_lock(&printf_mutex);
 	if (protocol != ETHERTYPE_IP)
@@ -420,7 +420,7 @@ void print_debug_ethernet_header(t_eth_hdr *eth_header)
 // 		   ntohs(icmp_hdr->checksum));
 // }
 
-void print_debug_protocol(int protocol)
+void print_debug_protocol(const int protocol)
 {
 	pthread_mutex_lock(&printf_mutex);
 	switch (protocol)
@@ -442,7 +442,7 @@ void print_debug_protocol(int protocol)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_probe_request(t_probe *request)
+void print_debug_probe_request(const t_probe *request)
 {
 	char buf[16] = { 0 };
 
@@ -473,7 +473,7 @@ void print_debug_probe_request(t_probe *request)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_ethernet_type(int ether_type)
+void print_debug_ethernet_type(const int ether_type)
 {
 	pthread_mutex_lock(&printf_mutex);
 	if (ether_type != ETHERTYPE_IP)
@@ -514,7 +514,7 @@ void print_debug_ip_header(struct ip *ip_hdr)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_datalink_type(int datalink_type)
+void print_debug_datalink_type(const int datalink_type)
 {
 	pthread_mutex_lock(&printf_mutex);
 	switch (datalink_type)
@@ -543,7 +543,7 @@ void print_debug_datalink_type(int datalink_type)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_parsing_args(t_ctx ctx)
+void print_debug_parsing_args(const t_ctx ctx)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -589,7 +589,7 @@ void print_debug_parsing_args(t_ctx ctx)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count)
+void print_debug_iface_info(t_iface_info *ifaces, const size_t iface_count)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -612,7 +612,7 @@ void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_receiver_data(t_receiver_data *receiver_data)
+void print_debug_receiver_data(const t_receiver_data *receiver_data)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
