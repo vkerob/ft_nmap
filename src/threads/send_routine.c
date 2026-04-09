@@ -80,8 +80,8 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp, u32 packet_len)
 {
-	printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
-		   ntohs(socket->sin.sin_port));
+	//printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
+		  //  ntohs(socket->sin.sin_port));
 	const ssize_t res
 		= sendto(socket->sfd, packet, packet_len, 0,
 				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));

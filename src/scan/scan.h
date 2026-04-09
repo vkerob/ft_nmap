@@ -1,7 +1,7 @@
 #ifndef SCAN_H
 #define SCAN_H
 
-#define HIGHEST_PORT_STATE 5
+#define HIGHEST_PORT_STATE 3
 
 #include "args.h"
 #include "defines.h"
@@ -14,18 +14,20 @@
 
 typedef enum e_port_state
 {
-	OPEN = 1,
 	CLOSE,
 	FILTERED,
 	UNFILTERED,
 	OPEN_FILTERED,
 	UNKNOWN,
+	OPEN
 } t_port_state;
 
 typedef struct s_port
 {
 	u16				port_number;
 	t_port_state	port_state;
+	/* Why the port is in that state */
+	char *reason;
 } t_port;
 
 typedef struct s_port_list
@@ -34,9 +36,9 @@ typedef struct s_port_list
 	u16	   *port_map;
 	/* Store the state of each port for each type of scan*/
 	t_port *port_map_rev[MAX_NB_SCAN_TYPE];
-	/* Store the final state of each port */
-	t_port_state *port_final_state;
-	/* Number of port in each state (open, filtered, ...) */
+	/* Store the final state and the reason we deduce it for each port for each protocol (TCP and UDP) */
+	t_port *port_final_state[MAX_PROTO_COUNT];
+	/* For each protocol (TCP and UDP) number of port in each state except open: filtered, close, open|filtered, unfiltered */
 	int state_count[HIGHEST_PORT_STATE];
 } t_port_list;
 

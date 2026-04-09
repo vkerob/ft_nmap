@@ -262,21 +262,23 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				// print_debug_max_retries_exceeded(tmp);
 				const int index
 					= tmp->target->port_list.port_map[tmp->port];
-				t_port *state
+				t_port *port
 					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
 				{
 				case SCAN_SYN:
 				case SCAN_ACK:
-					state->port_state = FILTERED;
+					port->port_state = FILTERED;
+					port->reason = "no-response";
 					break;
 				case SCAN_FIN:
 				case SCAN_NULL:
 				case SCAN_XMAS:
-					state->port_state = OPEN_FILTERED;
+				case SCAN_UDP:
+					port->port_state = OPEN_FILTERED;
+					port->reason = "no-response";
 					break;
 				default:
 					break;
@@ -284,10 +286,6 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 				free(tmp);
 				tmp = next;
-				// sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of sent queue
-				// %d\n" ANSI_COLOR_RESET, sent->nb_probe);
-				// sync_printf(ANSI_BOLD ANSI_COLOR_MAGENTA "Size of to_send
-				// queue %d\n" ANSI_COLOR_RESET, sent->nb_probe);
 				continue;
 			}
 			memset(&tmp->timestamp, 0, sizeof(struct timeval));

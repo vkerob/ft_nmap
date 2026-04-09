@@ -9,10 +9,11 @@
 #include <stdlib.h>
 #define ICMP_ERROR_HIGHEST_IDX 6
 
-/* Can either be from a UDP or TCP probe */
+/* Can either be from a UDP or TCP probe so we pass the scan type as argument */
 void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const struct in_addr ip_src,
 	const u8 code, const t_scan_type scan_type)
 {
+	// ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
 	static u8 icmp_error_codes[6] = {
 		1, 2, 3, 9, 10, 13	
 	};
@@ -27,17 +28,21 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const
 		return;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
-
+	t_port *port = &probe->target->port_list.port_map_rev[scan_type][idx];
 	for (u8 i = 0; i < ICMP_ERROR_HIGHEST_IDX; i++)
 	{
 		if (code == icmp_error_codes[i])
 		{
-			probe->target->port_list.port_map_rev[scan_type][idx].port_state = FILTERED;
-			break ;
+			port->port_state = FILTERED;
+			port->reason = "icmp-unreachable-error";
+			pthread_mutex_unlock(&sent_list->mut);
+			free(probe);
+			return ;
 		}
 	}
-	
+	port->port_state = UNKNOWN;
 	pthread_mutex_unlock(&sent_list->mut);
 	free(probe);
+	
 }
 

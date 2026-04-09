@@ -173,8 +173,8 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count, int *dupli
 	}
 
 	u16 port_left, port_right;
-	if (!parse_port_strict(left, &port_left)
-		|| !parse_port_strict(right, &port_right))
+	if (parse_port_strict(left, &port_left)
+		|| parse_port_strict(right, &port_right))
 	{
 		fprintf(stderr, "ft_nmap: invalid port range: '%s-%s'\n", left, right);
 		return true;
@@ -419,6 +419,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			if (parse_speed_strict(optarg, &args->speed))
 				return true;
 			break;
+
 		case PACKET_TRACE:
 			SET(args->flags, F_PACKET_TRACE);
 			break ;

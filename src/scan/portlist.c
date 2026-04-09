@@ -64,16 +64,44 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	{
 		max_port_number = get_max_port_number(ports);
 	}
-	port_list->port_final_state = calloc(port_count + 1, sizeof(t_port_state));
-	if (port_list->port_final_state == NULL) {
-		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+	bool udp_scan = false;
+	bool tcp_scan = false;
+	for (u8 i = 0; i < nb_scan_type; i++)
+	{
+		udp_scan |= (scan_types[i] == SCAN_UDP);
+		tcp_scan |= (scan_types[i] != SCAN_UDP);
+	}
+
+	if (tcp_scan){
+		port_list->port_final_state[0] = calloc(port_count + 1, sizeof(t_port_state));
+		if (port_list->port_final_state[0] == NULL) {
+			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+			return true;
+		}
+	}
+	if (udp_scan){
+		port_list->port_final_state[1] = calloc(port_count + 1, sizeof(t_port_state));
+		if (port_list->port_final_state[1] == NULL) {
+			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+			if (tcp_scan)
+			{
+				free(port_list->port_final_state[0]);
+			}
+			return true;
+		}
+
 	}
 	port_list->port_map = calloc(max_port_number + 1, sizeof(u16));
 	if (port_list->port_map == NULL)
 	{
 		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
-		free(port_list->port_final_state);
+		if (tcp_scan)
+		{
+			free(port_list->port_final_state[0]);
+		}
+		if (udp_scan){
+			free(port_list->port_final_state[1]);
+		}
 		return true;
 	}
 
@@ -91,7 +119,13 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 			delete_port_map_rev(port_list->port_map_rev, scan_types, i - 1);
 			free(port_list->port_map);
-			free(port_list->port_final_state);
+			if (tcp_scan)
+			{
+				free(port_list->port_final_state[0]);
+			}
+			if (udp_scan){
+				free(port_list->port_final_state[1]);
+			}
 			return true;
 		}
 

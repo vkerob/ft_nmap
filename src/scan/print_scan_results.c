@@ -1,5 +1,7 @@
 #include "scan.h"
 
+#include <string.h>
+
 #define PRINT_LIMIT 25
 
 // ── Helpers
@@ -107,24 +109,160 @@ static t_port_state get_port_conclusion(const t_target *target, const t_args *ar
 	return UNKNOWN;
 }
 
-// Builds the "Not shown:" summary line for all states which have a number
-// ports over PRINT_LIMIT
-//static void build_not_shown_str(u16 nb_closed, u16 nb_filtered,
-//								u16 nb_open_filtered)
-//{
-//	struct s_entry
-//	{
-//		u16			count;
-//		const char *label;
-//		const char *reason;
-//	} entries[3];
-//	u8 nb_entries = 0;
+// Return the next most common ignored state (which the most port shared a state)
+// or unknown if none are left
+static t_port_state get_next_ignored_state(const int *state_count)
+{
+	static t_port_state prev_ignored_state = UNKNOWN;
+
+	int max = PRINT_LIMIT; 
+	t_port_state next_ignored_state = UNKNOWN;
+	for (u8 i = 0; i < HIGHEST_PORT_STATE; i++)
+	{
+		if (i == prev_ignored_state)
+		{
+			continue ;
+		}
+		int count = state_count[i];
+		if (count > max)
+		{
+			max = count;
+			next_ignored_state = i;
+		}
+	}
+
+	if (prev_ignored_state == next_ignored_state)
+	{
+		return UNKNOWN;
+	}
+	prev_ignored_state = next_ignored_state;
+	return next_ignored_state;
+}
+
+/* This is for a special case when some port can be filtered because we got a IMCP error unreachable code, and other can be filtered 
+because we didn't get any response. In this  case we separate the 'not shown' output between those two reasons */
+static void get_common_reason(t_port *port_final_state, u16 port_count, char *next_common_reason, int *common_reason_count)
+{
+	int count_reason1 = 0;
+	int count_reason2 = 0;
+	char reason1[16] = {0};
+	char reason2[16] = {0};
+
+	for (u16 i = 0; i < port_count; i++)
+	{
+		if (reason1[0] == '\0'){
+			strcpy(reason1, port_final_state[i].reason);
+			count_reason1++;
+		}
+		else if (reason2[0] == '\0'){
+			strcpy(reason2, port_final_state[i].reason);
+			count_reason2++;
+		}
+		else{
+			if (strcmp(reason1, port_final_state[i].reason)){
+				count_reason1++;
+			}
+			else if (strcmp(reason2, port_final_state[i].reason)){
+				count_reason2++;
+			}
+		}
+	}
+
+	if (count_reason1 > count_reason2){
+		strcpy(next_common_reason, reason1);
+		*common_reason_count = count_reason1;
+	}
+	else{
+		strcpy(next_common_reason, reason2);
+		*common_reason_count = count_reason2;
+	}
+}
+
+char *state_to_label(t_port_state state)
+{
+	switch (state){
+		case OPEN_FILTERED:
+			return "open|filtered";
+		case UNFILTERED:
+			return "unfiltered";
+		case FILTERED:
+			return "filtered";
+		case CLOSE:
+			return "close";
+		case OPEN:
+			return "open";
+		case UNKNOWN:
+			return "unknown";
+	}
+	return NULL;
+}
+
+// Builds the "Not shown:" summary line for all states except OPEN which have a number
+// ports over PRINT_LIMIT in which case they are considered "ignored".
+// They are print from the most common to the least common and with a reason associated (no-response, reset, ...)
+static void build_not_shown_str(int *state_count, t_port **port_final_state, u16 port_count,
+	bool tcp_scan, bool udp_scan)
+{
+	t_port_state next_ignore_state = get_next_ignored_state(state_count);
+	// struct s_entry
+	// {
+	// 	u16			count;
+	// 	const char *label;
+	// 	const char *reason;
+	// } entries[3];
+	// u8 nb_entries = 0;
+
+	if (next_ignore_state != UNKNOWN){
+		printf("Not shown: ");
+	}
+	char reasons[2][16] = {0};
+	while (next_ignore_state != UNKNOWN){
+		char *state_label = state_to_label(next_ignore_state);
+		int count = state_count[next_ignore_state];
+		/* sub count for first reason (is equal to total count if only one reason)*/
+		int sub_count_1 = 0;
+		if (tcp_scan)
+		{
+			get_common_reason(port_final_state[0], port_count, reasons[0], &sub_count_1);
+			/* If we have more than two reason
+			Ex: Half the port were filtered because 'no-response' and the other half because we got icmp error code */
+			if (sub_count_1 == count){
+				printf("%u tcp port%s (%s)", count, state_label, count > 1 ? "s" : "", reasons[0]);
+			}
+			else {
+				get_common_reason(port_final_state[0], port_count, reasons[1], &sub_count_2);
+				printf("%u tcp port%s (%s), %u tcp port%s (%s)", sub_count_1, state_label, sub_count_1 > 1 ? "s" : "", reasons[0],
+				sub_count_2, state_label, sub_count_2 > 1 ? "s" : "", reasons[1]);
+			}
+		}
+		// If we got both tcp scan and udp we need to separate the output like so:
+		// Not shown: 16 open|filtered udp ports (no-response), 16 open|filtered tcp ports (no-response)
+		if (udp_scan)
+		{
+			memset(reasons, 0, sizeof(reasons));
+			if (tcp_scan)
+			{
+				printf(", ");
+			}
+			get_common_reason(port_final_state[1], port_count, reasons[0], &sub_count_1);
+			/* If we have more than two reason
+				Ex: Not shown: 16 open|filtered udp ports (no-response), 16 open|filtered udp ports (icmp-unreachable-error) */
+			if (sub_count_1 == count){
+				printf("%u udp port%s (%s)\n", count, state_label, count > 1 ? "s" : "", reasons[0]);
+			}
+			else {
+				get_common_reason(port_final_state[1], port_count, reasons[1], &sub_count_2);
+				printf("%u udp port%s (%s), %u udp port%s (%s)", sub_count_1, state_label, sub_count_1 > 1 ? "s" : "", reasons[0],
+				sub_count_2, state_label, sub_count_2 > 1 ? "s" : "", reasons[1]);
+			}
+		}
+		printf("\n");
+		next_ignore_state = get_next_ignored_state(state_count);
+	}
+
 //
 //	if (nb_closed > 0)
 //	{
-//		entries[nb_entries].count = nb_closed;
-//		entries[nb_entries].label = "closed tcp";
-//		entries[nb_entries].reason = "reset";
 //		nb_entries++;
 //	}
 //	if (nb_filtered > 0)
@@ -154,7 +292,7 @@ static t_port_state get_port_conclusion(const t_target *target, const t_args *ar
 //			   entries[i].count > 1 ? "s" : "", entries[i].reason);
 //	}
 //	printf("\n");
-//}
+}
 
 static void build_results_str(const t_target *target, const t_args *args, const u16 port,
 							  char *buf, size_t buf_size)
@@ -205,14 +343,33 @@ static void print_target_results(t_target *target, t_args *args)
 	printf("Nmap scan report for %s\n", ip_str);
 	printf("Host is up.\n");
 
+	bool udp_scan = false;
+	bool tcp_scan = false;
+	for (u8 i = 0; i < args->nb_scan_types; i++)
+	{
+		udp_scan |= (args->scan_types[i] == SCAN_UDP);
+		tcp_scan |= (args->scan_types[i] != SCAN_UDP);
+	}
+
 	for (u16 i = 0; i < args->port_count; i++)
 	{
 		const t_port_state port_state = get_port_conclusion(target, args, args->ports[i]);
-		target->port_list.state_count[port_state]++;
+		if (tcp_scan)
+		{
+			target->port_list.state_count[port_state]++;
+		}
+		if (udp_scan)
+		{
+			target->port_list.state_count[port_state]++;
+		}
 		const u16 idx = target->port_list.port_map[args->ports[i]];
-		target->port_list.port_final_state[idx] = port_state;
+		target->port_list.port_final_state[idx]->port_state = port_state;
+		//TODO: we need to be able 4 reasons for each port (2 TCP 2 UDP)
+		target->port_list.port_final_state[idx]->reason = args->
 	}
 
+	build_not_shown_str(target->port_list.state_count, target->port_list.port_final_state,
+		args->port_count, tcp_scan, udp_scan);
 
 	// If we got no port's open and all port state occurrences exceed 25
 	//if (nb_open == 0)

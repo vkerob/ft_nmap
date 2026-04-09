@@ -37,6 +37,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	shared_data_probe->to_send.tail = NULL;
 	shared_data_probe->to_send.nb_probe = 0;
 	shared_data_probe->program_info = &ctx->program_info;
+	shared_data_probe->flags = ctx->args.flags;
 
 	atomic_init(&shared_data_probe->id, 1);
 	atomic_init(&shared_data_probe->base_seq, rand());

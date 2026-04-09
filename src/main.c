@@ -44,11 +44,11 @@ bool nmap_main(t_ctx *ctx)
 	pthread_t			*pcap_threads = NULL;
 	pthread_t			*send_threads = NULL;
 
-	if (HAS(ctx->args.flags, F_SPOOF))
-	{
-		printf(ANSI_BOLD ANSI_COLOR_YELLOW
-			   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
-	}
+	//if (HAS(ctx->args.flags, F_SPOOF))
+	//{
+	//	printf(ANSI_BOLD ANSI_COLOR_YELLOW
+	//		   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
+	//}
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{

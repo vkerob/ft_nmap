@@ -20,8 +20,8 @@ void	handle_udp_response(t_probe_queue *sent_list, const u16 source_port, struct
 		return;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
-	probe->target->port_list.port_map_rev[SCAN_UDP][idx].port_state
-				= OPEN;
+	t_port *port = &probe->target->port_list.port_map_rev[SCAN_UDP][idx];
+	// Any UDP response from target port (unusual) means the port is open
+	port->port_state = OPEN;
 	free(probe);
 }
-
