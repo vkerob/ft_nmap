@@ -8,7 +8,7 @@
 
 #include <netinet/ip_icmp.h>
 
-void handle_icmp_response(t_probe_queue *sent_list, u16 source_port, struct in_addr ip_src,
-	u8 code, t_scan_type scan_type);
+void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const struct in_addr ip_src,
+	const u8 code, const t_scan_type scan_type, const u8 protocol);
 
 #endif

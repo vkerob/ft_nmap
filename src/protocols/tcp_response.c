@@ -31,8 +31,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		if ((flags & TH_RST) && (flags & TH_ACK))
 		{
 			port->port_state = CLOSE;
-			port->reason = "reset";
-			
+			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
 		}
 		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
@@ -43,11 +42,11 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		if (flags & TH_RST)
 		{
 			port->port_state = UNFILTERED;
-			port->reason = "reset";
+			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
 		}
-		 else
-		 {
-		 	port->port_state = UNKNOWN;
+		else
+		{
+			port->port_state = UNKNOWN;
 		 }
 		break;
 	case SCAN_FIN:
@@ -56,15 +55,16 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		if (flags & TH_RST)
 		{
 			port->port_state = CLOSE;
-			port->reason = "reset";
+			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
 		}
 		else
 		{
 			port->port_state = UNKNOWN;
 		}
 		break;
+	//SCAN UDP (nothing to do but compiler complain if not handle)
 	default:
-		break;
+		break ;
 	}
 	free(probe);
 }

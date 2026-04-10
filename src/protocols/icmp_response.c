@@ -11,7 +11,7 @@
 
 /* Can either be from a UDP or TCP probe so we pass the scan type as argument */
 void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const struct in_addr ip_src,
-	const u8 code, const t_scan_type scan_type)
+	const u8 code, const t_scan_type scan_type, const u8 protocol)
 {
 	// ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
 	static u8 icmp_error_codes[6] = {
@@ -34,7 +34,7 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port, const
 		if (code == icmp_error_codes[i])
 		{
 			port->port_state = FILTERED;
-			port->reason = "icmp-unreachable-error";
+			set_port_state_reason(port, UNREACHABLE, protocol);
 			pthread_mutex_unlock(&sent_list->mut);
 			free(probe);
 			return ;

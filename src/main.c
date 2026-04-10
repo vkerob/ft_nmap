@@ -38,6 +38,15 @@ static void print_usage() {
 	printf(" --help: Display this menu\n");
 }
 
+static void set_scan_presence(t_args *args)
+{
+	for (u8 i = 0; i < args->nb_scan_types; i++)
+	{
+		args->udp_scan |= (args->scan_types[i] == SCAN_UDP);
+		args->tcp_scan |= (args->scan_types[i] != SCAN_UDP);
+	}
+}
+
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
@@ -68,6 +77,7 @@ bool nmap_main(t_ctx *ctx)
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
+	set_scan_presence(&ctx->args);
 	// shared_data_probe.to_send.nb_probe
 	// 	= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 

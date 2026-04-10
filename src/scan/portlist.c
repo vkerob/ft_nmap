@@ -5,6 +5,59 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+void set_port_state_reason(t_port *port, t_port_state_reason reason, u8 protocol)
+{
+	switch (reason)
+	{
+		case CONNECTION_RESET:
+		 	if (protocol == IPPROTO_TCP){
+				if (port->reason_tcp[0] == NULL){
+					strcpy(port->reason_tcp[0], "reset");
+				}
+				else if (port->reason_tcp[1] == NULL){
+					strcpy(port->reason_tcp[1], "reset");
+				}
+			}
+			else{
+				if (port->reason_udp == NULL){
+					strcpy(port->reason_tcp[0], "reset");
+				}
+			}
+			break;
+		case UNREACHABLE:
+		 	if (protocol == IPPROTO_TCP){
+				if (port->reason_tcp[0] == NULL){
+					strcpy(port->reason_tcp[0], "unreachable");
+				}
+				else if (port->reason_tcp[1] == NULL){
+					strcpy(port->reason_tcp[1], "unreachable");
+				}
+			}
+			else{
+				if (port->reason_udp == NULL){
+					strcpy(port->reason_tcp[0], "unreachable");
+				}
+			}
+			break;
+		case NO_RESPONSE:
+		 	if (protocol == IPPROTO_TCP){
+				if (port->reason_tcp[0] == NULL){
+					strcpy(port->reason_tcp[0], "no-response");
+				}
+				else if (port->reason_tcp[1] == NULL){
+					strcpy(port->reason_tcp[1], "no-response");
+				}
+			}
+			else{
+				if (port->reason_udp == NULL){
+					strcpy(port->reason_udp, "no-response");
+				}
+			}
+			break;
+	}
+}
+
 static u16 get_max_port_number(u16 ports[MAX_PORT_COUNT])
 {
 	u16 max_port_val = 0;
@@ -43,7 +96,7 @@ bool link_port_list_to_each_target(t_ctx *ctx)
 	{
 		if (init_portlist(&ctx->targets[i].port_list, ctx->args.port_count,
 						  ctx->args.ports, ctx->args.scan_types,
-						  ctx->args.nb_scan_types))
+						  ctx->args.nb_scan_types, ctx->args.tcp_scan, ctx->args.udp_scan))
 		{
 			return true;
 		}
@@ -51,9 +104,22 @@ bool link_port_list_to_each_target(t_ctx *ctx)
 	return false;
 }
 
+
+static void free_port_final_state(t_port_output **final_port_state, bool free_tcp_part, bool free_udp_part)
+{
+	if (free_tcp_part)
+	{
+		free(final_port_state[TCP_INDEX]);
+	}
+	if (free_udp_part)
+	{
+		free(final_port_state[UDP_INDEX]);
+	}
+}
+
 bool init_portlist(t_port_list *port_list, const u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
-				   const u8 nb_scan_type)
+				   const u8 nb_scan_type, bool tcp_scan, bool udp_scan)
 {
 	// If not scan specified run all of them
 	// if (!HAS(args->flags, F_SCAN_TYPE))
@@ -64,30 +130,29 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	{
 		max_port_number = get_max_port_number(ports);
 	}
-	bool udp_scan = false;
-	bool tcp_scan = false;
-	for (u8 i = 0; i < nb_scan_type; i++)
-	{
-		udp_scan |= (scan_types[i] == SCAN_UDP);
-		tcp_scan |= (scan_types[i] != SCAN_UDP);
-	}
+
 
 	if (tcp_scan){
-		port_list->port_final_state[0] = calloc(port_count + 1, sizeof(t_port_state));
+		port_list->port_final_state[0] = calloc(port_count + 1, sizeof(t_port_output));
 		if (port_list->port_final_state[0] == NULL) {
 			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 			return true;
 		}
+		for (u16 i = 0; i < port_count; i++)
+		{
+			port_list->port_final_state[0]->port_state = UNKNOWN;
+		}
 	}
 	if (udp_scan){
-		port_list->port_final_state[1] = calloc(port_count + 1, sizeof(t_port_state));
+		port_list->port_final_state[1] = calloc(port_count + 1, sizeof(t_port_output));
 		if (port_list->port_final_state[1] == NULL) {
 			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
-			if (tcp_scan)
-			{
-				free(port_list->port_final_state[0]);
-			}
+			free_port_final_state(port_list->port_final_state, true, false);
 			return true;
+		}
+		for (u16 i = 0; i < port_count; i++)
+		{
+			port_list->port_final_state[1]->port_state= UNKNOWN;
 		}
 
 	}
@@ -95,13 +160,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	if (port_list->port_map == NULL)
 	{
 		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
-		if (tcp_scan)
-		{
-			free(port_list->port_final_state[0]);
-		}
-		if (udp_scan){
-			free(port_list->port_final_state[1]);
-		}
+		free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
 		return true;
 	}
 
@@ -119,13 +178,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
 			delete_port_map_rev(port_list->port_map_rev, scan_types, i - 1);
 			free(port_list->port_map);
-			if (tcp_scan)
-			{
-				free(port_list->port_final_state[0]);
-			}
-			if (udp_scan){
-				free(port_list->port_final_state[1]);
-			}
+			free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
 			return true;
 		}
 

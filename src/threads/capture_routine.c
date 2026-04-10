@@ -89,13 +89,13 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			t_scan_type scan_type = determine_tcp_scan_type(
 				ntohs(nested_datalink_header.tcp_hdr.th_dport));
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type);
+								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type, IPPROTO_TCP);
 			break;
 		case IPPROTO_UDP:
 			nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP);
+								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP, IPPROTO_UDP);
 			break;
 		default:
 			return true;
@@ -271,14 +271,14 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 				case SCAN_SYN:
 				case SCAN_ACK:
 					port->port_state = FILTERED;
-					port->reason = "no-response";
+					set_port_state_reason(port, NO_RESPONSE, tmp->type == SCAN_UDP ? IPPROTO_UDP : IPPROTO_TCP);
 					break;
 				case SCAN_FIN:
 				case SCAN_NULL:
 				case SCAN_XMAS:
 				case SCAN_UDP:
 					port->port_state = OPEN_FILTERED;
-					port->reason = "no-response";
+					set_port_state_reason(port, NO_RESPONSE, tmp->type == SCAN_UDP ? IPPROTO_UDP : IPPROTO_TCP);
 					break;
 				default:
 					break;

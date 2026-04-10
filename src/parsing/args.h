@@ -4,6 +4,8 @@
 #include "defines.h"
 #include "typesdef.h"
 
+#include <stdbool.h>
+
 typedef struct	s_args
 {
 	u8				flags;
@@ -13,5 +15,9 @@ typedef struct	s_args
 	u8				nb_scan_types;
 	u8				nb_scan;
 	u8				speed;
+	/* Indicate whether we have a UDP and TCP scan among scan_types so we don't have to loop over scan_types we 
+	need that information */
+	bool			tcp_scan;
+	bool			udp_scan;
 }	t_args;
 #endif
