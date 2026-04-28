@@ -13,25 +13,25 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 
 	pthread_mutex_lock(&sent_list->mut);
 	t_probe *probe
-		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port, ip_src, scan_type,
-					&sent_list->nb_probe);
+		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
+								ip_src, scan_type, &sent_list->nb_probe);
 	pthread_mutex_unlock(&sent_list->mut);
-//	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x probe=%s\n",
-//		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
+	//	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x
+	//probe=%s\n", 		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
 
 	if (!probe)
 	{
 		return;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
-	t_port *port = &probe->target->port_list.port_map_rev[scan_type][idx];
+	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];
 	switch (scan_type)
 	{
 	case SCAN_SYN:
 		if ((flags & TH_RST) && (flags & TH_ACK))
 		{
 			port->port_state = CLOSE;
-			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
+			set_port_state_reason(port, CONNECTION_RESET);
 		}
 		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
@@ -42,12 +42,12 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		if (flags & TH_RST)
 		{
 			port->port_state = UNFILTERED;
-			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
+			set_port_state_reason(port, CONNECTION_RESET);
 		}
 		else
 		{
 			port->port_state = UNKNOWN;
-		 }
+		}
 		break;
 	case SCAN_FIN:
 	case SCAN_NULL:
@@ -55,16 +55,16 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		if (flags & TH_RST)
 		{
 			port->port_state = CLOSE;
-			set_port_state_reason(port, CONNECTION_RESET, IPPROTO_TCP);
+			set_port_state_reason(port, CONNECTION_RESET);
 		}
 		else
 		{
 			port->port_state = UNKNOWN;
 		}
 		break;
-	//SCAN UDP (nothing to do but compiler complain if not handle)
+	// SCAN UDP (nothing to do but compiler complain if not handle)
 	default:
-		break ;
+		break;
 	}
 	free(probe);
 }

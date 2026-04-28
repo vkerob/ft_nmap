@@ -89,13 +89,15 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			t_scan_type scan_type = determine_tcp_scan_type(
 				ntohs(nested_datalink_header.tcp_hdr.th_dport));
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type, IPPROTO_TCP);
+								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type,
+								 IPPROTO_TCP);
 			break;
 		case IPPROTO_UDP:
 			nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP, IPPROTO_UDP);
+								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP,
+								 IPPROTO_UDP);
 			break;
 		default:
 			return true;
@@ -110,17 +112,19 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	// Header] which contains the error code of why it fails to returns us a
 	// proper UPD / TCP response instead
 
-	if (HAS(flags, F_PACKET_TRACE)) {
+	if (HAS(flags, F_PACKET_TRACE))
+	{
 		return print_debug_packet_recv(ip_hdr, &datalink_hdr,
-									   &nested_datalink_header, nested_ip_header,
-									   relative_recv_time);
+									   &nested_datalink_header,
+									   nested_ip_header, relative_recv_time);
 	}
 	return false;
 }
 
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen,
-								 struct timeval *relative_recv_time, const u8 flags)
+								 struct timeval *relative_recv_time,
+								 const u8		 flags)
 {
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
@@ -191,7 +195,7 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 
 	(void)receiver_data;
 
-	t_probe_queue  *sent_list = user_data->receiver_data->sent;
+	t_probe_queue		 *sent_list = user_data->receiver_data->sent;
 	const t_program_info *program_info = receiver_data->program_info;
 
 	struct timeval recv_timestamp;
@@ -212,7 +216,7 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 
 	// print_debug_packet_start();
 	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen,
-						 &relative_recv_time,  receiver_data->flags);
+						 &relative_recv_time, receiver_data->flags);
 	// print_debug_thread_leave(phid, __FUNCTION__);
 }
 
@@ -262,23 +266,22 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				const int index
-					= tmp->target->port_list.port_map[tmp->port];
-				t_port *port
+				const int index = tmp->target->port_list.port_map[tmp->port];
+				t_port	 *port
 					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
 				{
 				case SCAN_SYN:
 				case SCAN_ACK:
 					port->port_state = FILTERED;
-					set_port_state_reason(port, NO_RESPONSE, tmp->type == SCAN_UDP ? IPPROTO_UDP : IPPROTO_TCP);
+					set_port_state_reason(port, NO_RESPONSE);
 					break;
 				case SCAN_FIN:
 				case SCAN_NULL:
 				case SCAN_XMAS:
 				case SCAN_UDP:
 					port->port_state = OPEN_FILTERED;
-					set_port_state_reason(port, NO_RESPONSE, tmp->type == SCAN_UDP ? IPPROTO_UDP : IPPROTO_TCP);
+					set_port_state_reason(port, NO_RESPONSE);
 					break;
 				default:
 					break;

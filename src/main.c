@@ -12,11 +12,14 @@
 
 sig_atomic_t volatile g_stop = 0;
 
-static void print_usage() {
+static void print_usage()
+{
 	printf("Usage:\n");
-	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS [--speedup [NUMBER]] [--scan [TYPE]]\n");
+	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS "
+		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
 	printf("or\n");
-	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE [--speedup [NUMBER]] [--scan [TYPE]]\n");
+	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
+		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
 	printf("\nSCAN TECHNIQUES: \n");
 	printf(" If no scan types are specified all will be run\n");
 	printf(" --scan <SYN, ACK, XMAS, NULL, URG, UDP>\n");
@@ -102,15 +105,20 @@ bool nmap_main(t_ctx *ctx)
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
 		free(ctx->targets[i].port_list.port_map);
-		free(ctx->targets[i].port_list.port_final_state);
+		if (ctx->args.tcp_scan)
+		{
+			free(ctx->targets[i].port_list.port_final_state[TCP_INDEX]);
+		}
+		if (ctx->args.udp_scan)
+		{
+			free(ctx->targets[i].port_list.port_final_state[UDP_INDEX]);
+		}
 		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
 		{
 			const t_scan_type scan_type = ctx->args.scan_types[j];
 			free(ctx->targets[i].port_list.port_map_rev[scan_type]);
 		}
 	}
-
-	
 
 	deinitialize_shared_data(&shared_data_probe, ctx);
 

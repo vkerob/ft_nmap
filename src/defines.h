@@ -28,7 +28,7 @@
 /* Number of type of scan a user can perform simultaneously */
 #define MAX_NB_SCAN_TYPE 6
 #define MAX_SCAN_TYPE_TCP 5
-#define HIGHEST_PORT_STATE 3
+#define HIGHEST_PORT_STATE 6
 #define IP_VERSION 4
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64
@@ -40,7 +40,6 @@
 #define UDP_INDEX 1
 
 #define MAX_REASONS_NUMBER 2
-
 
 #define ANSI_COLOR_GREEN "\x1b[32m"
 #define ANSI_COLOR_BLUE "\x1b[34m"

@@ -255,27 +255,27 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 		*out = SCAN_SYN;
 		return false;
 	}
-	else if (strcmp(upper_scan_str, "NULL") == 0)
+	if (strcmp(upper_scan_str, "NULL") == 0)
 	{
 		*out = SCAN_NULL;
 		return false;
 	}
-	else if (strcmp(upper_scan_str, "ACK") == 0)
+	if (strcmp(upper_scan_str, "ACK") == 0)
 	{
 		*out = SCAN_ACK;
 		return false;
 	}
-	else if (strcmp(upper_scan_str, "FIN") == 0)
+	if (strcmp(upper_scan_str, "FIN") == 0)
 	{
 		*out = SCAN_FIN;
 		return false;
 	}
-	else if (strcmp(upper_scan_str, "XMAS") == 0)
+	if (strcmp(upper_scan_str, "XMAS") == 0)
 	{
 		*out = SCAN_XMAS;
 		return false;
 	}
-	else if (strcmp(upper_scan_str, "UDP") == 0)
+	if (strcmp(upper_scan_str, "UDP") == 0)
 	{
 		*out = SCAN_UDP;
 		return false;
@@ -284,7 +284,7 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 	return true;
 }
 
-bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
+static bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
 {
 	char *saveptr = NULL;
 	char *token = NULL;
@@ -307,6 +307,12 @@ bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types)
 				return true;
 			}
 			(*out)[*nb_scan_types] = scan_type;
+			if (scan_type == SCAN_UDP) {
+				*udp_scan = true;
+			}
+			else {
+				*tcp_scan = true;
+			}
 		}
 		else if (token == NULL)
 		{
@@ -408,7 +414,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case SCAN:
 			SET(args->flags, F_SCAN_TYPE);
 			if (parse_scan_types(optarg, &args->scan_types,
-								 &args->nb_scan_types))
+								 &args->nb_scan_types, &args->tcp_scan, &args->udp_scan))
 			{
 				return true;
 			}
