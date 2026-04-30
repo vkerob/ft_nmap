@@ -98,7 +98,7 @@ static bool parse_port_strict(const char *s, u16 *out)
 		return false;
 
 	errno = 0;
-	char		 *end = NULL;
+	char			   *end = NULL;
 	const unsigned long value = strtoul(s, &end, 10);
 
 	if (errno == ERANGE)
@@ -123,7 +123,8 @@ static bool contains_port(const u16 *ports, const size_t count, const u16 port)
 	return false;
 }
 
-static bool push_port(u16 *ports, u16 *count, const u16 port, int *duplicate_port_number)
+static bool push_port(u16 *ports, u16 *count, const u16 port,
+					  int *duplicate_port_number)
 {
 	*duplicate_port_number |= contains_port(ports, *count, port);
 
@@ -135,7 +136,8 @@ static bool push_port(u16 *ports, u16 *count, const u16 port, int *duplicate_por
 	return false;
 }
 
-static bool parse_token_and_push(char *token, u16 *ports, u16 *count, int *duplicate_port_number)
+static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
+								 int *duplicate_port_number)
 {
 	char *dash = strchr(token, '-');
 
@@ -182,14 +184,16 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count, int *dupli
 
 	if (port_left > port_right)
 	{
-		fprintf(stderr, "ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?", port_left, port_right, port_left, port_right);
+		fprintf(
+			stderr,
+			"ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?",
+			port_left, port_right, port_left, port_right);
 		return true;
 	}
 
 	if (port_right - port_left > 1024)
 	{
-		fprintf(stderr, "ft_nmap: too many ports (max %d)\n",
-				MAX_PORT_COUNT);
+		fprintf(stderr, "ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
 		return true;
 	}
 
@@ -207,7 +211,8 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 	int duplicate_port_number = 0;
 
 	char *copy = strdup(port_str);
-	if (!copy) {
+	if (!copy)
+	{
 		fprintf(stderr, "ft_nmap: strdup failed: %s\n", strerror(errno));
 		return true;
 	}
@@ -227,7 +232,8 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 			break;
 		}
 
-		if (parse_token_and_push(trim_str, ports, port_count, &duplicate_port_number))
+		if (parse_token_and_push(trim_str, ports, port_count,
+								 &duplicate_port_number))
 		{
 			error = true;
 			break;
@@ -235,7 +241,8 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 
 		tok = strtok(NULL, ",");
 	}
-	if (duplicate_port_number) {
+	if (duplicate_port_number)
+	{
 		fprintf(stderr, "ft_nmap: Duplicate port number(s) specified.\n");
 	}
 	free(copy);
@@ -284,7 +291,8 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 	return true;
 }
 
-static bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
+static bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types,
+							 bool *tcp_scan, bool *udp_scan)
 {
 	char *saveptr = NULL;
 	char *token = NULL;
@@ -307,10 +315,12 @@ static bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types, bo
 				return true;
 			}
 			(*out)[*nb_scan_types] = scan_type;
-			if (scan_type == SCAN_UDP) {
+			if (scan_type == SCAN_UDP)
+			{
 				*udp_scan = true;
 			}
-			else {
+			else
+			{
 				*tcp_scan = true;
 			}
 		}
@@ -379,6 +389,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "scan", required_argument, 0, SCAN },
 		{ "speedup", required_argument, 0, SPEED },
 		{ "packet-trace", no_argument, 0, PACKET_TRACE },
+		{ "reason", no_argument, 0, REASON },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -414,7 +425,8 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case SCAN:
 			SET(args->flags, F_SCAN_TYPE);
 			if (parse_scan_types(optarg, &args->scan_types,
-								 &args->nb_scan_types, &args->tcp_scan, &args->udp_scan))
+								 &args->nb_scan_types, &args->tcp_scan,
+								 &args->udp_scan))
 			{
 				return true;
 			}
@@ -428,7 +440,11 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 		case PACKET_TRACE:
 			SET(args->flags, F_PACKET_TRACE);
-			break ;
+			break;
+
+		case REASON:
+			SET(args->flags, F_REASON);
+			break;
 
 		case '?':
 		case ':':

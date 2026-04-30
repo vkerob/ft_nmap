@@ -16,8 +16,6 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
 								ip_src, scan_type, &sent_list->nb_probe);
 	pthread_mutex_unlock(&sent_list->mut);
-	//	printf("handle_tcp_response: port=%u scan_type=%d flags=0x%02x
-	//probe=%s\n", 		   source_port, scan_type, flags, probe ? "FOUND" : "NULL");
 
 	if (!probe)
 	{
@@ -28,6 +26,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	switch (scan_type)
 	{
 	case SCAN_SYN:
+
 		if ((flags & TH_RST) && (flags & TH_ACK))
 		{
 			port->port_state = CLOSE;

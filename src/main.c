@@ -38,6 +38,7 @@ static void print_usage()
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf("\nHELP: \n");
+	printf(" --reason: Show the reason why the port is in that state\n");
 	printf(" --help: Display this menu\n");
 }
 
@@ -56,11 +57,11 @@ bool nmap_main(t_ctx *ctx)
 	pthread_t			*pcap_threads = NULL;
 	pthread_t			*send_threads = NULL;
 
-	//if (HAS(ctx->args.flags, F_SPOOF))
+	// if (HAS(ctx->args.flags, F_SPOOF))
 	//{
 	//	printf(ANSI_BOLD ANSI_COLOR_YELLOW
 	//		   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
-	//}
+	// }
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
@@ -144,7 +145,8 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (HAS(ctx.args.flags, F_HELP)) {
+	if (HAS(ctx.args.flags, F_HELP))
+	{
 		print_usage();
 		return EXIT_SUCCESS;
 	}
@@ -176,7 +178,7 @@ int main(const int argc, char **argv)
 	}
 
 	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
-	char   date_buf[64];
+	char		 date_buf[64];
 	const time_t t = ctx.program_info.start.tv_sec;
 	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
 	printf("Starting ft_nmap at %s\n", date_buf);

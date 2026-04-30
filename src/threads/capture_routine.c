@@ -92,15 +92,13 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			t_scan_type scan_type = determine_tcp_scan_type(
 				ntohs(nested_datalink_header.tcp_hdr.th_dport));
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), scan_type,
-								 IPPROTO_TCP);
+								 datalink_hdr.icmp_hdr, scan_type, IPPROTO_TCP);
 			break;
 		case IPPROTO_UDP:
 			nested_datalink_header.udp_hdr = *(t_udp_hdr *)datalink_header;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP,
-								 IPPROTO_UDP);
+								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP);
 			break;
 		default:
 			return true;
