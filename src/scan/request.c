@@ -3,7 +3,8 @@
 
 #include <stdlib.h>
 
-void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node, u16 *nb_probe)
+void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
+							 u16 *nb_probe)
 {
 	if (node->prev)
 		node->prev->next = node->next;
@@ -73,7 +74,8 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 }
 
 t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
-								 struct in_addr ip_src, t_scan_type scan_type, u16 *nb_probes)
+							   struct in_addr ip_src, t_scan_type scan_type,
+							   u16 *nb_probes)
 {
 	t_probe *tmp = *head;
 
@@ -86,9 +88,7 @@ t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
 	}
 	if (tmp)
 	{
-		erase_reference_to_node(head, tail, tmp,
-								nb_probes);
+		erase_reference_to_node(head, tail, tmp, nb_probes);
 	}
 	return tmp;
 }
-

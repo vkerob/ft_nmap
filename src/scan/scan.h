@@ -32,16 +32,7 @@ typedef struct s_port
 {
 	u16			 port_number;
 	t_port_state port_state;
-	/* Why the port is in that state, maximum 3 reasons
-		Ex: For a SYN scan:
-			- No response received (even after retransmissions)	filtered
-			- ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-	   filtered So maximum 2 reasons for TCP, but if the user run a UDP scan too
-	   we can a have third reason (which will be the same as one of the two
-	   before but it will printed separately in the output)
-			- Other ICMP unreachable errors (type 3, code 1, 2, 9, 10, or 13)
-	*/
-	char *reasons[MAX_REASONS_NUMBER];
+	char		*reasons[MAX_REASONS_NUMBER];
 } t_port;
 
 typedef struct s_port_output
@@ -53,10 +44,18 @@ typedef struct s_port_output
 
 typedef struct s_port_state_and_reason
 {
-	int								count;
-	char						   *reason;
-	t_port_state					port_state;
+	int			 count;
+	char		*reason;
+	t_port_state port_state;
+
+	/* Maximum of 2 reasons, only be filled with tcp scans if more than one
+	reason for a port state exist to know the subcount of each */
+	struct s_port_state_and_reason *first_reason;
+	struct s_port_state_and_reason *second_reason;
+
+	// NULL if child node
 	struct s_port_state_and_reason *next;
+
 } t_port_state_and_reason;
 
 typedef struct s_port_list
@@ -64,14 +63,19 @@ typedef struct s_port_list
 	/* Store the index of the port inside port_map_rev array and
 	 * port_final_state array or 0 if the port is not scanned */
 	u16 *port_map;
-	/* Store the state of each port for each type of scan*/
+
+	/* Store the state of each port for each type of scan,
+		So if all scans types are run, this will store 6 differents state for a
+	   same port (5 for TCP and 1 for UDP)*/
 	t_port *port_map_rev[MAX_NB_SCAN_TYPE];
+
 	/* Store the final state and the reason we deduce it for each port for each
 	protocol (TCP and UDP) because the "Not shown output" is separated between
 	those two (even for the same state)*/
 	t_port_output *port_final_state[MAX_PROTO_COUNT];
-	/* For each protocol (TCP and UDP) number of port in each state except open:
-	 * filtered, close, open|filtered, unfiltered */
+
+	/* For each protocol (TCP and UDP) number of port in each state with their
+	respective reason and occurences, this list is not sorted in any way */
 	t_port_state_and_reason *state_and_reason[MAX_PROTO_COUNT];
 
 	int state_count[HIGHEST_PORT_STATE];

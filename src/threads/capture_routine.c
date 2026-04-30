@@ -75,17 +75,20 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 
 		// 8 bytes is the size of icmp header
 		nested_ip_header
-			= (t_ip *)((u8 *)ip_hdr + ip_hlen + l4_len - sizeof(struct icmp));
+			= (t_ip *)((u8 *)ip_hdr + ip_hlen + sizeof(t_icmp_hdr));
+
 		// print_debug_ip_header(nested_ip_header);
+
 		int ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
-		u8 *protocol = (u8 *)nested_ip_header + ip2_hlen;
+		u8 *datalink_header = (u8 *)nested_ip_header + ip2_hlen;
 
 		switch (nested_ip_header->ip_p)
 		{
 		case IPPROTO_TCP:
-			nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)protocol;
-			source_port = ntohs(nested_datalink_header.tcp_hdr.th_sport);
-			// print_debug_tcp_header(nested_datalink_header->tcp_hdr);
+
+			nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)datalink_header;
+			source_port = ntohs(nested_datalink_header.tcp_hdr.th_dport);
+			// print_debug_tcp_header(&nested_datalink_header.tcp_hdr);
 			t_scan_type scan_type = determine_tcp_scan_type(
 				ntohs(nested_datalink_header.tcp_hdr.th_dport));
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
@@ -93,7 +96,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 								 IPPROTO_TCP);
 			break;
 		case IPPROTO_UDP:
-			nested_datalink_header.udp_hdr = *(t_udp_hdr *)protocol;
+			nested_datalink_header.udp_hdr = *(t_udp_hdr *)datalink_header;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
 								 ICMP_CODE(datalink_hdr.icmp_hdr), SCAN_UDP,

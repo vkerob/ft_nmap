@@ -184,7 +184,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		for (u16 j = 0; j < port_count; j++)
 		{
 			port_list->port_map_rev[scan_type]->port_number = ports[j];
-			port_list->port_map_rev[scan_type]->port_state = UNKNOWN;
+			port_list->port_map_rev[scan_type]->port_state = DEFAULT;
 		}
 	}
 	return false;

@@ -54,12 +54,10 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 
 	pthread_mutex_lock(&printf_mutex);
 	printf("SENT (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
-		  (unsigned long)relative_sent_time->tv_usec,
-			probe->type == SCAN_UDP ? "UDP" : "TCP",
-		  src,
-		  ntohs(datalink_hdr->tcp_hdr.th_sport),
-			target,
-		  ntohs(datalink_hdr->tcp_hdr.th_dport));
+		   (unsigned long)relative_sent_time->tv_usec,
+		   probe->type == SCAN_UDP ? "UDP" : "TCP", src,
+		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
+		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 
 	printf("ttl: %d ", ip_hdr->ip_ttl);
 	printf("id: %d ", ntohs(ip_hdr->ip_id));
@@ -88,9 +86,11 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	return false;
 }
 
-bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *datalink_hdr,
-			const t_datalink_hdr *nested_datalink_hdr, const struct ip *nested_ip_hdr, const
-			struct timeval *relative_recv_time)
+bool print_debug_packet_recv(const struct ip	  *ip_hdr,
+							 const t_datalink_hdr *datalink_hdr,
+							 const t_datalink_hdr *nested_datalink_hdr,
+							 const struct ip	  *nested_ip_hdr,
+							 const struct timeval *relative_recv_time)
 {
 	char	   src[32];
 	char	   dst[32];
@@ -111,13 +111,12 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 
 	pthread_mutex_lock(&printf_mutex);
 	printf("RCVD (%ld.%06lu) ", relative_recv_time->tv_sec,
-		   (unsigned long)relative_recv_time->tv_usec );
+		   (unsigned long)relative_recv_time->tv_usec);
 
 	if (ip_hdr->ip_p == IPPROTO_TCP)
 	{
-		printf("TCP %s:%d > %s:%d ",
-		   src,
-		   ntohs(datalink_hdr->tcp_hdr.th_sport), dst, ntohs(datalink_hdr->tcp_hdr.th_dport));
+		printf("TCP %s:%d > %s:%d ", src, ntohs(datalink_hdr->tcp_hdr.th_sport),
+			   dst, ntohs(datalink_hdr->tcp_hdr.th_dport));
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
 			printf("URG ");
 		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
@@ -132,23 +131,21 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 			printf("FIN ");
 		if (datalink_hdr->tcp_hdr.th_flags & 0x00)
 			printf(". ");
-	 printf("ttl: %d ", ip_hdr->ip_ttl);
-	 printf("id: %d ", ntohs(ip_hdr->ip_id));
+		printf("ttl: %d ", ip_hdr->ip_ttl);
+		printf("id: %d ", ntohs(ip_hdr->ip_id));
 		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
-	 printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
-	 printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-	 printf("cksum: 0x%04x " ANSI_COLOR_RESET,
-		   ntohs(datalink_hdr->tcp_hdr.th_sum));
+		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
+		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
+		printf("cksum: 0x%04x " ANSI_COLOR_RESET,
+			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP)
 	{
-		printf("UDP %s:%d > %s:%d ",
-		   src,
-		   ntohs(datalink_hdr->udp_hdr.uh_sport), dst, ntohs(datalink_hdr->udp_hdr.uh_dport));
+		printf("UDP %s:%d > %s:%d ", src, ntohs(datalink_hdr->udp_hdr.uh_sport),
+			   dst, ntohs(datalink_hdr->udp_hdr.uh_dport));
 		printf("ttl: %d ", ntohs(ip_hdr->ip_ttl));
 		printf("id: %d ", ntohs(ip_hdr->ip_id));
 		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
-		
 	}
 	if (ip_hdr->ip_p == IPPROTO_ICMP)
 	{
@@ -166,9 +163,12 @@ bool print_debug_packet_recv(const struct ip *ip_hdr, const t_datalink_hdr *data
 			dest_port = ntohs(nested_datalink_hdr->tcp_hdr.th_dport);
 		}
 
-		printf("ICMP [%s:%d > %s:%d (type=%d/code=%d) ] IP [ ttl=%d id=%d iplen=%d ]", src, dest_port,
-				dst, source_port, ICMP_TYPE(datalink_hdr->icmp_hdr), ICMP_CODE(datalink_hdr->icmp_hdr),
-				ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
+		printf("ICMP [%s:%d > %s:%d (type=%d/code=%d) ] IP [ ttl=%d id=%d "
+			   "iplen=%d ]",
+			   src, dest_port, dst, source_port,
+			   ICMP_TYPE(datalink_hdr->icmp_hdr),
+			   ICMP_CODE(datalink_hdr->icmp_hdr), ip_hdr->ip_ttl,
+			   ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);
@@ -211,7 +211,8 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sent_queue_state(const u8 iface_index, const t_probe_queue *sent)
+void print_debug_sent_queue_state(const u8			   iface_index,
+								  const t_probe_queue *sent)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -271,7 +272,8 @@ void print_debug_concise_probe(const t_probe *probe)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_sender_thread_proceed_probe(pthread_t phid, const t_probe *request,
+void print_debug_sender_thread_proceed_probe(pthread_t			   phid,
+											 const t_probe		  *request,
 											 const struct timeval *tv)
 {
 	pthread_mutex_lock(&printf_mutex);
@@ -409,16 +411,37 @@ void print_debug_ethernet_header(t_eth_hdr *eth_header)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-// void print_debug_icmp_header(struct icmphdr *icmp_hdr)
-// {
-// 	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nICMP Header:\n" ANSI_COLOR_RESET);
-// 	printf(ANSI_COLOR_CYAN
-// 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
-// 	printf(ANSI_COLOR_CYAN "  • Type: %d\n" ANSI_COLOR_RESET, icmp_hdr->type);
-// 	printf(ANSI_COLOR_CYAN "  • Code: %d\n" ANSI_COLOR_RESET, icmp_hdr->code);
-// 	printf(ANSI_COLOR_CYAN "  • Checksum: 0x%04x\n" ANSI_COLOR_RESET,
-// 		   ntohs(icmp_hdr->checksum));
-// }
+void print_debug_definitive_port_state_tcp(t_port_output *port)
+{
+
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN "TCP Port %d: \n" ANSI_COLOR_RESET,
+		   port->port_number);
+	printf(ANSI_COLOR_CYAN "State: %s\n" ANSI_COLOR_RESET,
+		   port_state_to_str(port->port_state));
+	printf(ANSI_COLOR_CYAN "Reasons: \n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN "  • %s\n" ANSI_COLOR_RESET, port->reasons[0]);
+	if (port->reasons[1] != NULL)
+	{
+		printf(ANSI_COLOR_CYAN "  • %s\n" ANSI_COLOR_RESET, port->reasons[1]);
+	}
+	pthread_mutex_unlock(&printf_mutex);
+}
+
+void print_debug_icmp_header(t_icmp_hdr *icmp_hdr)
+{
+	pthread_mutex_lock(&printf_mutex);
+	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nICMP Header:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_CYAN "  • Type: %d\n" ANSI_COLOR_RESET,
+		   ICMP_TYPE(*icmp_hdr));
+	printf(ANSI_COLOR_CYAN "  • Code: %d\n" ANSI_COLOR_RESET,
+		   ICMP_CODE(*icmp_hdr));
+	printf(ANSI_COLOR_CYAN "  • Checksum: 0x%04x\n" ANSI_COLOR_RESET,
+		   ntohs(ICMP_CKSUM(*icmp_hdr)));
+	pthread_mutex_unlock(&printf_mutex);
+}
 
 void print_debug_protocol(const int protocol)
 {

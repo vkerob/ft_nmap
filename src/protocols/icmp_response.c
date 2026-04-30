@@ -14,7 +14,6 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 						  const struct in_addr ip_src, const u8 code,
 						  const t_scan_type scan_type, const u8 protocol)
 {
-
 	(void)protocol;
 	// ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
 	static u8 icmp_error_codes[6] = { 1, 2, 3, 9, 10, 13 };
