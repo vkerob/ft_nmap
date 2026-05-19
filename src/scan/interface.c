@@ -25,7 +25,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		*ifaces = realloc(*ifaces, (*iface_count + 1) * sizeof(t_iface_info));
 		if (!*ifaces)
 		{
-			fprintf(stderr, "ft_nmap: realloc failed: %s\n", strerror(errno));
+			LOG("ft_nmap: realloc failed: %s\n", strerror(errno));
 			return true;
 		}
 	}
@@ -34,7 +34,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		*ifaces = calloc(*iface_count + 1, sizeof(t_iface_info));
 		if (!*ifaces)
 		{
-			fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 			return true;
 		}
 	}
@@ -136,7 +136,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		if (add_unique_dev(ifaces, local_addr.sin_addr, iface_count, ifname_buf,
 						   &iface_index))
 		{
-			fprintf(stderr, "ft_nmap: Failed to add interface name\n");
+			LOG("ft_nmap: Failed to add interface name\n");
 			return true;
 		}
 		targets[i].iface_info = &(*ifaces[iface_index]);

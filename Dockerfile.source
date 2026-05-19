@@ -1,6 +1,7 @@
 FROM alpine:latest
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade musl && apk add --no-cache \
+		gdb \
     # build tools
     gcc g++ make cmake musl-dev linux-headers \
     # network libs

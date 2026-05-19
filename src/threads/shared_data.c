@@ -13,7 +13,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	shared_data_probe->sent = calloc(ctx->iface_count, sizeof(t_probe_queue));
 	if (!shared_data_probe->sent)
 	{
-		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
 
@@ -22,7 +22,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		int res = pthread_mutex_init(&shared_data_probe->sent[i].mut, NULL);
 		if (res != 0)
 		{
-			fprintf(stderr, "ft_nmap: pthread_mutex_init: %s\n", strerror(res));
+			LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 			return true;
 		}
 		shared_data_probe->sent[i].nb_probe = 0;
@@ -45,7 +45,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	int res = pthread_mutex_init(&shared_data_probe->to_send.mut, NULL);
 	if (res != 0)
 	{
-		fprintf(stderr, "ft_nmap: pthread_mutex_init: %s\n", strerror(res));
+		LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 		return true;
 	}
 
@@ -60,7 +60,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 	*pcap_ctxs = calloc(iface_count, sizeof(t_receiver_data));
 	if (!*pcap_ctxs)
 	{
-		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
 
@@ -75,31 +75,30 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 	return false;
 }
 
-
 static void free_probes(t_probe *head)
 {
-		t_probe *tmp = head;
-		t_probe *next;
+	t_probe *tmp = head;
+	t_probe *next;
 
-		while (tmp)
-		{
-			next = tmp->next;
-			free(tmp);
-			tmp = next;
-		}
+	while (tmp)
+	{
+		next = tmp->next;
+		free(tmp);
+		tmp = next;
+	}
 }
 
 static void free_sent_queues(size_t iface_count, t_probe_queue *sent_queues)
 {
 	for (size_t i = 0; i < iface_count; i++)
 	{
-		// If we stopped the program before it ends, sent list may contain t_probe objects
+		// If we stopped the program before it ends, sent list may contain
+		// t_probe objects
 		if (sent_queues[i].nb_probe > 0)
 		{
 			free_probes(sent_queues[i].head);
 		}
 		pthread_mutex_destroy(&sent_queues[i].mut);
-
 	}
 	free(sent_queues);
 }

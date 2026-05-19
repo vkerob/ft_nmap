@@ -130,7 +130,7 @@ int main(const int argc, char **argv)
 {
 	// if (geteuid() != 0)
 	// {
-	// 	fprintf(stderr, "ft_nmap: You must be root to run this program.\n");
+	// 	LOG("ft_nmap: You must be root to run this program.\n");
 	// 	return 1;
 	// }
 

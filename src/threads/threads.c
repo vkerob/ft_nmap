@@ -18,13 +18,13 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 	*pcap_threads = calloc(ctx->iface_count, sizeof(pthread_t));
 	if (*pcap_threads == NULL)
 	{
-		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
 	*send_threads = calloc(ctx->args.speed, sizeof(pthread_t));
 	if (*send_threads == NULL)
 	{
-		fprintf(stderr, "ft_nmap: calloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		free(*pcap_threads);
 		return true;
 	}
@@ -42,8 +42,7 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 		{
 			free(*send_threads);
 			free(*pcap_threads);
-			fprintf(stderr, "ft_nmap: pthread_create failed: %s\n",
-					strerror(ret));
+			LOG("ft_nmap: pthread_create failed: %s\n", strerror(ret));
 			return true;
 		}
 	}
@@ -56,8 +55,7 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								 shared_data_probe);
 		if (ret != 0)
 		{
-			fprintf(stderr, "ft_nmap: pthread_create failed: %s\n",
-					strerror(ret));
+			LOG("ft_nmap: pthread_create failed: %s\n", strerror(ret));
 			free(*send_threads);
 			free(*pcap_threads);
 			return true;
@@ -73,8 +71,9 @@ void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 	{
 		pthread_join((*pcap_threads)[i], NULL);
 	}
-	
-	// Once all capture threads have stopped we set g_stop to 1 to stop the senders threads
+
+	// Once all capture threads have stopped we set g_stop to 1 to stop the
+	// senders threads
 	g_stop = 1;
 
 	for (u8 i = 0; i < nb_send_threads; i++)

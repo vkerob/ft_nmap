@@ -46,6 +46,7 @@ target_compile_options(ft_nmap PRIVATE
 )
 
 target_compile_options(tests_ft_nmap PRIVATE
+				-DTEST_MODE
         -Wall -Wextra -Werror -g
         ${FT_NMAP_SANITIZER_COMPILE_FLAGS}
 )
@@ -75,6 +76,9 @@ find_library(LIBPCAP NAMES pcap HINTS ${HINT_DIR} REQUIRED NO_CMAKE_FIND_ROOT_PA
 target_link_libraries(ft_nmap PRIVATE ${LIBPCAP})
 
 target_link_libraries(tests_ft_nmap ${LIBPCAP})
+
+list(APPEND TEST_SUITES parsing scan)
+
 
 foreach (TEST_SUITE ${TEST_SUITES})
     add_test(

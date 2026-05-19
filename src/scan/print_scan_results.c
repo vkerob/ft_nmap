@@ -604,16 +604,14 @@ bool find_or_update_state_and_reason_combination(
 						= calloc(1, sizeof(t_port_state_and_reason));
 					if (tmp->first_reason == NULL)
 					{
-						fprintf(stderr, "ft_nmap: calloc failed: %s\n",
-								strerror(errno));
+						LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 						return true;
 					}
 					tmp->second_reason
 						= calloc(1, sizeof(t_port_state_and_reason));
 					if (tmp->second_reason == NULL)
 					{
-						fprintf(stderr, "ft_nmap: calloc failed: %s\n",
-								strerror(errno));
+						LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 						return true;
 					}
 

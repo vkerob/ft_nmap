@@ -1,6 +1,9 @@
 import subprocess
 import re
+import socket
 import sys
+import os
+import ipdb
 
 ANSI_COLOR_GREEN = "\x1b[32m"
 ANSI_COLOR_RED = "\x1b[31m"
@@ -37,22 +40,27 @@ def run_test(args_nmap, args_ft_nmap, protocol):
 		print(f"{ANSI_COLOR_RED}FAILED{ANSI_COLOR_RESET}\n")
 		return False
 
+def init_servers():
+	tcp_serv_addr = ("127.0.0.1", 8080)
+	udp_serv_addr = ("127.0.0.1", 8081)
+	tcp_s = socket.create_server(tcp_serv_addr)
+	udp_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	udp_s.bind(udp_serv_addr)
+	while True:
+		tcp_s.listen()
+		# conn, addr = s.accepjt()
+		# print(f"Connected by {addr}") # addr is ('IP', PORT)
 
-if __name__ == '__main__':
-	exit_code = subprocess.getstatusoutput("nmap --help")[0]
-	if exit_code != 0:
-		print(f"{ANSI_COLOR_RED}nmap not found{ANSI_COLOR_RESET}")
-		sys.exit()
-	exit_code = subprocess.getstatusoutput("./ft_nmap --help")[0]
-	if exit_code != 0:
-		print(f"{ANSI_COLOR_RED}ft_nmap executable not found{ANSI_COLOR_RESET}")
-		sys.exit()
-	target_ip = input("Enter the target IP address for tests: ")
+
+def run_tests():
+	target_ip = "127.0.0.1"
+	# target_ip = input("Enter the target IP address for tests: ")
 	print(f"Testing against {target_ip}")
 	passed = 0
 	failed = 0
 	print("Testing SYN scan...")
-	if run_test(["nmap", target_ip, "-p", "1234-1244", "-sS"],
+	ipdb.set_trace()
+	if run_test(["nmap", target_ip, "-p", "1234-1244,8080", "-sS"],
 					["./ft_nmap", "--ip", target_ip, "--ports", "1234-1244", "--scan", "SYN"],
 					"tcp"):
 		passed += 1
@@ -118,3 +126,21 @@ if __name__ == '__main__':
 	print(f"{ANSI_COLOR_GREEN}Passed: {passed}{ANSI_COLOR_RESET}")
 	print(f"{ANSI_COLOR_RED}Failed: {failed}{ANSI_COLOR_RESET}")
 	print(f"Total: {passed + failed}")
+
+
+if __name__ == '__main__':
+
+	exit_code = subprocess.getstatusoutput("nmap --help")[0]
+	if exit_code != 0:
+		print(f"{ANSI_COLOR_RED}nmap not found{ANSI_COLOR_RESET}")
+		sys.exit()
+	exit_code = subprocess.getstatusoutput("./ft_nmap --help")[0]
+	if exit_code != 0:
+		print(f"{ANSI_COLOR_RED}ft_nmap executable not found{ANSI_COLOR_RESET}")
+		sys.exit()
+
+	pid = os.fork()
+	if pid > 0:
+		init_servers()
+	else:
+		run_tests()

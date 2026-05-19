@@ -41,14 +41,14 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 				  sizeof(src))
 		== NULL)
 	{
-		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
+		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 	if (inet_ntop(domain, (const void *)&probe->target->iface_info->ip_addr,
 				  src, sizeof(target))
 		== NULL)
 	{
-		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
+		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 
@@ -99,13 +99,13 @@ bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 	if (inet_ntop(domain, (const void *)&ip_hdr->ip_src, src, sizeof(src))
 		== NULL)
 	{
-		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
+		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 	if (inet_ntop(domain, (const void *)&ip_hdr->ip_dst, dst, sizeof(dst))
 		== NULL)
 	{
-		fprintf(stderr, "ft_nmap: inet_pton: %s\n", strerror(errno));
+		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
 

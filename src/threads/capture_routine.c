@@ -337,7 +337,7 @@ void *capture_routine(void *arg)
 	// const struct timeval *timeout = pcap_get_required_select_timeout(handle);
 	// if (timeout == NULL)
 	// {
-	// 	fprintf(stderr, "timeout not required\n");
+	// 	LOG("timeout not required\n");
 	// }
 	// else
 	// {
@@ -348,10 +348,10 @@ void *capture_routine(void *arg)
 	switch (ret)
 	{
 	case PCAP_ERROR_NOT_ACTIVATED:
-		fprintf(stderr, "pcap_setnonblock: Capture handle is not activated\n");
+		LOG("pcap_setnonblock: Capture handle is not activated\n");
 		return NULL;
 	case PCAP_ERROR:
-		fprintf(stderr, "pcap_setnonblock: %s\n", errbuf);
+		LOG("pcap_setnonblock: %s\n", errbuf);
 		return NULL;
 	default:
 		break;

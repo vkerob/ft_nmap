@@ -56,4 +56,14 @@
 #define SET(flags, flag) ((flags) |= (flag))
 #define HAS(flags, flag) (((flags) & (flag)) != 0)
 
+#include <stdlib.h>
+#define LOG(fmt, ...)                                                          \
+	do                                                                         \
+	{                                                                          \
+		if (getenv("TEST_MODE") == NULL)                                       \
+		{                                                                      \
+			fprintf(stderr, fmt, ##__VA_ARGS__);                               \
+		}                                                                      \
+	} while (0)
+
 #endif // PARSING_H

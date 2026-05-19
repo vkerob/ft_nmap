@@ -1,5 +1,5 @@
-#include "parsing.h"
 #include "commons.h"
+#include "parsing.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -56,8 +56,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 {
 	if (HAS(flags, F_IP_MODE) && HAS(flags, F_FILE_MODE))
 	{
-		fprintf(stderr,
-				"ft_nmap: cannot use --ip and --file options together\n");
+		LOG("ft_nmap: cannot use --ip and --file options together\n");
 		return true;
 	}
 
@@ -90,7 +89,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		FILE *file = fopen(arg, "r");
 		if (!file)
 		{
-			fprintf(stderr, "ft_nmap: Could not open file %s\n", arg);
+			LOG("ft_nmap: Could not open file %s\n", arg);
 			return true;
 		}
 
@@ -113,7 +112,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 
 		if (count == 0)
 		{
-			fprintf(stderr, "ft_nmap: No targets found in file %s\n", arg);
+			LOG("ft_nmap: No targets found in file %s\n", arg);
 			free_tabp((void ***)targets, 0);
 			return true;
 		}
@@ -122,7 +121,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		char **tmp = realloc(*targets, count * sizeof(char *));
 		if (!tmp)
 		{
-			fprintf(stderr, "ft_nmap: memory allocation failed\n");
+			LOG("ft_nmap: memory allocation failed\n");
 			free_tabp((void ***)targets, count);
 			return true;
 		}

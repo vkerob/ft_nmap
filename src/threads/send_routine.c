@@ -80,8 +80,8 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp, u32 packet_len)
 {
-	//printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
-		  //  ntohs(socket->sin.sin_port));
+	// printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
+	//   ntohs(socket->sin.sin_port));
 	const ssize_t res
 		= sendto(socket->sfd, packet, packet_len, 0,
 				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
@@ -195,7 +195,7 @@ void *send_routine(void *arg)
 		const int res = gettimeofday(&tv, NULL);
 		if (res == -1)
 		{
-			fprintf(stderr, "ft_nmap: gettimeofday: %s\n", strerror(errno));
+			LOG("ft_nmap: gettimeofday: %s\n", strerror(errno));
 			continue;
 			// close_sockets(&udp_socket, &tcp_socket);
 			// print_debug_thread_leave(phid, __FUNCTION__);
@@ -225,15 +225,16 @@ void *send_routine(void *arg)
 		shared_data->sent[request->target->iface_info->iface_index].nb_probe++;
 		shared_data->to_send.nb_probe--;
 		t_ip *ip_hdr = (t_ip *)packet;
-		if (HAS(shared_data->flags, F_PACKET_TRACE)) {
-			if (print_debug_packet_send(request, &relative_sent_time, &datalink_hdr,
-									ip_hdr))
-			return NULL;
+		if (HAS(shared_data->flags, F_PACKET_TRACE))
+		{
+			if (print_debug_packet_send(request, &relative_sent_time,
+										&datalink_hdr, ip_hdr))
+				return NULL;
 		}
 		if (send_packet(&used_socket, packet, &sent_timestamp, packet_len))
 		{
-			fprintf(stderr, "ft_nmap: failed to send packet to %s\n",
-					inet_ntoa(request->target->addr));
+			LOG("ft_nmap: failed to send packet to %s\n",
+				inet_ntoa(request->target->addr));
 			continue;
 		}
 		pthread_mutex_unlock(
