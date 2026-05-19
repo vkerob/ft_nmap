@@ -29,6 +29,8 @@ char *port_state_to_str(t_port_state state)
 		return "open|filtered";
 	case UNKNOWN:
 		return "unknown";
+	case DEFAULT:
+		return "default";
 	default:
 		return NULL;
 	}
@@ -79,6 +81,7 @@ static void update_port_reasons(t_port_output *port_conclusion,
 	}
 	else
 	{
+		// printf("%s\n", port_state_to_str(port->port_state));
 		assert(port->reasons[0] != NULL);
 		assert(port->reasons[1] == NULL);
 		port_conclusion->reasons[0] = port->reasons[0];
@@ -98,6 +101,10 @@ static void
 update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 										const t_port  *port)
 {
+	// fprintf(stderr, "port conclusion: %s\n",
+	// 		port_state_to_str(port->port_state));
+	// fprintf(stderr, "port state: %s\n",
+	// 		port_state_to_str(port_conclusion->port_state));
 	if (port_conclusion->port_state == UNKNOWN)
 	{
 		return;

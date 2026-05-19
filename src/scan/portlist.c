@@ -21,6 +21,9 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason)
 	case NO_RESPONSE:
 		reason_str = strdup("no-response");
 		break;
+	case SYN_ACK:
+		reason_str = strdup("syn-ack");
+		break;
 	default:
 		return;
 	}

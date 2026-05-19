@@ -25,7 +25,8 @@ typedef enum e_port_state_reason
 {
 	CONNECTION_RESET,
 	UNREACHABLE,
-	NO_RESPONSE
+	NO_RESPONSE,
+	SYN_ACK
 } t_port_state_reason;
 
 typedef struct s_port

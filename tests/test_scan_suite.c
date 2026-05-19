@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+extern char **environ;
+
 SUITE(scan_suite);
 extern t_server *g_server_data; // just the variable, extern is fine here
 
@@ -22,12 +24,19 @@ void run_command(char **args, char **output)
 {
 	(void)args;
 	int pipe_fds[2];
+
 	(void)output;
 	if (pipe(pipe_fds) == -1)
 	{
 		fprintf(stderr, "%s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+	printf("Executing following commands: \n");
+	for (int i = 0; args[i]; i++)
+	{
+		printf("%s ", args[i]);
+	}
+	printf("\n");
 	pid_t pid = fork();
 
 	if (pid == 0)
@@ -35,9 +44,10 @@ void run_command(char **args, char **output)
 		dup2(pipe_fds[1], STDOUT_FILENO);
 		close(pipe_fds[0]);
 		close(pipe_fds[1]);
-		if (execve(args[0], args, NULL) == -1)
+
+		if (execvp(args[0], args) == -1)
 		{
-			fprintf(stderr, "%s\n", strerror(errno));
+			fprintf(stderr, "|%s|\n", strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -120,12 +130,17 @@ void get_port_list(char *ft_nmap_output, regex_t regex, t_port **head)
 	}
 }
 
-TEST compare(char *ft_nmap_output, char *nmap_output, const char *protocol)
+TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 {
 	regex_t regex;
 	t_port *port_list_nmap = NULL;
 	t_port *port_list_ft_nmap = NULL;
 
+	char *ft_nmap_output = NULL;
+	char *nmap_output = NULL;
+
+	run_command(args_ft_nmap, &ft_nmap_output);
+	run_command(args_nmap, &nmap_output);
 	char re[512] = { 0 };
 
 	/* Match the following type of line:
@@ -140,11 +155,22 @@ TEST compare(char *ft_nmap_output, char *nmap_output, const char *protocol)
 	get_port_list(ft_nmap_output, regex, &port_list_ft_nmap);
 	get_port_list(nmap_output, regex, &port_list_nmap);
 
+	fprintf(stderr, "[DEBUG] --- ft_nmap ports ---\n");
+	for (t_port *p = port_list_ft_nmap; p; p = p->next)
+		fprintf(stderr, "[DEBUG]   port: %d, state: %s\n", p->port,
+				p->port_state);
+
+	fprintf(stderr, "[DEBUG] --- nmap ports ---\n");
+	for (t_port *p = port_list_nmap; p; p = p->next)
+		fprintf(stderr, "[DEBUG]   port: %d, state: %s\n", p->port,
+				p->port_state);
+
 	t_port *tmp1 = port_list_nmap;
 	t_port *tmp2 = port_list_ft_nmap;
 
 	while (tmp1 && tmp2)
 	{
+
 		ASSERT_EQ(tmp1->port, tmp2->port);
 		ASSERT_STR_EQ(tmp1->port_state, tmp2->port_state);
 		tmp1 = tmp1->next;
@@ -153,29 +179,13 @@ TEST compare(char *ft_nmap_output, char *nmap_output, const char *protocol)
 	PASS();
 }
 
-void run_test(char **args_nmap, char **args_ft_nmap, const char *protocol)
-{
-	char *ft_nmap_output = NULL;
-	char *nmap_output = NULL;
-
-	run_command(args_ft_nmap, &ft_nmap_output);
-	run_command(args_nmap, &nmap_output);
-
-	compare(ft_nmap_output, nmap_output, protocol);
-}
-
 SUITE(scan_suite)
 {
-	char *args_nmap[]
-		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_arg_port,
-			"-sS",			 NULL };
-	char *args_ft_nmap[] = { "./ft_nmap",
-							 "--ip",
-							 "127.0.0.1",
-							 "--ports",
-							 g_server_data->tcp_arg_port,
-							 "--scan",
-							 "SYN",
-							 NULL };
-	run_test(args_nmap, args_ft_nmap, "tcp");
+	char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
+					 g_server_data->udp_ports, "-sU",		NULL };
+	char *ft_nmap_args[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
+		"--scan",	 "UDP",	 NULL
+	};
+	RUN_TESTp(compare, args, ft_nmap_args, "udp");
 }

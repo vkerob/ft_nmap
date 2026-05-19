@@ -26,7 +26,6 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	switch (scan_type)
 	{
 	case SCAN_SYN:
-
 		if ((flags & TH_RST) && (flags & TH_ACK))
 		{
 			port->port_state = CLOSE;
@@ -35,6 +34,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
 			port->port_state = OPEN;
+			set_port_state_reason(port, SYN_ACK);
 		}
 		break;
 	case SCAN_ACK:

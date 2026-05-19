@@ -2,6 +2,7 @@
 #include "greatest.h"
 #include <arpa/inet.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 extern SUITE(parsing_suite);
@@ -86,22 +87,25 @@ static int open_udp_port(int port)
 	return fd;
 }
 
-static void build_port_arg(t_socket *sockets, int n, char *buf, size_t bufsz)
+static void build_port_arg(t_socket *sockets, int n, char **ptr)
 {
-	int written = 0;
+	int	   written = 0;
+	size_t total_len = 0;
+	char   buf[16] = { 0 };
+
 	for (int i = 0; i < n; i++)
 	{
-		int ret;
-		if (i == 0)
-		{
-			ret = snprintf(buf, bufsz - written, "%d", sockets[i].port);
-		}
-		else
-			ret = snprintf(buf + written, bufsz - written, ",%d",
-						   sockets[i].port);
-		if (ret < 0 || (size_t)ret >= bufsz - written)
-			break;
-		written += ret;
+		total_len += sprintf(buf, "%s%d", i ? "," : "", sockets[i].port);
+	}
+	*ptr = malloc(total_len + 1);
+	if (*ptr == NULL)
+	{
+		exit(EXIT_FAILURE);
+	}
+	for (int i = 0; i < n; i++)
+	{
+		written
+			+= sprintf(*ptr + written, "%s%d", i ? "," : "", sockets[i].port);
 	}
 }
 
@@ -127,11 +131,15 @@ void init_servers(void *data)
 	for (int i = 0; i < max_port_nb_tcp;)
 	{
 		int port = random_port();
-		int fd = open_tcp_port(port);
-		if (fd < 0)
-			continue; /* port busy, try another */
-		g_server_data->tcp_sockets[i].fd = fd;
 		g_server_data->tcp_sockets[i].port = port;
+		int open = rand() % 2;
+		if (open == 1)
+		{
+			int fd = open_tcp_port(port);
+			if (fd < 0)
+				continue; /* port busy, try another */
+			g_server_data->tcp_sockets[i].fd = fd;
+		}
 		i++;
 	}
 	g_server_data->nb_open_sock_tcp = max_port_nb_tcp;
@@ -140,34 +148,36 @@ void init_servers(void *data)
 	for (int i = 0; i < max_port_nb_udp;)
 	{
 		int port = random_port();
-		int fd = open_udp_port(port);
-		if (fd < 0)
-			continue;
-		g_server_data->udp_sockets[i].fd = fd;
 		g_server_data->udp_sockets[i].port = port;
+		int open = rand() % 2;
+		if (open == 1)
+		{
+			int fd = open_udp_port(port);
+			if (fd < 0)
+				continue; /* port busy, try another */
+			g_server_data->udp_sockets[i].fd = fd;
+		}
 		i++;
 	}
 	g_server_data->nb_open_sock_udp = max_port_nb_udp;
-	/* Build the port-argument strings for nmap / ft_nmap */
-	build_port_arg(g_server_data->tcp_sockets, g_server_data->nb_open_sock_tcp,
-				   g_server_data->tcp_arg_port,
-				   sizeof(g_server_data->tcp_arg_port));
-	build_port_arg(g_server_data->udp_sockets, g_server_data->nb_open_sock_udp,
-				   g_server_data->udp_arg_port,
-				   sizeof(g_server_data->udp_arg_port));
+	/* Build the port-argument strings for nmap / ft_nmap which contains opened
+	 * ports */
 
-	printf("[setup] TCP ports : %s\n", g_server_data->tcp_arg_port);
-	printf("[setup] UDP ports : %s\n", g_server_data->udp_arg_port);
+	build_port_arg(g_server_data->tcp_sockets, g_server_data->nb_open_sock_tcp,
+				   &g_server_data->tcp_ports);
+	build_port_arg(g_server_data->udp_sockets, g_server_data->nb_open_sock_udp,
+				   &g_server_data->udp_ports);
+
+	printf("[setup] TCP ports : %s\n", g_server_data->tcp_ports);
+	printf("[setup] UDP ports : %s\n", g_server_data->udp_ports);
 }
 
-void close_servers(void *data)
+void close_servers()
 {
-	t_server *td = (t_server *)data;
-
-	for (int i = 0; i < td->nb_open_sock_tcp; i++)
-		close(td->tcp_sockets[i].fd);
-	for (int i = 0; i < td->nb_open_sock_udp; i++)
-		close(td->udp_sockets[i].fd);
+	for (int i = 0; i < g_server_data->nb_open_sock_tcp; i++)
+		close(g_server_data->tcp_sockets[i].fd);
+	for (int i = 0; i < g_server_data->nb_open_sock_udp; i++)
+		close(g_server_data->udp_sockets[i].fd);
 }
 
 /* ------------------------------------------------------------------ */
@@ -184,6 +194,6 @@ int main(const int argc, char **argv)
 
 	init_servers(NULL);
 	RUN_SUITE(scan_suite);
-
+	close_servers();
 	GREATEST_MAIN_END();
 }

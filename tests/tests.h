@@ -14,8 +14,8 @@ typedef struct s_server
 	t_socket tcp_sockets[MAX_PORT_NUMBER];
 	int		 nb_open_sock_udp;
 	int		 nb_open_sock_tcp;
-	char	 tcp_arg_port[65536];
-	char	 udp_arg_port[65536];
+	char	*tcp_ports;
+	char	*udp_ports;
 } t_server;
 
 #endif
