@@ -1,5 +1,6 @@
 #include "greatest.h"
 #include "tests.h"
+#include "typesdef.h"
 #include <errno.h>
 #include <regex.h>
 #include <stdint.h>
@@ -8,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "typesdef.h"
 extern char **environ;
 
 SUITE(scan_suite);
@@ -99,10 +99,9 @@ typedef struct s_port
 {
 	int			   port;
 	char		  *port_state;
-	char			*service;
+	char		  *service;
 	struct s_port *next;
 } t_port;
-
 
 static void free_port(t_port *port)
 {
@@ -160,7 +159,7 @@ static void get_port_list(char *ft_nmap_output, regex_t regex, t_port **head)
 static u16 get_port_list_size(t_port *head)
 {
 	t_port *tmp = head;
-	u16 i = 0;
+	u16		i = 0;
 	while (tmp)
 	{
 		i++;
@@ -198,7 +197,10 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	/* Match the following type of line:
 		1234/tcp closed hotline
 	*/
-	sprintf(re, "([0-9]+)/%s.*(closed|open|filtered|unfiltered) ([a-zA-Z]|[0-9]|-*)", protocol);
+	sprintf(
+		re,
+		"([0-9]+)/%s.*(closed|open|filtered|unfiltered) ([a-zA-Z]|[0-9]|-*)",
+		protocol);
 	if (regcomp(&regex, re, REG_NEWLINE | REG_EXTENDED))
 	{
 		exit(EXIT_FAILURE);
@@ -210,23 +212,18 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	u16 size_port_list_ft_nmap = get_port_list_size(port_list_ft_nmap);
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
 
-	printf("%d %d\n", size_port_list_ft_nmap, size_port_list_nmap);
-
 	ASSERT_EQ(size_port_list_ft_nmap, size_port_list_nmap);
 
-	fprintf(stderr, "--- ft_nmap ports ---\n");
-	for (t_port *p = port_list_ft_nmap; p; p = p->next)
-		fprintf(stderr, "port: %d, state: %s\n", p->port,
-				p->port_state);
+	// fprintf(stderr, "--- ft_nmap ports ---\n");
+	// for (t_port *p = port_list_ft_nmap; p; p = p->next)
+	// 	fprintf(stderr, "port: %d, state: %s\n", p->port, p->port_state);
 
-	fprintf(stderr, "--- nmap ports ---\n");
-	for (t_port *p = port_list_nmap; p; p = p->next)
-		fprintf(stderr, "port: %d, state: %s\n", p->port,
-				p->port_state);
+	// fprintf(stderr, "--- nmap ports ---\n");
+	// for (t_port *p = port_list_nmap; p; p = p->next)
+	// 	fprintf(stderr, "port: %d, state: %s\n", p->port, p->port_state);
 
 	t_port *tmp1 = port_list_nmap;
 	t_port *tmp2 = port_list_ft_nmap;
-
 
 	while (tmp1 && tmp2)
 	{
@@ -253,8 +250,8 @@ SUITE(scan_suite)
 	};
 	RUN_TESTp(compare, args, ft_nmap_args, "udp");
 
-	char *args2[] =  { "/usr/bin/nmap",   "127.0.0.1", "-p",
-					 g_server_data->tcp_ports, "-sS",		NULL };
+	char *args2[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
+					  g_server_data->tcp_ports, "-sS",		 NULL };
 	char *ft_nmap_args2[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "SYN",	 NULL

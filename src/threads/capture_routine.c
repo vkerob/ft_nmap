@@ -267,8 +267,9 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				const int index = tmp->target->port_list.port_map[tmp->port];
-				t_port	 *port
+				const int index
+					= tmp->target->port_list.port_map[PORT(tmp->port)];
+				t_port *port
 					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
 				{
