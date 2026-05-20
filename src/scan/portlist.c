@@ -76,7 +76,7 @@ bool link_port_list_to_each_target(t_ctx *ctx)
 		if (init_portlist(&ctx->targets[i].port_list, ctx->args.port_count,
 						  ctx->args.ports, ctx->args.scan_types,
 						  ctx->args.nb_scan_types, ctx->args.tcp_scan,
-						  ctx->args.udp_scan))
+						  ctx->args.udp_scan, &ctx->args.max_port_nb))
 		{
 			return true;
 		}
@@ -100,17 +100,13 @@ static void free_port_final_state(t_port_output **final_port_state,
 bool init_portlist(t_port_list *port_list, const u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
 				   const u8 nb_scan_type, const bool tcp_scan,
-				   const bool udp_scan)
+				   const bool udp_scan, u16 *max_port_nb)
 {
 	// If not scan specified run all of them
 	// if (!HAS(args->flags, F_SCAN_TYPE))
 
-	static u16 max_port_number;
 
-	if (!max_port_number)
-	{
-		max_port_number = get_max_port_number(ports);
-	}
+	*max_port_nb = get_max_port_number(ports);
 
 	if (tcp_scan)
 	{
@@ -146,20 +142,22 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 			port_list->port_final_state[UDP_INDEX][i].reasons[0] = NULL;
 			port_list->port_final_state[UDP_INDEX][i].reasons[1] = NULL;
 		}
-
 		port_list->state_and_reason[UDP_INDEX] = NULL;
 	}
-	port_list->port_map = calloc(max_port_number + 1, sizeof(u16));
+	// User can't scan port below PORT_MIN so the actual range of port map is  [1024 ; maximum port number entered]
+	port_list->port_map = malloc((*max_port_nb + 1- MIN_SRC_PORT_NUMBER) * sizeof(int));
 	if (port_list->port_map == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
 		return true;
 	}
+	// printf("%ld\n", *max_port_nb - MIN_SRC_PORT_NUMBER)
+	memset(port_list->port_map, -1, (*max_port_nb - MIN_SRC_PORT_NUMBER + 1) * sizeof(int));
 
 	for (u16 j = 0; j < port_count; j++)
 	{
-		port_list->port_map[ports[j]] = j;
+		port_list->port_map[PORT(ports[j])] = j;
 		if (udp_scan)
 		{
 			port_list->port_final_state[UDP_INDEX][j].port_number = ports[j];

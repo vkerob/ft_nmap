@@ -10,6 +10,8 @@
 #include <pcap/pcap.h>
 #include <stdbool.h>
 
+#define PORT(port)( port - MIN_SRC_PORT_NUMBER)
+
 typedef enum e_port_state
 {
 	DEFAULT,
@@ -63,7 +65,7 @@ typedef struct s_port_list
 {
 	/* Store the index of the port inside port_map_rev array and
 	 * port_final_state array or 0 if the port is not scanned */
-	u16 *port_map;
+	int *port_map;
 
 	/* Store the state of each port for each type of scan,
 		So if all scans types are run, this will store 6 differents state for a
@@ -134,7 +136,7 @@ typedef struct s_ctx
 
 bool init_portlist(t_port_list *port_list, u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
-				   u8 nb_scan_type, bool tcp_scan, bool udp_scan);
+				   u8 nb_scan_type, bool tcp_scan, bool udp_scan, u16 *max_port_nb);
 
 bool link_port_list_to_each_target(t_ctx *ctx);
 

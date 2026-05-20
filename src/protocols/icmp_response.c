@@ -32,7 +32,7 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 		sync_printf("Probe not found\n");
 		return;
 	}
-	const int idx = probe->target->port_list.port_map[source_port];
+	const int idx = probe->target->port_list.port_map[PORT(source_port)];
 	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];
 	for (u8 i = 0; i < ICMP_ERROR_HIGHEST_IDX; i++)
 	{

@@ -1,7 +1,8 @@
 #ifndef TESTS_H
 #define TESTS_H
 
-#define MAX_PORT_NUMBER 1024
+#define MAX_NUMBER_PORT_TO_SCAN 25
+
 typedef struct s_socket
 {
 	int fd;
@@ -10,8 +11,8 @@ typedef struct s_socket
 
 typedef struct s_server
 {
-	t_socket udp_sockets[MAX_PORT_NUMBER];
-	t_socket tcp_sockets[MAX_PORT_NUMBER];
+	t_socket udp_sockets[MAX_NUMBER_PORT_TO_SCAN];
+	t_socket tcp_sockets[MAX_NUMBER_PORT_TO_SCAN];
 	int		 nb_open_sock_udp;
 	int		 nb_open_sock_tcp;
 	char	*tcp_ports;
