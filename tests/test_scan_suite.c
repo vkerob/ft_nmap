@@ -9,6 +9,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+// Size of data type use to represent one unit of text
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+
 extern char **environ;
 
 SUITE(scan_suite);
@@ -114,45 +119,67 @@ static void free_port(t_port *port)
 #define PORT_STATE_MATCH 2
 #define PORT_SERVICE_MATCH 3
 
-static void get_port_list(char *ft_nmap_output, regex_t regex, t_port **head)
+static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head)
 {
-	char	  *ptr = ft_nmap_output;
 	t_port	  *tmp = NULL;
-	regmatch_t pmatch[4];
 
-	for (unsigned int i = 0;; i++)
+	char *ptr = ft_nmap_output;
+
+	/* Match the pattern against the subject text. */
+
+	while(1)
 	{
-		if (regexec(&regex, ptr, 4, pmatch, 0))
-			break;
+		pcre2_match_data *match_data =
+		pcre2_match_data_create_from_pattern(regex, NULL);
+		int  rc = pcre2_match(
+			regex,
+			(unsigned char *)ptr,
+			strlen(ptr),
+			0,
+			0,
+			match_data,
+			NULL);
+		if (rc == PCRE2_ERROR_NOMATCH) {
+			printf("No match\n");
+			break ;
+		} else if (rc < 0) {
+			fprintf(stderr, "Matching error\n");
+			break ;
+		} else {
+			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
 
-		char *port_nbr_str = substr(ptr, pmatch[1].rm_so, pmatch[1].rm_eo);
-		char *state_str = substr(ptr, pmatch[2].rm_so, pmatch[2].rm_eo);
-		char *service_str = substr(ptr, pmatch[3].rm_so, pmatch[3].rm_eo);
+			// printf("Found match: '%.*s'\n", (int)(ovector[1] - ovector[0]),
+			// 			ptr + ovector[0]);
+			char *port_nbr_str = substr(ptr, ovector[2], ovector[3]);
+			char *state_str = substr(ptr, ovector[4], ovector[5]);
+			char *service_str = substr(ptr, ovector[6], ovector[7]);
+			// fprintf(stderr, "|%s %s %s|\n", port_nbr_str, state_str, service_str);
 
-		int		port = atoi(port_nbr_str);
-		t_port *new = calloc(1, sizeof(t_port));
-		if (new == NULL)
-		{
-			fprintf(stderr, "%s\n", strerror(errno));
-			exit(EXIT_FAILURE);
-		}
-		// ASSERT(new != NULL);
+			int		port = atoi(port_nbr_str);
+			t_port *new = calloc(1, sizeof(t_port));
+			if (new == NULL)
+			{
+				fprintf(stderr, "%s\n", strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+				// ASSERT(new != NULL);
 
-		new->port_state = state_str;
-		new->port = port;
-		new->service = service_str;
-		if (*head)
-		{
-			tmp->next = new;
-			tmp = new;
+				new->port_state = state_str;
+				new->port = port;
+				new->service = service_str;
+				if (*head)
+				{
+					tmp->next = new;
+					tmp = new;
+				}
+				else
+				{
+					*head = new;
+					tmp = *head;
+				}
+				ptr += ovector[1];
 		}
-		else
-		{
-			*head = new;
-			tmp = *head;
-		}
-		ptr += pmatch[3].rm_eo;
-		memset(pmatch, 0, sizeof(pmatch));
+		pcre2_match_data_free(match_data);   /* Free resources */
 	}
 }
 
@@ -181,33 +208,51 @@ static void free_port_list(t_port *head)
 	}
 }
 
+#define OVECCOUNT 30    /* should be a multiple of 3 */
+
+
 TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 {
-	regex_t regex;
+	// regex_t regex;
 	t_port *port_list_nmap = NULL;
 	t_port *port_list_ft_nmap = NULL;
+// int ovector[OVECCOUNT];
 
 	char *ft_nmap_output = NULL;
 	char *nmap_output = NULL;
 
 	run_command(args_ft_nmap, &ft_nmap_output);
 	run_command(args_nmap, &nmap_output);
-	char re[512] = { 0 };
+	char pattern[512] = { 0 };
 
 	/* Match the following type of line:
 		1234/tcp closed hotline
 	*/
-	sprintf(
-		re,
-		"([0-9]+)/%s.*(closed|open|filtered|unfiltered) ([a-zA-Z]|[0-9]|-*)",
-		protocol);
-	if (regcomp(&regex, re, REG_NEWLINE | REG_EXTENDED))
+	// sprintf( re,
+	// 	"([0-9]+)/%s.*\\(closed|open|filtered|unfiltered\\) \\((?:[a-zA-Z]|[0-9]|-)*\\)",
+	// 	protocol);
+	
+	sprintf(pattern,
+		"([0-9]+)/%s.*(closed|open|filtered|unfiltered)([a-zA-Z0-9-^ ]*)",
+		protocol);  // substitute your actual value here
+	int error_number;
+	PCRE2_SIZE error_offset;
+	pcre2_code *re = pcre2_compile(
+		(unsigned char *)pattern,               /* the pattern */
+		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
+		0,                     /* default options */
+		&error_number,         /* for error number */
+		&error_offset,         /* for error offset */
+		NULL);   
+	if (re == NULL)
 	{
+		fprintf(stderr, "Invalid pattern: %s\n", pattern);
 		exit(EXIT_FAILURE);
 	}
+	get_port_list(ft_nmap_output, re, &port_list_ft_nmap);
+	get_port_list(nmap_output, re, &port_list_nmap);
+	pcre2_code_free(re);
 
-	get_port_list(ft_nmap_output, regex, &port_list_ft_nmap);
-	get_port_list(nmap_output, regex, &port_list_nmap);
 
 	u16 size_port_list_ft_nmap = get_port_list_size(port_list_ft_nmap);
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
@@ -229,6 +274,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	{
 		ASSERT_EQ(tmp1->port, tmp2->port);
 		ASSERT_STR_EQ(tmp1->port_state, tmp2->port_state);
+		ASSERT_STR_EQ(tmp1->service, tmp2->service);
 
 		tmp1 = tmp1->next;
 		tmp2 = tmp2->next;
