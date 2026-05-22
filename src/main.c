@@ -37,6 +37,7 @@ static void print_usage()
 	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
+	printf(" --verbose: No port states are ignored\n");
 	printf("\nHELP: \n");
 	printf(" --reason: Show the reason why the port is in that state\n");
 	printf(" --help: Display this menu\n");

@@ -10,6 +10,7 @@
 #define SPEED 1005
 #define PACKET_TRACE 1006
 #define REASON 1007
+#define VERBOSE 1008
 #define MIN_PORT_NUMBER 1
 #define SCAN_INVALID 255
 /* Maximum number of threads our program can run (option set with --speed)*/

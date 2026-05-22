@@ -383,6 +383,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "speedup", required_argument, 0, SPEED },
 		{ "packet-trace", no_argument, 0, PACKET_TRACE },
 		{ "reason", no_argument, 0, REASON },
+		{ "verbose", no_argument, 0, VERBOSE},
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -437,6 +438,10 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 		case REASON:
 			SET(args->flags, F_REASON);
+			break;
+
+		case VERBOSE:
+			SET(args->flags, F_VERBOSE);
 			break;
 
 		case '?':

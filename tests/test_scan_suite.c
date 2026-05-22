@@ -124,6 +124,7 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 	char *ptr = subject;
 	int rc;
 
+	// printf("[OUTPUT] %s\n", subject);
 	/* Match the pattern against the subject text. */
 	while(1)
 	{
@@ -137,12 +138,17 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 			0,
 			match_data,
 			NULL);
-		if (rc == PCRE2_ERROR_NOMATCH) {
+		if (rc == PCRE2_ERROR_NOMATCH)
+		{
 			break ;
-		} else if (rc < 0) {
+		}
+		else if (rc < 0)
+		{
 			fprintf(stderr, "Matching error\n");
 			break ;
-		} else {
+		}
+		else
+		{
 			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
 			if (ovector == NULL)
 			{
@@ -285,20 +291,21 @@ fail:
 	FAIL();
 }
 
+
 SUITE(scan_suite)
 {
-	/* UDP SCAN */
+	 /* UDP SCAN */
 	char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
-					 g_server_data->udp_ports, "-sU",		NULL };
+					 g_server_data->udp_ports, "-sU",		"-v", NULL };
 	char *ft_nmap_args[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
-		"--scan",	 "UDP",	 NULL
+		"--scan",	 "UDP",	 "--verbose", NULL
 	};
 	RUN_TESTp(compare, args, ft_nmap_args);
 
 	/* SYN SCAN */
 	char *args2[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sS",		 NULL };
+					  g_server_data->tcp_ports, "-sS",	"-v",	 NULL };
 	char *ft_nmap_args2[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "SYN",	 NULL
@@ -307,7 +314,7 @@ SUITE(scan_suite)
 
 	/* ACK SCAN */
 	char *args3[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sA",		 NULL };
+					  g_server_data->tcp_ports, "-sA",	"-v",	 NULL };
 	char *ft_nmap_args3[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "ACK",	 NULL
@@ -316,7 +323,7 @@ SUITE(scan_suite)
 
 	/* FIN SCAN */
 	char *args4[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sF",		 NULL };
+					  g_server_data->tcp_ports, "-sF", "-v",	 NULL };
 	char *ft_nmap_args4[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "FIN",	 NULL
@@ -325,7 +332,7 @@ SUITE(scan_suite)
 
 	/* XMAS SCAN */
 	char *args5[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sX",		 NULL };
+					  g_server_data->tcp_ports, "-sX",	"-v",	 NULL };
 	char *ft_nmap_args5[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "FIN",	 NULL
@@ -334,7 +341,7 @@ SUITE(scan_suite)
 
 	/* NULL SCAN */
 	char *args6[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sN",		 NULL };
+					  g_server_data->tcp_ports, "-sN",	"-v",	 NULL };
 	char *ft_nmap_args6[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "NULL",	 NULL

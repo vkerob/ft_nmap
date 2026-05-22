@@ -194,7 +194,7 @@ int main(const int argc, char **argv)
 {
 	GREATEST_MAIN_BEGIN();
 
-	// RUN_SUITE(parsing_suite);
+	RUN_SUITE(parsing_suite);
 
 	// Doesn't seem to works when i call this function using setup and teardown greatest.h hooks
 	init_servers(NULL);
