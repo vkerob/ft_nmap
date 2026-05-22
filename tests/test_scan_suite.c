@@ -213,11 +213,13 @@ static void free_port_list(t_port *head)
 
 TEST compare(char **args_nmap, char **args_ft_nmap)
 {
+	char pattern[512] = { 0 };
 	t_port *port_list_nmap = NULL;
 	t_port *port_list_ft_nmap = NULL;
-
 	char *ft_nmap_output = NULL;
 	char *nmap_output = NULL;
+	int error_number;
+	PCRE2_SIZE error_offset;
 
 	run_command(args_ft_nmap, &ft_nmap_output);
 	run_command(args_nmap, &nmap_output);
@@ -226,15 +228,13 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	{
 		goto fail;
 	}
-	char pattern[512] = { 0 };
 
 	/* Match the following type of line:
 		1234/tcp closed hotline
 	*/
 	sprintf(pattern,
 		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");  // substitute your actual value here
-	int error_number;
-	PCRE2_SIZE error_offset;
+
 	pcre2_code *re = pcre2_compile(
 		(unsigned char *)pattern,               /* the pattern */
 		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
@@ -242,6 +242,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 		&error_number,         /* for error number */
 		&error_offset,         /* for error offset */
 		NULL);   
+
 	if (re == NULL)
 	{
 		fprintf(stderr, "Invalid pattern: %s\n", pattern);
@@ -257,6 +258,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
 
 	ASSERT_EQ(size_port_list_ft_nmap, size_port_list_nmap);
+
 	t_port *tmp1 = port_list_nmap;
 	t_port *tmp2 = port_list_ft_nmap;
 
