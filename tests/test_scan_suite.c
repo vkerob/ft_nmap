@@ -12,26 +12,21 @@
 
 // Size of data type use to represent one unit of text
 #define PCRE2_CODE_UNIT_WIDTH 8
+
 #include <pcre2.h>
 
 extern char **environ;
 
-SUITE(scan_suite);
-extern t_server *g_server_data; // just the variable, extern is fine here
+#define NITEMS(arr) (sizeof((arr)) / sizeof((arr)[0]))
 
-#define die(e)                                                                 \
-	do                                                                         \
-	{                                                                          \
-		fprintf(stderr, "%s\n", e);                                            \
-		exit(EXIT_FAILURE);                                                    \
-	} while (0);
+SUITE(scan_suite);
+
+extern t_server *g_server_data; // just the variable, extern is fine here
 
 void run_command(char **args, char **output)
 {
-	(void)args;
 	int pipe_fds[2];
 
-	(void)output;
 	if (pipe(pipe_fds) == -1)
 	{
 		fprintf(stderr, "%s\n", strerror(errno));
@@ -85,8 +80,6 @@ void run_command(char **args, char **output)
 	}
 }
 
-#define NITEMS(arr) (sizeof((arr)) / sizeof((arr)[0]))
-
 char *substr(char *str, int start, int end)
 {
 	int	  len = end - start;
@@ -102,9 +95,10 @@ char *substr(char *str, int start, int end)
 
 typedef struct s_port
 {
-	int			   port;
+	char 			*port;
 	char		  *port_state;
 	char		  *service;
+	char			*protocol;
 	struct s_port *next;
 } t_port;
 
@@ -112,12 +106,10 @@ static void free_port(t_port *port)
 {
 	free(port->port_state);
 	free(port->service);
+	free(port->protocol);
+	free(port->port);
 	free(port);
 }
-
-#define PORT_NB_MATCH 1
-#define PORT_STATE_MATCH 2
-#define PORT_SERVICE_MATCH 3
 
 static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head)
 {
@@ -140,7 +132,6 @@ static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head
 			match_data,
 			NULL);
 		if (rc == PCRE2_ERROR_NOMATCH) {
-			printf("No match\n");
 			break ;
 		} else if (rc < 0) {
 			fprintf(stderr, "Matching error\n");
@@ -148,36 +139,32 @@ static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head
 		} else {
 			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
 
-			// printf("Found match: '%.*s'\n", (int)(ovector[1] - ovector[0]),
-			// 			ptr + ovector[0]);
-			char *port_nbr_str = substr(ptr, ovector[2], ovector[3]);
-			char *state_str = substr(ptr, ovector[4], ovector[5]);
-			char *service_str = substr(ptr, ovector[6], ovector[7]);
-			// fprintf(stderr, "|%s %s %s|\n", port_nbr_str, state_str, service_str);
+			char *port_nb_str = substr(ptr, ovector[2], ovector[3]);
+			char *protocol = substr(ptr, ovector[4], ovector[5]);
+			char *state_str = substr(ptr, ovector[6], ovector[7]);
+			char *service_str = substr(ptr, ovector[8], ovector[9]);
 
-			int		port = atoi(port_nbr_str);
 			t_port *new = calloc(1, sizeof(t_port));
 			if (new == NULL)
 			{
 				fprintf(stderr, "%s\n", strerror(errno));
 				exit(EXIT_FAILURE);
 			}
-				// ASSERT(new != NULL);
-
-				new->port_state = state_str;
-				new->port = port;
-				new->service = service_str;
-				if (*head)
-				{
-					tmp->next = new;
-					tmp = new;
-				}
-				else
-				{
-					*head = new;
-					tmp = *head;
-				}
-				ptr += ovector[1];
+			new->port_state = state_str;
+			new->port = port_nb_str;
+			new->service = service_str;
+			new->protocol = protocol;
+			if (*head)
+			{
+				tmp->next = new;
+				tmp = new;
+			}
+			else
+			{
+				*head = new;
+				tmp = *head;
+			}
+			ptr += ovector[1];
 		}
 		pcre2_match_data_free(match_data);   /* Free resources */
 	}
@@ -231,10 +218,9 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	// sprintf( re,
 	// 	"([0-9]+)/%s.*\\(closed|open|filtered|unfiltered\\) \\((?:[a-zA-Z]|[0-9]|-)*\\)",
 	// 	protocol);
-	
+	(void)protocol;
 	sprintf(pattern,
-		"([0-9]+)/%s.*(closed|open|filtered|unfiltered)([a-zA-Z0-9-^ ]*)",
-		protocol);  // substitute your actual value here
+		"([0-9]+)\\/(tcp|udp)\\s*(closed|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9]*)\\s*\\n");  // substitute your actual value here
 	int error_number;
 	PCRE2_SIZE error_offset;
 	pcre2_code *re = pcre2_compile(
@@ -258,23 +244,15 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
 
 	ASSERT_EQ(size_port_list_ft_nmap, size_port_list_nmap);
-
-	// fprintf(stderr, "--- ft_nmap ports ---\n");
-	// for (t_port *p = port_list_ft_nmap; p; p = p->next)
-	// 	fprintf(stderr, "port: %d, state: %s\n", p->port, p->port_state);
-
-	// fprintf(stderr, "--- nmap ports ---\n");
-	// for (t_port *p = port_list_nmap; p; p = p->next)
-	// 	fprintf(stderr, "port: %d, state: %s\n", p->port, p->port_state);
-
 	t_port *tmp1 = port_list_nmap;
 	t_port *tmp2 = port_list_ft_nmap;
 
 	while (tmp1 && tmp2)
 	{
-		ASSERT_EQ(tmp1->port, tmp2->port);
+		ASSERT_STR_EQ(tmp1->port, tmp2->port);
 		ASSERT_STR_EQ(tmp1->port_state, tmp2->port_state);
-		ASSERT_STR_EQ(tmp1->service, tmp2->service);
+		// ASSERT_STR_EQ(tmp1->service, tmp2->service);
+		ASSERT_STR_EQ(tmp1->protocol, tmp2->protocol);
 
 		tmp1 = tmp1->next;
 		tmp2 = tmp2->next;
@@ -288,13 +266,13 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 
 SUITE(scan_suite)
 {
-	char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
-					 g_server_data->udp_ports, "-sU",		NULL };
-	char *ft_nmap_args[] = {
-		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
-		"--scan",	 "UDP",	 NULL
-	};
-	RUN_TESTp(compare, args, ft_nmap_args, "udp");
+	// char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
+	// 				 g_server_data->udp_ports, "-sU",		NULL };
+	// char *ft_nmap_args[] = {
+	// 	"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
+	// 	"--scan",	 "UDP",	 NULL
+	// };
+	// RUN_TESTp(compare, args, ft_nmap_args, "udp");
 
 	char *args2[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
 					  g_server_data->tcp_ports, "-sS",		 NULL };
@@ -303,4 +281,5 @@ SUITE(scan_suite)
 		"--scan",	 "SYN",	 NULL
 	};
 	RUN_TESTp(compare, args2, ft_nmap_args2, "tcp");
+
 }

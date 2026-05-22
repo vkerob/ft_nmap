@@ -36,24 +36,24 @@ char *port_state_to_str(t_port_state state)
 	}
 }
 
-const char *port_state_color(t_port_state state)
-{
-	switch (state)
-	{
-	case OPEN:
-		return ANSI_COLOR_GREEN;
-	case FILTERED:
-		return ANSI_COLOR_YELLOW;
-	case OPEN_FILTERED:
-		return ANSI_COLOR_YELLOW;
-	case UNFILTERED:
-		return ANSI_COLOR_CYAN;
-	case CLOSE:
-		return ANSI_COLOR_RED;
-	default:
-		return ANSI_COLOR_RESET;
-	}
-}
+// const char *port_state_color(t_port_state state)
+// {
+// 	switch (state)
+// 	{
+// 	case OPEN:
+// 		return ANSI_COLOR_GREEN;
+// 	case FILTERED:
+// 		return ANSI_COLOR_YELLOW;
+// 	case OPEN_FILTERED:
+// 		return ANSI_COLOR_YELLOW;
+// 	case UNFILTERED:
+// 		return ANSI_COLOR_CYAN;
+// 	case CLOSE:
+// 		return ANSI_COLOR_RED;
+// 	default:
+// 		return ANSI_COLOR_RESET;
+// 	}
+// }
 
 const char *get_service_name(u16 port)
 {
@@ -784,7 +784,7 @@ static void print_port_states(t_target *target, t_args *args,
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 
 			const char *svc = get_service_name(port);
-			const char *color = port_state_color(final_port_state.port_state);
+			// const char *color = port_state_color(final_port_state.port_state);
 			const char *state = port_state_to_str(final_port_state.port_state);
 
 			size_t recap_udp_len = strlen(recap_udp);
@@ -793,18 +793,18 @@ static void print_port_states(t_target *target, t_args *args,
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_UDP);
-				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len,
-						 "%-*s %s%-*s%s %-*s %s\n", col_port, port_str, color,
-						 col_state, state, ANSI_COLOR_RESET, col_svc, svc,
-						 results_buf);
+snprintf(recap_udp + recap_udp_len,
+         sizeof(recap_udp) - recap_udp_len,
+         "%-*s %-*s %-*s %s\n", col_port, port_str,
+         col_state, state, col_svc, svc,
+         results_buf);
 			}
 			else
 			{
-				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len,
-						 "%-*s %s%-*s%s %-*s", col_port, port_str, color,
-						 col_state, state, ANSI_COLOR_RESET, col_svc, svc);
+snprintf(recap_udp + recap_udp_len,
+         sizeof(recap_udp) - recap_udp_len,
+         "%-*s %-*s %-*s", col_port, port_str,
+         col_state, state, col_svc, svc);
 				recap_udp_len = strlen(recap_udp);
 				if (HAS(args->flags, F_REASON))
 				{
@@ -829,8 +829,8 @@ static void print_port_states(t_target *target, t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/tcp", port);
 			const char *svc = get_service_name(port);
-			const char *color = port_state_color(
-				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
+			// const char *color = port_state_color(
+			// 	target->port_list.port_final_state[TCP_INDEX][idx].port_state);
 			const char *state = port_state_to_str(
 				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
 			size_t recap_tcp_len = strlen(recap_tcp);
@@ -839,18 +839,18 @@ static void print_port_states(t_target *target, t_args *args,
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
-				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %s%-*s%s %-*s %s\n", col_port, port_str, color,
-						 col_state, state, ANSI_COLOR_RESET, col_svc, svc,
-						 results_buf);
+snprintf(recap_tcp + recap_tcp_len,
+         sizeof(recap_tcp) - recap_tcp_len,
+         "%-*s %-*s %-*s %s\n", col_port, port_str,
+         col_state, state, col_svc, svc,
+         results_buf);
 			}
 			else
 			{
-				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %s%-*s%s %-*s", col_port, port_str, color,
-						 col_state, state, ANSI_COLOR_RESET, col_svc, svc);
+snprintf(recap_tcp + recap_tcp_len,
+         sizeof(recap_tcp) - recap_tcp_len,
+         "%-*s %-*s %-*s", col_port, port_str,
+         col_state, state, col_svc, svc);
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
