@@ -36,25 +36,6 @@ char *port_state_to_str(t_port_state state)
 	}
 }
 
-// const char *port_state_color(t_port_state state)
-// {
-// 	switch (state)
-// 	{
-// 	case OPEN:
-// 		return ANSI_COLOR_GREEN;
-// 	case FILTERED:
-// 		return ANSI_COLOR_YELLOW;
-// 	case OPEN_FILTERED:
-// 		return ANSI_COLOR_YELLOW;
-// 	case UNFILTERED:
-// 		return ANSI_COLOR_CYAN;
-// 	case CLOSE:
-// 		return ANSI_COLOR_RED;
-// 	default:
-// 		return ANSI_COLOR_RESET;
-// 	}
-// }
-
 const char *get_service_name(u16 port)
 {
 	const struct servent *svc = getservbyport(htons(port), "tcp");
@@ -81,7 +62,6 @@ static void update_port_reasons(t_port_output *port_conclusion,
 	}
 	else
 	{
-		// printf("%s\n", port_state_to_str(port->port_state));
 		assert(port->reasons[0] != NULL);
 		assert(port->reasons[1] == NULL);
 		port_conclusion->reasons[0] = port->reasons[0];
@@ -101,10 +81,6 @@ static void
 update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 										const t_port  *port)
 {
-	// fprintf(stderr, "port conclusion: %s\n",
-	// 		port_state_to_str(port->port_state));
-	// fprintf(stderr, "port state: %s\n",
-	// 		port_state_to_str(port_conclusion->port_state));
 	if (port_conclusion->port_state == UNKNOWN)
 	{
 		return;

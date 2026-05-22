@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 // Size of data type use to represent one unit of text
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -21,25 +22,20 @@ extern char **environ;
 
 SUITE(scan_suite);
 
-extern t_server *g_server_data; // just the variable, extern is fine here
+extern t_server *g_server_data; 
 
 void run_command(char **args, char **output)
 {
 	int pipe_fds[2];
+	pid_t	pid;
 
 	if (pipe(pipe_fds) == -1)
 	{
 		fprintf(stderr, "%s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	printf("Executing following commands: \n");
-	for (int i = 0; args[i]; i++)
-	{
-		printf("%s ", args[i]);
-	}
-	printf("\n");
-	pid_t pid = fork();
 
+	pid = fork();
 	if (pid == 0)
 	{
 		dup2(pipe_fds[1], STDOUT_FILENO);
@@ -60,6 +56,15 @@ void run_command(char **args, char **output)
 
 		while (0 != (nbytes = read(pipe_fds[0], buf, sizeof(buf))))
 		{
+			if (nbytes < 0)
+			{
+					if (errno == EINTR)
+					{
+						continue;
+					}
+					perror("read");
+					break;
+			}
 			if (*output == NULL)
 			{
 				*output = strndup(buf, nbytes);
@@ -80,50 +85,51 @@ void run_command(char **args, char **output)
 	}
 }
 
-char *substr(char *str, int start, int end)
+
+bool substr(char *str, int start, int end, char **ptr)
 {
 	int	  len = end - start;
-	char *new = calloc(len, sizeof(char));
-	if (new == NULL)
+
+	*ptr = calloc(len + 1, sizeof(char));
+	if (*ptr == NULL)
 	{
 		fprintf(stderr, "%s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+		return true;
 	}
-	strncpy(new, str + start, len);
-	return new;
+	strncpy(*ptr, str + start, len);
+	return false;
 }
 
-typedef struct s_port
+void better_free(void *ptr)
 {
-	char 			*port;
-	char		  *port_state;
-	char		  *service;
-	char			*protocol;
-	struct s_port *next;
-} t_port;
+	if (ptr)
+	{
+		free(ptr);
+	}
+}
 
 static void free_port(t_port *port)
 {
-	free(port->port_state);
-	free(port->service);
-	free(port->protocol);
-	free(port->port);
-	free(port);
+	better_free(port->port_state);
+	better_free(port->service);
+	better_free(port->protocol);
+	better_free(port->port);
+	better_free(port);
 }
 
-static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head)
+
+static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 {
 	t_port	  *tmp = NULL;
-
-	char *ptr = ft_nmap_output;
+	char *ptr = subject;
+	int rc;
 
 	/* Match the pattern against the subject text. */
-
 	while(1)
 	{
 		pcre2_match_data *match_data =
 		pcre2_match_data_create_from_pattern(regex, NULL);
-		int  rc = pcre2_match(
+		rc = pcre2_match(
 			regex,
 			(unsigned char *)ptr,
 			strlen(ptr),
@@ -138,22 +144,20 @@ static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head
 			break ;
 		} else {
 			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
-
-			char *port_nb_str = substr(ptr, ovector[2], ovector[3]);
-			char *protocol = substr(ptr, ovector[4], ovector[5]);
-			char *state_str = substr(ptr, ovector[6], ovector[7]);
-			char *service_str = substr(ptr, ovector[8], ovector[9]);
+			if (ovector == NULL)
+			{
+				fprintf(stderr, "%s\n", strerror(errno));
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
+			}
 
 			t_port *new = calloc(1, sizeof(t_port));
 			if (new == NULL)
 			{
 				fprintf(stderr, "%s\n", strerror(errno));
-				exit(EXIT_FAILURE);
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
 			}
-			new->port_state = state_str;
-			new->port = port_nb_str;
-			new->service = service_str;
-			new->protocol = protocol;
 			if (*head)
 			{
 				tmp->next = new;
@@ -164,16 +168,27 @@ static void get_port_list(char *ft_nmap_output, pcre2_code *regex, t_port **head
 				*head = new;
 				tmp = *head;
 			}
+
+			if (substr(ptr, ovector[2], ovector[3], &new->port) ||
+				substr(ptr, ovector[4], ovector[5], &new->protocol) ||
+				substr(ptr, ovector[6], ovector[7], &new->port_state) || 
+				substr(ptr, ovector[8], ovector[9], &new->service))
+			{
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
+			}
 			ptr += ovector[1];
 		}
 		pcre2_match_data_free(match_data);   /* Free resources */
 	}
+	return false;
 }
 
 static u16 get_port_list_size(t_port *head)
 {
 	t_port *tmp = head;
 	u16		i = 0;
+
 	while (tmp)
 	{
 		i++;
@@ -195,32 +210,29 @@ static void free_port_list(t_port *head)
 	}
 }
 
-#define OVECCOUNT 30    /* should be a multiple of 3 */
 
-
-TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
+TEST compare(char **args_nmap, char **args_ft_nmap)
 {
-	// regex_t regex;
 	t_port *port_list_nmap = NULL;
 	t_port *port_list_ft_nmap = NULL;
-// int ovector[OVECCOUNT];
 
 	char *ft_nmap_output = NULL;
 	char *nmap_output = NULL;
 
 	run_command(args_ft_nmap, &ft_nmap_output);
 	run_command(args_nmap, &nmap_output);
+
+	if (ft_nmap_output == NULL || nmap_output == NULL)
+	{
+		goto fail;
+	}
 	char pattern[512] = { 0 };
 
 	/* Match the following type of line:
 		1234/tcp closed hotline
 	*/
-	// sprintf( re,
-	// 	"([0-9]+)/%s.*\\(closed|open|filtered|unfiltered\\) \\((?:[a-zA-Z]|[0-9]|-)*\\)",
-	// 	protocol);
-	(void)protocol;
 	sprintf(pattern,
-		"([0-9]+)\\/(tcp|udp)\\s*(closed|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9]*)\\s*\\n");  // substitute your actual value here
+		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");  // substitute your actual value here
 	int error_number;
 	PCRE2_SIZE error_offset;
 	pcre2_code *re = pcre2_compile(
@@ -233,12 +245,13 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	if (re == NULL)
 	{
 		fprintf(stderr, "Invalid pattern: %s\n", pattern);
-		exit(EXIT_FAILURE);
+		goto fail;
 	}
-	get_port_list(ft_nmap_output, re, &port_list_ft_nmap);
-	get_port_list(nmap_output, re, &port_list_nmap);
+	if (get_port_list(ft_nmap_output, re, &port_list_ft_nmap) || get_port_list(nmap_output, re, &port_list_nmap))
+	{
+		goto fail;
+	}
 	pcre2_code_free(re);
-
 
 	u16 size_port_list_ft_nmap = get_port_list_size(port_list_ft_nmap);
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
@@ -262,24 +275,67 @@ TEST compare(char **args_nmap, char **args_ft_nmap, const char *protocol)
 	free_port_list(port_list_ft_nmap);
 
 	PASS();
+
+fail:
+	free_port_list(port_list_nmap);
+	free_port_list(port_list_ft_nmap);
+	pcre2_code_free(re);
+	FAIL();
 }
 
 SUITE(scan_suite)
 {
-	// char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
-	// 				 g_server_data->udp_ports, "-sU",		NULL };
-	// char *ft_nmap_args[] = {
-	// 	"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
-	// 	"--scan",	 "UDP",	 NULL
-	// };
-	// RUN_TESTp(compare, args, ft_nmap_args, "udp");
+	/* UDP SCAN */
+	char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
+					 g_server_data->udp_ports, "-sU",		NULL };
+	char *ft_nmap_args[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
+		"--scan",	 "UDP",	 NULL
+	};
+	RUN_TESTp(compare, args, ft_nmap_args);
 
+	/* SYN SCAN */
 	char *args2[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
 					  g_server_data->tcp_ports, "-sS",		 NULL };
 	char *ft_nmap_args2[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "SYN",	 NULL
 	};
-	RUN_TESTp(compare, args2, ft_nmap_args2, "tcp");
+	RUN_TESTp(compare, args2, ft_nmap_args2);
 
+	/* ACK SCAN */
+	char *args3[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
+					  g_server_data->tcp_ports, "-sA",		 NULL };
+	char *ft_nmap_args3[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "ACK",	 NULL
+	};
+	RUN_TESTp(compare, args3, ft_nmap_args3);
+
+	/* FIN SCAN */
+	char *args4[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
+					  g_server_data->tcp_ports, "-sF",		 NULL };
+	char *ft_nmap_args4[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "FIN",	 NULL
+	};
+	RUN_TESTp(compare, args4, ft_nmap_args4);
+
+	/* XMAS SCAN */
+	char *args5[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
+					  g_server_data->tcp_ports, "-sX",		 NULL };
+	char *ft_nmap_args5[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "FIN",	 NULL
+	};
+	RUN_TESTp(compare, args5, ft_nmap_args5);
+
+	/* NULL SCAN */
+	char *args6[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
+					  g_server_data->tcp_ports, "-sN",		 NULL };
+	char *ft_nmap_args6[] = {
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "NULL",	 NULL
+	};
+	RUN_TESTp(compare, args6, ft_nmap_args6);
 }

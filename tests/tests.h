@@ -19,4 +19,13 @@ typedef struct s_server
 	char	*udp_ports;
 } t_server;
 
+typedef struct s_port
+{
+	char 			*port;
+	char		  *port_state;
+	char		  *service;
+	char			*protocol;
+	struct s_port *next;
+} t_port;
+
 #endif

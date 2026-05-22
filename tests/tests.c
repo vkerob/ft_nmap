@@ -119,9 +119,6 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 static void init_servers()
 {
 	g_server_data = calloc(1, sizeof(t_server));
-	// ASSERT(g_server_data != NULL);
-	// t_server *server = (t_server *)data;
-	// memset(server, 0, sizeof(*server));
 
 	srand((unsigned)time(NULL) ^ (unsigned)getpid());
 
@@ -129,7 +126,6 @@ static void init_servers()
 	int max_port_nb_tcp = 1 + rand() % MAX_NUMBER_PORT_TO_SCAN
 ;
 	int max_port_nb_udp = 1 + rand() % MAX_NUMBER_PORT_TO_SCAN;
-	// g_server_data = calloc(1, sizeof(t_server));
 
 	/* --- TCP --- */
 	for (int i = 0; i < max_port_nb_tcp;)
@@ -200,6 +196,7 @@ int main(const int argc, char **argv)
 
 	// RUN_SUITE(parsing_suite);
 
+	// Doesn't seem to works when i call this function using setup and teardown greatest.h hooks
 	init_servers(NULL);
 	RUN_SUITE(scan_suite);
 	close_servers();
