@@ -10,7 +10,11 @@
 #include <pcap/pcap.h>
 #include <stdbool.h>
 
-#define PORT(port)( port - MIN_SRC_PORT_NUMBER)
+/* Index of a destination port inside port_map. We index by raw port number
+ * because the subject allows scanning any port in [1..65535] (default is
+ * 1-1024). Keeping a direct mapping avoids signed/unsigned mismatches when
+ * the highest requested port is below 1024. */
+#define PORT(port) (port)
 
 typedef enum e_port_state
 {
@@ -43,6 +47,7 @@ typedef struct s_port_output
 	char		*reasons[MAX_REASONS_NUMBER];
 	u16			 port_number;
 	t_port_state port_state;
+	char		 version[128]; // banner grabbed via version detection
 } t_port_output;
 
 typedef struct s_port_state_and_reason
@@ -100,6 +105,7 @@ typedef struct s_program_info
 typedef struct s_target
 {
 	char		  *input;
+	char		  *hostname; // reverse DNS result (NULL if not found or same as input)
 	struct in_addr addr;
 	t_port_list	   port_list;
 	t_iface_info  *iface_info;
@@ -148,4 +154,8 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 void print_scan_results(t_ctx *ctx);
 
 void set_port_state_reason(t_port *port, t_port_state_reason reason);
+
+void grab_versions(t_target *target, t_args *args);
+
+const char *guess_os(u8 ttl, u16 tcp_window);
 #endif

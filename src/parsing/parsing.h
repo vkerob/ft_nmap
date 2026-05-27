@@ -17,7 +17,8 @@ enum e_flags
 	F_SPEED = 1u << 5,
 	F_PACKET_TRACE = 1u << 6,
 	F_REASON = 1u << 7,
-	F_VERBOSE = 1u << 8
+	F_VERBOSE = 1u << 8,
+	F_VERSION = 1u << 9,
 };
 
 bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,

@@ -97,7 +97,7 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 
 	for (int i = 0; i < n; i++)
 	{
-		total_len += sprintf(buf, "%s%d", i ? "," : "", sockets[i].port);
+		total_len += snprintf(buf, sizeof(buf), "%s%d", i ? "," : "", sockets[i].port);
 	}
 	*ptr = malloc(total_len + 1);
 	if (*ptr == NULL)
@@ -108,7 +108,7 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 	for (int i = 0; i < n; i++)
 	{
 		written
-			+= sprintf(*ptr + written, "%s%d", i ? "," : "", sockets[i].port);
+			+= snprintf(*ptr + written, total_len + 1 - written, "%s%d", i ? "," : "", sockets[i].port);
 	}
 }
 
@@ -116,7 +116,7 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 /*  greatest setup / teardown callbacks                                 */
 /* ------------------------------------------------------------------ */
 
-static void init_servers()
+static void init_servers(void)
 {
 	g_server_data = calloc(1, sizeof(t_server));
 
@@ -197,7 +197,7 @@ int main(const int argc, char **argv)
 	RUN_SUITE(parsing_suite);
 
 	// Doesn't seem to works when i call this function using setup and teardown greatest.h hooks
-	init_servers(NULL);
+	init_servers();
 	RUN_SUITE(scan_suite);
 	close_servers();
 	GREATEST_MAIN_END();
