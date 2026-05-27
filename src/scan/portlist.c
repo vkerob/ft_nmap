@@ -144,16 +144,18 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		}
 		port_list->state_and_reason[UDP_INDEX] = NULL;
 	}
-	// User can't scan port below PORT_MIN so the actual range of port map is  [1024 ; maximum port number entered]
-	port_list->port_map = malloc((*max_port_nb + 1- MIN_SRC_PORT_NUMBER) * sizeof(int));
+	/* port_map is indexed by raw destination port number, so we need
+	 * (max_port_nb + 1) entries (port 0 unused, ports 1..max_port_nb usable).
+	 * The subject allows scanning ports < 1024 (default range is 1-1024). */
+	const size_t port_map_count = (size_t)(*max_port_nb) + 1;
+	port_list->port_map = malloc(port_map_count * sizeof(int));
 	if (port_list->port_map == NULL)
 	{
-		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: malloc failed: %s\n", strerror(errno));
 		free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
 		return true;
 	}
-	// printf("%ld\n", *max_port_nb - MIN_SRC_PORT_NUMBER)
-	memset(port_list->port_map, -1, (*max_port_nb - MIN_SRC_PORT_NUMBER + 1) * sizeof(int));
+	memset(port_list->port_map, -1, port_map_count * sizeof(int));
 
 	for (u16 j = 0; j < port_count; j++)
 	{

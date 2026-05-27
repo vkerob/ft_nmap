@@ -1,6 +1,8 @@
 #include "debug.h"
+#include "parsing.h"
 #include "scan.h"
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -47,20 +49,26 @@ const char *get_service_name(u16 port)
 static void update_port_reasons(t_port_output *port_conclusion,
 								const t_port  *port)
 {
+	/* If the scan never produced a reason (e.g. probe was dropped before
+	 * timeout could fire), there is nothing to merge. */
+	if (port->reasons[0] == NULL)
+		return;
+
 	//  Same port state but maybe the reason the port is in that state is
 	//  different
 	if (port_conclusion->port_state == port->port_state)
 	{
-		assert(port->reasons[0] != NULL);
-		if (strcmp(port_conclusion->reasons[0], port->reasons[0]) != 0)
+		if (port_conclusion->reasons[0] == NULL)
+		{
+			port_conclusion->reasons[0] = port->reasons[0];
+		}
+		else if (strcmp(port_conclusion->reasons[0], port->reasons[0]) != 0)
 		{
 			port_conclusion->reasons[1] = port->reasons[0];
 		}
 	}
 	else
 	{
-		assert(port->reasons[0] != NULL);
-		assert(port->reasons[1] == NULL);
 		port_conclusion->reasons[0] = port->reasons[0];
 		port_conclusion->reasons[1] = NULL;
 	}
@@ -230,94 +238,154 @@ char *state_to_label(t_port_state state)
 
 // Ignored states are print from the most common to the least common and with a
 // reason associated (no-response, reset, ...)
+/* Count the number of ports in each state for a given protocol slot
+ * (TCP_INDEX or UDP_INDEX). Avoids relying on the shared state_count which
+ * mixes TCP and UDP totals together. */
+static void count_states_for_proto(const t_target *target, u8 proto_index,
+								   u16 port_count, int counts[HIGHEST_PORT_STATE])
+{
+	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
+		counts[s] = 0;
+
+	const t_port_output *arr = target->port_list.port_final_state[proto_index];
+	if (arr == NULL)
+		return;
+	for (u16 i = 0; i < port_count; i++)
+	{
+		const t_port_state st = arr[i].port_state;
+		if (st < HIGHEST_PORT_STATE)
+			counts[st]++;
+	}
+}
+
+/* Append one "Not shown" segment for a given (state, protocol) by walking the
+ * state_and_reason linked list of that protocol and printing every reason
+ * subtotal. */
+static size_t append_not_shown_segment(char *buf, size_t buf_size,
+									   size_t					 buf_len,
+									   t_port_state_and_reason  *head,
+									   t_port_state              state,
+									   const char               *proto_str,
+									   bool                     *first_segment)
+{
+	for (t_port_state_and_reason *r = head; r != NULL; r = r->next)
+	{
+		if (r->port_state != state)
+			continue;
+
+		const char *state_str = port_state_to_str(state);
+
+		/* tmp->reason == NULL means there are two sub-reasons stored in
+		 * first_reason / second_reason. Print them both. */
+		if (r->reason == NULL && r->first_reason && r->second_reason)
+		{
+			const char *r1 = r->first_reason->reason
+								 ? r->first_reason->reason
+								 : "unknown";
+			const char *r2 = r->second_reason->reason
+								 ? r->second_reason->reason
+								 : "unknown";
+			buf_len += snprintf(
+				buf + buf_len, buf_size - buf_len,
+				"%s%d %s %s ports (%s, %s)",
+				*first_segment ? "" : ", ",
+				r->count, state_str, proto_str, r1, r2);
+		}
+		else
+		{
+			const char *reason = r->reason ? r->reason : "unknown";
+			buf_len += snprintf(buf + buf_len, buf_size - buf_len,
+								"%s%d %s %s ports (%s)",
+								*first_segment ? "" : ", ",
+								r->count, state_str, proto_str, reason);
+		}
+		*first_segment = false;
+	}
+	return buf_len;
+}
+
+/* Decide, per protocol, which states should be grouped into a "Not shown"
+ * line. A state is grouped when it has strictly more than PRINT_LIMIT ports
+ * in that protocol. TCP and UDP are treated independently, so we can group
+ * e.g. closed-TCP without forcing the same on UDP.
+ *
+ * ignored_tcp / ignored_udp are output arrays indexed by t_port_state value
+ * (size HIGHEST_PORT_STATE), set to true for states that should be hidden
+ * from the per-port table.
+ *
+ * Returns true iff every scanned port ended up in a grouped state (nothing
+ * left to display in the detailed table). */
 static bool print_ignored_port_states(t_target *target, bool tcp_scan,
 									  bool udp_scan, u16 port_count,
-									  t_port_state *ignored_port_states)
+									  bool *ignored_tcp,
+									  bool *ignored_udp)
 {
-	(void)ignored_port_states;
-	bool					display_not_shown_str = false;
-	t_port_state_and_reason next_ignored_port_state_reason = { 0 };
-	t_port_state			next_ignored_port_state = { UNKNOWN };
-	int						i = 0;
-	bool					all_ignored = false;
-
-	char buf[BUF_SIZE] = { 0 };
-	while (get_next_ignored_port_state(target->port_list.state_count,
-									   &next_ignored_port_state))
+	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 	{
-		const char *port_state_str = port_state_to_str(next_ignored_port_state);
-
-		if (tcp_scan)
-		{
-			while (get_reason_for_port_state(
-				&target->port_list.state_and_reason[TCP_INDEX],
-				&next_ignored_port_state_reason, next_ignored_port_state))
-			{
-				if (display_not_shown_str == false)
-				{
-					snprintf(buf, sizeof(buf), "Not shown: ");
-					display_not_shown_str = true;
-				}
-
-				size_t buf_len = strlen(buf);
-				if (next_ignored_port_state_reason.first_reason != NULL)
-				{
-					snprintf(
-						buf + buf_len, sizeof(buf) - buf_len,
-						"%d %s tcp ports (%s)",
-						next_ignored_port_state_reason.second_reason->count,
-						port_state_str,
-						next_ignored_port_state_reason.second_reason->reason);
-					if (next_ignored_port_state_reason.second_reason != NULL)
-					{
-						size_t buf_len = strlen(buf);
-						snprintf(
-							buf + buf_len, sizeof(buf) - buf_len,
-							", %d %s tcp ports (%s)",
-							next_ignored_port_state_reason.second_reason->count,
-							port_state_str,
-							next_ignored_port_state_reason.second_reason
-								->reason);
-					}
-				}
-				else
-				{
-					snprintf(buf + buf_len, sizeof(buf) - buf_len,
-							 "%d %s tcp ports (%s)\n",
-							 next_ignored_port_state_reason.count,
-							 port_state_str,
-							 next_ignored_port_state_reason.reason);
-				}
-			}
-		}
-		if (udp_scan)
-		{
-			while (get_reason_for_port_state(
-				&target->port_list.state_and_reason[UDP_INDEX],
-				&next_ignored_port_state_reason, next_ignored_port_state))
-			{
-				if (display_not_shown_str == false)
-				{
-					snprintf(buf, sizeof(buf), "Not shown: ");
-					display_not_shown_str = true;
-				}
-				size_t buf_len = strlen(buf);
-				snprintf(buf + buf_len, sizeof(buf) - buf_len,
-						 "%d %s udp ports (%s)\n",
-						 next_ignored_port_state_reason.count, port_state_str,
-						 next_ignored_port_state_reason.reason);
-			}
-		}
-		ignored_port_states[i++] = next_ignored_port_state;
+		ignored_tcp[s] = false;
+		ignored_udp[s] = false;
 	}
-	if (target->port_list.state_and_reason[TCP_INDEX] == NULL
-		&& target->port_list.state_and_reason[UDP_INDEX] == NULL)
+
+	int tcp_counts[HIGHEST_PORT_STATE];
+	int udp_counts[HIGHEST_PORT_STATE];
+	count_states_for_proto(target, TCP_INDEX, port_count, tcp_counts);
+	count_states_for_proto(target, UDP_INDEX, port_count, udp_counts);
+
+	char   buf[BUF_SIZE] = { 0 };
+	size_t buf_len = 0;
+	bool   first_segment = true;
+	u16    tcp_hidden = 0;
+	u16    udp_hidden = 0;
+
+	for (t_port_state state = DEFAULT; state < HIGHEST_PORT_STATE; state++)
 	{
+		const bool tcp_group = tcp_scan && tcp_counts[state] > PRINT_LIMIT;
+		const bool udp_group = udp_scan && udp_counts[state] > PRINT_LIMIT;
+		if (!tcp_group && !udp_group)
+			continue;
+
+		if (first_segment)
+		{
+			buf_len = snprintf(buf, sizeof(buf), "Not shown: ");
+		}
+
+		if (tcp_group)
+		{
+			buf_len = append_not_shown_segment(
+				buf, sizeof(buf), buf_len,
+				target->port_list.state_and_reason[TCP_INDEX],
+				state, "tcp", &first_segment);
+			ignored_tcp[state] = true;
+			tcp_hidden += tcp_counts[state];
+		}
+		if (udp_group)
+		{
+			buf_len = append_not_shown_segment(
+				buf, sizeof(buf), buf_len,
+				target->port_list.state_and_reason[UDP_INDEX],
+				state, "udp", &first_segment);
+			ignored_udp[state] = true;
+			udp_hidden += udp_counts[state];
+		}
+	}
+
+	const u16 tcp_total = tcp_scan ? port_count : 0;
+	const u16 udp_total = udp_scan ? port_count : 0;
+	const bool all_ignored
+		= (tcp_total + udp_total) > 0
+		  && (tcp_hidden + udp_hidden) == (tcp_total + udp_total);
+
+	if (buf_len > 0)
+	{
+		printf("%s\n", buf);
+	}
+	else if (tcp_total + udp_total == 0)
+	{
+		/* Nothing to show at all (no scan ran). */
 		printf("All %u scanned ports on %s are in ignored states.\n",
 			   port_count, target->input);
-		all_ignored = true;
+		return true;
 	}
-	printf("%s", buf);
 	return all_ignored;
 }
 static void build_results_str(const t_target *target, const t_args *args,
@@ -369,9 +437,19 @@ bool find_or_update_state_and_reason_combination(
 {
 	t_port_state_and_reason *tmp = *state_and_reason_lst;
 	t_port_state_and_reason *prev = NULL;
+	/* If no reason was ever attached to this port (state stayed DEFAULT,
+	 * timeout never fired, etc.) fall back to a placeholder so that NULL
+	 * never reaches strcmp below. */
+	if (reason == NULL)
+		reason = "unknown";
 	if (tmp == NULL)
 	{
 		*state_and_reason_lst = calloc(1, sizeof(t_port_state_and_reason));
+		if (*state_and_reason_lst == NULL)
+		{
+			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+			return true;
+		}
 		(*state_and_reason_lst)->reason = reason;
 		(*state_and_reason_lst)->count = 1;
 		(*state_and_reason_lst)->port_state = port_state;
@@ -390,15 +468,12 @@ bool find_or_update_state_and_reason_combination(
 			// If reason is NULL it means there are two reasons (check subnodes)
 			if (tmp->reason == NULL)
 			{
-				// TODO: uncomment
-				//  assert(tmp->first_reason != NULL);
-				//  assert(tmp->first_reason->reason != NULL);
-				// assert(reason != NULL);
-				if (strcmp(tmp->first_reason->reason, reason) == 0)
+				if (tmp->first_reason && tmp->first_reason->reason
+					&& strcmp(tmp->first_reason->reason, reason) == 0)
 				{
 					tmp->first_reason->count++;
 				}
-				else if (tmp->second_reason->reason
+				else if (tmp->second_reason && tmp->second_reason->reason
 						 && strcmp(tmp->second_reason->reason, reason) == 0)
 				{
 					tmp->second_reason->count++;
@@ -459,17 +534,12 @@ bool find_or_update_state_and_reason_combination(
 	return false;
 }
 
-static bool is_ignored_state(t_port_state *ignored_port_states,
+static bool is_ignored_state(const bool   *ignored_states_by_idx,
 							 t_port_state  port_state)
 {
-	for (u8 i = 0; i < HIGHEST_PORT_STATE; i++)
-	{
-		if (port_state == ignored_port_states[i])
-		{
-			return true;
-		}
-	}
-	return false;
+	if (port_state >= HIGHEST_PORT_STATE)
+		return false;
+	return ignored_states_by_idx[port_state];
 }
 
 static void resolve_final_port_state(t_args *args, t_target *target)
@@ -531,7 +601,8 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 }
 
 static void print_port_states(t_target *target, t_args *args,
-							  t_port_state *ignored_port_states)
+							  const bool *ignored_tcp,
+							  const bool *ignored_udp)
 {
 	char recap_udp[65535] = { 0 };
 	char recap_tcp[65535] = { 0 };
@@ -540,16 +611,18 @@ static void print_port_states(t_target *target, t_args *args,
 	const int  col_state = 14;
 	const int  col_svc = 10;
 	const int  col_reason = 12;
+	const int  col_version = 28;
 	const bool multi_scan = args->nb_scan_types > 1;
+	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
 
 	if (multi_scan)
 	{
 		printf("%-*s %-*s %-*s %s ", col_port, "PORT", col_state, "STATE",
 			   col_svc, "SERVICE", "SCAN RESULTS");
 		if (HAS(args->flags, F_REASON))
-		{
 			printf(" %-*s", col_reason, "REASON");
-		}
+		if (show_version)
+			printf(" %s", "VERSION");
 		printf("\n");
 	}
 	else
@@ -557,16 +630,19 @@ static void print_port_states(t_target *target, t_args *args,
 		printf("%-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
 			   "SERVICE");
 		if (HAS(args->flags, F_REASON))
-		{
 			printf(" %-*s", col_reason, "REASON");
-		}
+		if (show_version)
+			printf(" %s", "VERSION");
 		printf("\n");
 	}
 	// For each port we check that his state is not among the "ignored states"
 	// which are all the state with more than 25 ports in If thats not the case
 	// we add a row to the table
 
-	for (u16 port = 1024; port <= args->max_port_nb; port++)
+	/* Iterate over all ports actually requested (the lowest scannable port is
+	 * MIN_PORT_NUMBER = 1, NOT 1024 — that constant is the lowest *source*
+	 * port we may use, not the lowest destination port). */
+	for (u16 port = MIN_PORT_NUMBER; port <= args->max_port_nb; port++)
 	{
 		const int idx = target->port_list.port_map[PORT(port)];
 
@@ -575,7 +651,7 @@ static void print_port_states(t_target *target, t_args *args,
 
 		if (args->udp_scan
 			&& (is_ignored_state(
-				   ignored_port_states,
+				   ignored_udp,
 				   target->port_list.port_final_state[UDP_INDEX][idx]
 					   .port_state)
 				   == false || HAS(args->flags, F_VERBOSE)))
@@ -621,7 +697,7 @@ snprintf(recap_udp + recap_udp_len,
 		}
 		if (args->tcp_scan
 			&& (is_ignored_state(
-				   ignored_port_states,
+				   ignored_tcp,
 				   target->port_list.port_final_state[TCP_INDEX][idx]
 					   .port_state)
 				   == false || HAS(args->flags, F_VERBOSE)))
@@ -631,36 +707,49 @@ snprintf(recap_udp + recap_udp_len,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/tcp", port);
 			const char *svc = get_service_name(port);
-			// const char *color = port_state_color(
-			// 	target->port_list.port_final_state[TCP_INDEX][idx].port_state);
 			const char *state = port_state_to_str(
 				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
+			const char *ver = (show_version && final_port_state.version[0])
+								  ? final_port_state.version
+								  : "";
 			size_t recap_tcp_len = strlen(recap_tcp);
 			if (multi_scan)
 			{
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
-snprintf(recap_tcp + recap_tcp_len,
-         sizeof(recap_tcp) - recap_tcp_len,
-         "%-*s %-*s %-*s %s\n", col_port, port_str,
-         col_state, state, col_svc, svc,
-         results_buf);
+				snprintf(recap_tcp + recap_tcp_len,
+						 sizeof(recap_tcp) - recap_tcp_len,
+						 "%-*s %-*s %-*s %s%s%s\n",
+						 col_port, port_str, col_state, state, col_svc, svc,
+						 results_buf,
+						 (show_version && ver[0]) ? "  " : "",
+						 ver);
 			}
 			else
 			{
-snprintf(recap_tcp + recap_tcp_len,
-         sizeof(recap_tcp) - recap_tcp_len,
-         "%-*s %-*s %-*s", col_port, port_str,
-         col_state, state, col_svc, svc);
+				snprintf(recap_tcp + recap_tcp_len,
+						 sizeof(recap_tcp) - recap_tcp_len,
+						 "%-*s %-*s %-*s", col_port, port_str,
+						 col_state, state, col_svc, svc);
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
 					snprintf(recap_tcp + recap_tcp_len,
 							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
-							 col_reason, final_port_state.reasons[0]);
+							 col_reason,
+							 final_port_state.reasons[0]
+								 ? final_port_state.reasons[0]
+								 : "");
+					recap_tcp_len = strlen(recap_tcp);
 				}
-				recap_tcp_len = strlen(recap_tcp);
+				if (show_version && ver[0])
+				{
+					snprintf(recap_tcp + recap_tcp_len,
+							 sizeof(recap_tcp) - recap_tcp_len,
+							 " %-*s", col_version, ver);
+					recap_tcp_len = strlen(recap_tcp);
+				}
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len, "\n");
 			}
@@ -678,25 +767,44 @@ snprintf(recap_tcp + recap_tcp_len,
 
 static void print_target_results(t_target *target, t_args *args)
 {
-	t_port_state ignored_port_states[HIGHEST_PORT_STATE] = { 0 };
+	/* Per-protocol "is this state hidden in Not shown ?" lookup tables.
+	 * Indexed by t_port_state value. We need two tables because a state
+	 * may dominate one protocol but not the other (e.g. 100 closed-TCP +
+	 * 5 closed-UDP — closed should be grouped for TCP, listed for UDP). */
+	bool ignored_tcp[HIGHEST_PORT_STATE] = { 0 };
+	bool ignored_udp[HIGHEST_PORT_STATE] = { 0 };
 
-	printf("Nmap scan report for %s\n", target->input);
+	/* Header: show "hostname (IP)" when reverse DNS found something,
+	 * otherwise fall back to whatever the user typed. */
+	const char *ip_str = inet_ntoa(target->addr);
+	if (target->hostname && strcmp(target->hostname, target->input) != 0)
+		printf("Nmap scan report for %s (%s)\n", target->hostname, ip_str);
+	else
+		printf("Nmap scan report for %s\n", target->input);
 	printf("Host is up.\n");
+
+	/* OS detection: display below "Host is up" if --os-detect and we have data */
+	if (HAS(args->flags, F_OS_DETECT))
+	{
+		if (target->os_ttl != 0)
+			printf("OS: %s\n", guess_os(target->os_ttl, target->os_tcp_window));
+		else
+			printf("OS: Detection requires at least one open TCP port (SYN scan)\n");
+	}
 
 	resolve_final_port_state(args, target);
 
-	// We copy the entire t_port structure but update the port_state with
-	// our definite state
+	/* Version detection: banner-grab every open TCP port before printing */
+	if (HAS(args->flags, F_VERSION))
+		grab_versions(target, args);
 
-	/* Print the port state count with their respective reason for all ignored
-	state (which have more than 25 occurences accross both protocol) and erase
-	them from the list */
+	const bool all_ignored = print_ignored_port_states(
+		target, args->tcp_scan, args->udp_scan, args->port_count,
+		ignored_tcp, ignored_udp);
 
-	if (HAS(args->flags, F_VERBOSE) || print_ignored_port_states(target, args->tcp_scan, args->udp_scan,
-								  args->port_count, ignored_port_states)
-		== false)
+	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
 	{
-		print_port_states(target, args, ignored_port_states);
+		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
 }
 

@@ -57,7 +57,9 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type,
-							source_port, ip_hdr->ip_src);
+							source_port, ip_hdr->ip_src,
+							ip_hdr->ip_ttl,
+							ntohs(datalink_hdr.tcp_hdr.th_win));
 		break;
 
 	case IPPROTO_UDP:

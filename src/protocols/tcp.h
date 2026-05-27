@@ -17,7 +17,7 @@ void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
 
 void handle_tcp_response(t_probe_queue *sent_list, u8 flags,
 						 t_scan_type scan_type, u16 source_port,
-						 struct in_addr ip_src);
+						 struct in_addr ip_src, u8 ttl, u16 tcp_window);
 
 void decode_tcp_packet(u8 *datagram, struct tcphdr *tcp_hdr);
 

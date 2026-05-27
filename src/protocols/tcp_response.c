@@ -8,7 +8,8 @@
 
 void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 						 const t_scan_type scan_type, const u16 source_port,
-						 const struct in_addr ip_src)
+						 const struct in_addr ip_src, const u8 ttl,
+						 const u16 tcp_window)
 {
 
 	pthread_mutex_lock(&sent_list->mut);
@@ -35,6 +36,12 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = OPEN;
 			set_port_state_reason(port, SYN_ACK);
+			/* Capture TTL and window for OS detection — first SYN-ACK wins */
+			if (probe->target->os_ttl == 0)
+			{
+				probe->target->os_ttl = ttl;
+				probe->target->os_tcp_window = tcp_window;
+			}
 		}
 		break;
 	case SCAN_ACK:

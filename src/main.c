@@ -82,7 +82,8 @@ bool nmap_main(t_ctx *ctx)
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
-	set_scan_presence(&ctx->args);
+	/* set_scan_presence is now invoked from main() before init_portlist;
+	 * keeping it here would be redundant. */
 	// shared_data_probe.to_send.nb_probe
 	// 	= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
@@ -151,6 +152,12 @@ int main(const int argc, char **argv)
 		print_usage();
 		return EXIT_SUCCESS;
 	}
+
+	/* Must run before link_port_list_to_each_target: init_portlist uses
+	 * tcp_scan / udp_scan to decide which port_final_state buffers to
+	 * allocate, and the "no --scan" default branch in parse_args doesn't
+	 * set those flags. */
+	set_scan_presence(&ctx.args);
 
 	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{

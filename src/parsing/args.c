@@ -20,12 +20,15 @@ void free_targets(t_target **targets, size_t count)
 	if (!targets || !*targets)
 		return;
 	for (size_t i = 0; i < count; i++)
+	{
 		free((*targets)[i].input);
+		free((*targets)[i].hostname);
+	}
 	free(*targets);
 	*targets = NULL;
 }
 
-// Resolve hostname/IP to IPv4 sockaddr and numeric string; no reverse DNS
+// Forward resolution: hostname/IP -> IPv4
 static bool resolve_target(const char *host, struct in_addr *dst)
 {
 	struct addrinfo	 hints;
@@ -44,6 +47,22 @@ static bool resolve_target(const char *host, struct in_addr *dst)
 
 	freeaddrinfo(res);
 	return true;
+}
+
+// Reverse DNS: IPv4 -> hostname (returns heap-allocated string or NULL)
+static char *reverse_dns(struct in_addr addr)
+{
+	struct sockaddr_in sa;
+	char			   host[NI_MAXHOST];
+
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_addr = addr;
+
+	if (getnameinfo((struct sockaddr *)&sa, sizeof(sa), host, sizeof(host),
+					NULL, 0, NI_NAMEREQD) != 0)
+		return NULL;
+	return strdup(host);
 }
 
 bool resolve_targets(char **inputs, const size_t count, t_target **targets)
@@ -70,6 +89,9 @@ bool resolve_targets(char **inputs, const size_t count, t_target **targets)
 			free_targets(&tmp, i + 1);
 			return true;
 		}
+
+		// Reverse DNS: only useful if input was an IP (hostname already known)
+		tmp[i].hostname = reverse_dns(tmp[i].addr);
 	}
 
 	*targets = tmp;
@@ -384,6 +406,8 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "packet-trace", no_argument, 0, PACKET_TRACE },
 		{ "reason", no_argument, 0, REASON },
 		{ "verbose", no_argument, 0, VERBOSE},
+		{ "version", no_argument, 0, VERSION_DETECT },
+		{ "os-detect", no_argument, 0, OS_DETECT },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -442,6 +466,14 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 		case VERBOSE:
 			SET(args->flags, F_VERBOSE);
+			break;
+
+		case VERSION_DETECT:
+			SET(args->flags, F_VERSION);
+			break;
+
+		case OS_DETECT:
+			SET(args->flags, F_OS_DETECT);
 			break;
 
 		case '?':

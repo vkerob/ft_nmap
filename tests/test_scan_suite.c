@@ -226,6 +226,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	char *nmap_output = NULL;
 	int error_number;
 	PCRE2_SIZE error_offset;
+	pcre2_code *re = NULL;
 
 	run_command(args_ft_nmap, &ft_nmap_output);
 	run_command(args_nmap, &nmap_output);
@@ -238,10 +239,10 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	/* Match the following type of line:
 		1234/tcp closed hotline
 	*/
-	sprintf(pattern,
+	snprintf(pattern, sizeof(pattern),
 		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");  // substitute your actual value here
 
-	pcre2_code *re = pcre2_compile(
+	re = pcre2_compile(
 		(unsigned char *)pattern,               /* the pattern */
 		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
 		0,                     /* default options */
