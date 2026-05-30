@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -14,7 +15,7 @@
 **      one immediately on connect).
 **   3. If nothing arrives, send a minimal HTTP probe — catches nginx, Apache,
 **      and anything HTTP-based.
-**   4. Store only the first non-empty line in port_output->version.
+**   4. Parse the raw banner into a human-friendly version string.
 */
 
 #define BANNER_TIMEOUT_SEC 2
@@ -29,7 +30,6 @@ static const char *HTTP_PROBE = "HEAD / HTTP/1.0\r\nHost: localhost\r\n\r\n";
 */
 static void sanitise_banner(char *buf, size_t buf_size)
 {
-	/* Truncate at first newline */
 	char *nl = strchr(buf, '\n');
 	if (nl)
 		*nl = '\0';
@@ -37,19 +37,16 @@ static void sanitise_banner(char *buf, size_t buf_size)
 	if (cr)
 		*cr = '\0';
 
-	/* Strip leading whitespace */
 	char *start = buf;
 	while (*start == ' ' || *start == '\t')
 		start++;
 
-	/* Replace non-printable characters with '.' */
 	for (char *p = start; *p; p++)
 	{
 		if ((unsigned char)*p < 0x20 || (unsigned char)*p == 0x7f)
 			*p = '.';
 	}
 
-	/* Copy back to buf if we moved start */
 	if (start != buf)
 	{
 		size_t len = strlen(start);
@@ -57,6 +54,80 @@ static void sanitise_banner(char *buf, size_t buf_size)
 			len = buf_size - 1;
 		memmove(buf, start, len + 1);
 	}
+}
+
+/*
+** Parse known banner formats into a nmap-style version string.
+** Returns 1 if the banner was recognised and out was filled, 0 otherwise.
+**
+** Supported formats:
+**   SSH   — "SSH-<proto>-<software>"  → "<software> (protocol <proto>)"
+**   FTP   — "220 <text>"             → "<text>"
+**   SMTP  — "220 <text>"             → "<text>"
+**   POP3  — "+OK <text>"             → "<text>"
+**   IMAP  — "* OK <text>"            → "<text>"
+**   HTTP  — "Server: <value>"        → "<value>"  (scanned from full response)
+*/
+static int parse_banner(const char *raw, char *out, size_t out_size)
+{
+	/* SSH: SSH-<proto>-<software> [extra info] */
+	char proto[32];
+	char software[96];
+	if (sscanf(raw, "SSH-%31[^-]-%95[^\r\n]", proto, software) == 2)
+	{
+		for (char *p = software; *p; p++)
+			if (*p == '_')
+				*p = ' ';
+		snprintf(out, out_size, "%s (protocol %s)", software, proto);
+		return 1;
+	}
+
+	/* FTP / SMTP: "220 <banner text>" */
+	char ftp_msg[256];
+	if (sscanf(raw, "220 %255[^\r\n]", ftp_msg) == 1)
+	{
+		snprintf(out, out_size, "%s", ftp_msg);
+		return 1;
+	}
+
+	/* POP3: "+OK <text>" */
+	char pop_msg[256];
+	if (sscanf(raw, "+OK %255[^\r\n]", pop_msg) == 1)
+	{
+		snprintf(out, out_size, "%s", pop_msg);
+		return 1;
+	}
+
+	/* IMAP: "* OK <text>" */
+	char imap_msg[256];
+	if (sscanf(raw, "* OK %255[^\r\n]", imap_msg) == 1)
+	{
+		snprintf(out, out_size, "%s", imap_msg);
+		return 1;
+	}
+
+	/* HTTP response: look for "Server:" header anywhere in the response */
+	const char *server = strcasestr(raw, "\r\nServer:");
+	if (!server)
+		server = strcasestr(raw, "\nServer:");
+	if (server)
+	{
+		server = strchr(server, ':');
+		if (server)
+		{
+			server++;
+			while (*server == ' ' || *server == '\t')
+				server++;
+			char http_server[128];
+			if (sscanf(server, "%127[^\r\n]", http_server) == 1)
+			{
+				snprintf(out, out_size, "%s", http_server);
+				return 1;
+			}
+		}
+	}
+
+	return 0;
 }
 
 static void grab_banner(struct in_addr target_addr, u16 port, char *out,
@@ -102,9 +173,12 @@ static void grab_banner(struct in_addr target_addr, u16 port, char *out,
 	if (n > 0)
 	{
 		buf[n] = '\0';
-		sanitise_banner(buf, sizeof(buf));
-		if (buf[0] != '\0')
-			strncpy(out, buf, out_size - 1);
+		if (!parse_banner(buf, out, out_size))
+		{
+			sanitise_banner(buf, sizeof(buf));
+			if (buf[0] != '\0')
+				strncpy(out, buf, out_size - 1);
+		}
 	}
 
 	close(sock);

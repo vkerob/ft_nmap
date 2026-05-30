@@ -18,8 +18,6 @@
 **        8192            → Windows (older / default)
 **        65535           → Windows 10/11 (with window scaling)
 **
-** This is intentionally simple: it covers the vast majority of cases
-** encountered in a typical 42 evaluation environment and is easy to defend.
 */
 
 const char *guess_os(u8 ttl, u16 tcp_window)
