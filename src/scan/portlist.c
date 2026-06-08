@@ -159,7 +159,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 
 	for (u16 j = 0; j < port_count; j++)
 	{
-		port_list->port_map[PORT(ports[j])] = j;
+		port_list->port_map[ports[j]] = j;
 		if (udp_scan)
 		{
 			port_list->port_final_state[UDP_INDEX][j].port_number = ports[j];

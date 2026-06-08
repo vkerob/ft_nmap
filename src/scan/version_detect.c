@@ -1,4 +1,6 @@
-#include "scan.h" // t_target, t_args, t_port_output, PORT(), OPEN, TCP_INDEX
+#include "scan.h" // t_target, t_args, t_port_output, OPEN, TCP_INDEX
+
+#define _GNU_SOURCE
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -197,7 +199,7 @@ void grab_versions(t_target *target, t_args *args)
 	for (u16 i = 0; i < args->port_count; i++)
 	{
 		const u16 port = args->ports[i];
-		const int idx = target->port_list.port_map[PORT(port)];
+		const int idx = target->port_list.port_map[port];
 		if (idx < 0)
 			continue;
 

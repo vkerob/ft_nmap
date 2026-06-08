@@ -10,12 +10,6 @@
 #include <pcap/pcap.h>
 #include <stdbool.h>
 
-/* Index of a destination port inside port_map. We index by raw port number
- * because the subject allows scanning any port in [1..65535] (default is
- * 1-1024). Keeping a direct mapping avoids signed/unsigned mismatches when
- * the highest requested port is below 1024. */
-#define PORT(port) (port)
-
 typedef enum e_port_state
 {
 	DEFAULT,
