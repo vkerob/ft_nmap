@@ -38,8 +38,12 @@ static void print_usage()
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf(" --verbose: No port states are ignored\n");
-	printf("\nHELP: \n");
 	printf(" --reason: Show the reason why the port is in that state\n");
+	printf("SERVICE/VERSION DETECTION:\n");
+	printf(" --version: Probe open ports to determine version info");
+	printf("OS DETECTION\n");
+	printf("--os-detect: Enable OS detection\n");
+	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
 }
 

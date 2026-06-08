@@ -402,7 +402,7 @@ static void build_results_str(const t_target *target, const t_args *args,
 			continue;
 		if (stype != SCAN_UDP && protocol == IPPROTO_UDP)
 			continue;
-		const int		   idx = target->port_list.port_map[PORT(port)];
+		const int		   idx = target->port_list.port_map[port];
 		const t_port_state state
 			= target->port_list.port_map_rev[stype][idx].port_state;
 		scan_type_to_str(stype, scan_name);
@@ -546,7 +546,7 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 {
 	for (u16 i = 0; i < args->port_count; i++)
 	{
-		const int idx = target->port_list.port_map[PORT(args->ports[i])];
+		const int idx = target->port_list.port_map[args->ports[i]];
 		for (u8 j = 0; j < args->nb_scan_types; j++)
 		{
 			const t_scan_type scan_type_index = args->scan_types[j];
@@ -644,7 +644,7 @@ static void print_port_states(t_target *target, t_args *args,
 	 * port we may use, not the lowest destination port). */
 	for (u16 port = MIN_PORT_NUMBER; port <= args->max_port_nb; port++)
 	{
-		const int idx = target->port_list.port_map[PORT(port)];
+		const int idx = target->port_list.port_map[port];
 
 		if (idx == -1)
 			continue;

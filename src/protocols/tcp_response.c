@@ -21,7 +21,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	{
 		return;
 	}
-	const int idx = probe->target->port_list.port_map[PORT(source_port)];
+	const int idx = probe->target->port_list.port_map[source_port];
 	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];
 	switch (scan_type)
 	{
