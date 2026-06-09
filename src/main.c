@@ -68,18 +68,21 @@ static void set_scan_presence(t_args *args)
 static bool init_port_map(t_args *args)
 {
 	u16 max_port_nb = get_max_port_number(args->ports);
-	printf("max port: %u\n", max_port_nb);
 	args->port_map = calloc(max_port_nb, sizeof(int));
 	if (args->port_map == NULL)
 	{
 		LOG("ft_nmap: ft_calloc: %s\n", strerror(errno));
 		return true;
 	}
-	memset(args->port_map, -1, max_port_nb * sizeof(int));
+	for (u16 i = 0; i < max_port_nb; i++)
+	{
+		args->port_map[i] = -1;
+	}
 	for (u16 j = 0; j < args->port_count; j++)
 	{
 		args->port_map[args->ports[j]] = j;
 	}
+	
 	return false;
 }
 
@@ -124,7 +127,7 @@ bool nmap_main(t_ctx *ctx)
 		return true;
 	}
 
-	print_debug_services(ctx->port_svc, ctx->args.port_count);
+	print_debug_services(ctx->port_svc, ctx->args.port_count, ctx->args.tcp_scan, ctx->args.udp_scan);
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 

@@ -161,7 +161,7 @@ void grab_versions(t_target *target, t_args *args);
 const char *guess_os(u8 ttl, u16 tcp_window);
 
 bool resolve_services_name(u16 port_count, int *port_map,
-								 t_port_svc *(*head)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan);
+								 t_port_svc *(*arr)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan);
 
 void free_services(t_port_svc *head[MAX_PROTO_COUNT]);
 

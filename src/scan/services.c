@@ -26,6 +26,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	pcre2_code *re = NULL;
 	char pattern[512] = { 0 };
 	int error_number;
+	u16 port_co = 0;
   if (tcp_scan)
   {
     (*arr)[TCP_INDEX] = calloc(port_count, sizeof(t_port_svc));
@@ -80,7 +81,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	int rc = -1;
 
 	char buffer[256];
-	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+	while (fgets(buffer, sizeof(buffer), fp) != NULL && port_co < port_count) {
 		line_nb++;
 		pcre2_match_data *match_data =
 		pcre2_match_data_create_from_pattern(re, NULL);
@@ -129,27 +130,46 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			}
 
 			char *endptr;
-			int port_nb = strtoimax(port, &endptr, 10);
+			intmax_t port_nb = strtoimax(port, &endptr, 10);
 
-			if (port_nb == 0)
+			if (port_nb == 0 && *port == '\0')
 			{
 				LOG("ft_nmap: error at line %d\n", line_nb);
 				memset(buffer, 0, sizeof(buffer));
 				continue ;
 			}
-      const int idx = port_map[port_nb];
-      printf("%u\n", idx);
-      // Means it's a port that's not scanned
-      if (idx == -1)
-      {
-        memset(buffer, 0, sizeof(buffer));
-        continue ;
-      }
-      (*arr)[idx]->port = port_nb;
-      (*arr)[idx]->name = service;
+
+			const int idx = port_map[port_nb];
+			// Means it's a port that's not scanned
+			if (idx == -1)
+			{
+				memset(buffer, 0, sizeof(buffer));
+				continue ;
+			}
+			port_co++;
+			if (strcmp(protocol, "tcp") == 0)
+			{
+				(*arr)[TCP_INDEX][idx].port = port_nb;
+				(*arr)[TCP_INDEX][idx].name = service;
+			}
+			else if (strcmp(protocol, "udp") == 0)
+			{
+				(*arr)[UDP_INDEX][idx].port = port_nb;
+				(*arr)[UDP_INDEX][idx].name = service;
+			}
 			memset(buffer, 0, sizeof(buffer));
 		}
 		pcre2_match_data_free(match_data);
+	}
+	for (u16 i = 0; i < port_count; i++){
+		if (udp_scan && (*arr)[UDP_INDEX][i].name == NULL)
+		{
+			(*arr)[UDP_INDEX][i].name = "unknown";
+		}
+		if (tcp_scan && (*arr)[TCP_INDEX][i].name == NULL)
+		{
+			(*arr)[TCP_INDEX][i].name = "unknown";
+		}
 	}
 	fclose(fp);
 	return false;
