@@ -240,7 +240,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 		1234/tcp closed hotline
 	*/
 	snprintf(pattern, sizeof(pattern),
-		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");  // substitute your actual value here
+		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");
 
 	re = pcre2_compile(
 		(unsigned char *)pattern,               /* the pattern */
@@ -273,7 +273,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	{
 		ASSERT_STR_EQ(tmp1->port, tmp2->port);
 		ASSERT_STR_EQ(tmp1->port_state, tmp2->port_state);
-		// ASSERT_STR_EQ(tmp1->service, tmp2->service);
+		ASSERT_STR_EQ(tmp1->service, tmp2->service);
 		ASSERT_STR_EQ(tmp1->protocol, tmp2->protocol);
 
 		tmp1 = tmp1->next;

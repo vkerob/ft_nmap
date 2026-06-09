@@ -9,8 +9,28 @@
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 sig_atomic_t volatile g_stop = 0;
+
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+
+bool substr(char *str, int start, int end, char **ptr)
+{
+	int	  len = end - start;
+
+	*ptr = calloc(len + 1, sizeof(char));
+	if (*ptr == NULL)
+	{
+		fprintf(stderr, "%s\n", strerror(errno));
+		return true;
+	}
+	strncpy(*ptr, str + start, len);
+	return false;
+}
 
 static void print_usage()
 {
@@ -40,7 +60,7 @@ static void print_usage()
 	printf(" --verbose: No port states are ignored\n");
 	printf(" --reason: Show the reason why the port is in that state\n");
 	printf("SERVICE/VERSION DETECTION:\n");
-	printf(" --version: Probe open ports to determine version info");
+	printf(" --version: Probe open ports to determine version info\n");
 	printf("OS DETECTION\n");
 	printf(" --os-detect: Enable OS detection\n");
 	printf("\nDECOY SCAN:\n");
@@ -50,6 +70,147 @@ static void print_usage()
 	printf("  Max %d decoys\n", MAX_DECOYS);
 	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
+}
+#include <regex.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+
+
+
+static bool resolve_services_name(u16 *ports, u16 port_count,
+								 t_port_svc_lst *(*head)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan)
+{
+	FILE *fp;
+	PCRE2_SIZE error_offset;
+	pcre2_code *re = NULL;
+	char pattern[512] = { 0 };
+	int error_number;
+	t_port_svc_lst **tcp_svc_head = head[TCP_INDEX];
+	t_port_svc_lst **udp_svc_head = head[UDP_INDEX];
+
+
+	// Open file in read mode
+	fp = fopen("./nmap-services", "r");
+	if (fp == NULL) {
+			return true;
+	}
+	snprintf(pattern, sizeof(pattern),
+	"([a-z]+)/(%s)	([0-9]+).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
+
+	re = pcre2_compile(
+		(unsigned char *)pattern,               /* the pattern */
+		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
+		0,                     /* default options */
+		&error_number,         /* for error number */
+		&error_offset,         /* for error offset */
+		NULL);   
+
+	if (re == NULL)
+	{
+		fprintf(stderr, "Invalid pattern: %s\n", pattern);
+		return true;
+	}
+
+	int rc;
+
+	char buffer[256];
+	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		pcre2_match_data *match_data =
+		pcre2_match_data_create_from_pattern(re, NULL);
+		rc = pcre2_match(
+			re,
+			(unsigned char *)buffer,
+			strlen(buffer),
+			0,
+			0,
+			match_data,
+			NULL);
+		if (rc == PCRE2_ERROR_NOMATCH)
+		{
+						memset(buffer, 0, sizeof(buffer));
+			continue ;
+		}
+		else if (rc < 0)
+		{
+			fprintf(stderr, "Matching error\n");
+			break ;
+		}
+		else
+		{
+			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+			if (ovector == NULL)
+			{
+				fprintf(stderr, "%s\n", strerror(errno));
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
+			}
+
+			t_port *new = calloc(1, sizeof(t_port));
+			if (new == NULL)
+			{
+				fprintf(stderr, "%s\n", strerror(errno));
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
+			}
+			char	*protocol;
+			char *port;
+			char *service;
+
+			if (substr(buffer, ovector[2], ovector[3], &service) ||
+				substr(buffer, ovector[4], ovector[5], &protocol) ||
+				substr(buffer, ovector[6], ovector[7], &port))
+			{
+				pcre2_match_data_free(match_data);   /* Free resources */
+				return true;
+			}
+			
+			int port_nb = atoi(port);
+			for (int i = 0; i < port_count; i++)
+			{
+				if (port_nb == ports[i])
+				{
+					// printf("port %s service: %s\n", port, service);
+					t_port_svc_lst *new = calloc(1, sizeof(t_port_svc_lst));
+					if (new == NULL)
+					{
+						//TODO: handle error
+						return true;
+					}
+					else
+					{
+						new->port = ports[i];
+						new->name = service;
+						bool tcp_svc_port = (strcmp(protocol, "tcp") == 0);
+						bool udp_svc_port = (strcmp(protocol, "udp") == 0);
+						if (tcp_svc_port && *tcp_svc_head == NULL)
+						{
+							*tcp_svc_head = new;
+						}
+						else if (udp_svc_port && *udp_svc_head == NULL)
+						{
+							*udp_svc_head = new;
+						}
+						else
+						{
+							t_port_svc_lst *tmp;
+							tmp = tcp_svc_port ?  *tcp_svc_head : *udp_svc_head;
+							while (tmp->next)
+							{
+								tmp = tmp->next;
+							}
+							tmp->next = new;
+						}
+					}
+					break;
+				}
+			}
+			memset(buffer, 0, sizeof(buffer));
+		}
+		pcre2_match_data_free(match_data);   /* Free resources */
+	}
+	// Close the file
+	fclose(fp);
+	return false;
 }
 
 static void set_scan_presence(t_args *args)
@@ -88,6 +249,14 @@ bool nmap_main(t_ctx *ctx)
 		printf("failed to initialize probe request\n");
 		return true;
 	}
+
+	if (resolve_services_name(ctx->args.ports, ctx->args.port_count,
+		&ctx->port_svc_lst, ctx->args.udp_scan, ctx->args.tcp_scan))
+	{
+		//TODO: use /etc/services instead
+	}
+
+	print_debug_services_lst(ctx->port_svc_lst);
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 

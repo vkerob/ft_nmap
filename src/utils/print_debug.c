@@ -89,6 +89,25 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	return false;
 }
 
+void print_debug_services_lst(t_port_svc_lst **services_lst)
+{
+	t_port_svc_lst *tmp = services_lst[TCP_INDEX];
+
+	while (tmp)
+	{
+		printf("%d %s\n", tmp->port, tmp->name);
+		tmp = tmp->next;
+	}
+
+	tmp = services_lst[UDP_INDEX];
+
+	while (tmp)
+	{
+		printf("%d %s\n", tmp->port, tmp->name);
+		tmp = tmp->next;
+	}
+}
+
 bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,
 							 const t_datalink_hdr *nested_datalink_hdr,
