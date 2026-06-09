@@ -38,8 +38,10 @@ char *port_state_to_str(t_port_state state)
 const char *get_service_name(u16 port)
 {
 	const struct servent *svc = getservbyport(htons(port), "tcp");
-	if (svc)
+	if (svc){
+		// fprintf(stderr, "service name: %s\n", svc->s_name);
 		return svc->s_name;
+	}
 	svc = getservbyport(htons(port), "udp");
 	if (svc)
 		return svc->s_name;
@@ -88,7 +90,8 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 {
 	if (port_conclusion->port_state == UNKNOWN)
 	{
-		return;
+		port_conclusion->port_state = port->port_state;
+		return ;
 	}
 	switch (port->port_state)
 	{
@@ -547,6 +550,7 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 	for (u16 i = 0; i < args->port_count; i++)
 	{
 		const int idx = target->port_list.port_map[args->ports[i]];
+
 		for (u8 j = 0; j < args->nb_scan_types; j++)
 		{
 			const t_scan_type scan_type_index = args->scan_types[j];
@@ -555,6 +559,7 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 
 			/* Update the conclusion of a port state based off what each scan
 				type gave us */
+
 			update_definitive_port_state_and_reason(
 				&target->port_list.port_final_state[protocol_index][idx],
 				&target->port_list.port_map_rev[scan_type_index][idx]);

@@ -125,6 +125,13 @@ typedef struct s_port_range_scan_type
 	u16			max_port_range;
 } t_port_range_scan_type;
 
+
+typedef struct s_port_svc_lst {
+	u16 port;
+	char *name;
+	struct s_port_svc_lst *next;
+}	t_port_svc_lst;
+
 typedef struct s_ctx
 {
 	t_target	  *targets;
@@ -132,6 +139,7 @@ typedef struct s_ctx
 	t_iface_info  *ifaces;
 	size_t		   iface_count;
 	t_args		   args;
+	t_port_svc_lst *port_svc_lst[MAX_PROTO_COUNT];
 	t_program_info program_info;
 	pcap_t		 **handles;
 } t_ctx;

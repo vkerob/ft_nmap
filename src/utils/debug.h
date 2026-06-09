@@ -41,6 +41,7 @@ void print_debug_packet_end();
 void print_debug_ethernet_header(t_eth_hdr *eth_header);
 
 // void	print_debug_icmp_header(struct icmphdr *icmp_hdr);
+void print_debug_services_lst(t_port_svc_lst **services_lst);
 
 void print_debug_protocol(int protocol);
 

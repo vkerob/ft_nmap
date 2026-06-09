@@ -8,7 +8,7 @@
 
 typedef struct	s_args
 {
-	u16			flags;
+	u16				flags;
 	u16				ports[MAX_PORT_COUNT];
 	u16				port_count;
 	u8				scan_types[MAX_NB_SCAN_TYPE];
