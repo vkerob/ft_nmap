@@ -1,5 +1,6 @@
 #include "greatest.h"
 #include "tests.h"
+#include "utils.h"
 #include "typesdef.h"
 #include <errno.h>
 #include <regex.h>
@@ -83,21 +84,6 @@ void run_command(char **args, char **output)
 		close(pipe_fds[0]);
 		wait(NULL);
 	}
-}
-
-
-bool substr(char *str, int start, int end, char **ptr)
-{
-	int	  len = end - start;
-
-	*ptr = calloc(len + 1, sizeof(char));
-	if (*ptr == NULL)
-	{
-		fprintf(stderr, "%s\n", strerror(errno));
-		return true;
-	}
-	strncpy(*ptr, str + start, len);
-	return false;
 }
 
 void better_free(void *ptr)

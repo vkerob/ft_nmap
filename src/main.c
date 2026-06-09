@@ -5,6 +5,7 @@
 #include "parsing.h"
 #include "scan.h"
 #include "shared.h"
+#include "utils.h"
 
 #include <pcap/pcap.h>
 #include <pthread.h>
@@ -14,23 +15,6 @@
 #include <string.h>
 
 sig_atomic_t volatile g_stop = 0;
-
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
-
-bool substr(char *str, int start, int end, char **ptr)
-{
-	int	  len = end - start;
-
-	*ptr = calloc(len + 1, sizeof(char));
-	if (*ptr == NULL)
-	{
-		fprintf(stderr, "%s\n", strerror(errno));
-		return true;
-	}
-	strncpy(*ptr, str + start, len);
-	return false;
-}
 
 static void print_usage()
 {
@@ -71,148 +55,6 @@ static void print_usage()
 	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
 }
-#include <regex.h>
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
-
-
-
-static bool resolve_services_name(u16 *ports, u16 port_count,
-								 t_port_svc_lst *(*head)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan)
-{
-	FILE *fp;
-	PCRE2_SIZE error_offset;
-	pcre2_code *re = NULL;
-	char pattern[512] = { 0 };
-	int error_number;
-	t_port_svc_lst **tcp_svc_head = head[TCP_INDEX];
-	t_port_svc_lst **udp_svc_head = head[UDP_INDEX];
-
-
-	// Open file in read mode
-	fp = fopen("./nmap-services", "r");
-	if (fp == NULL) {
-			return true;
-	}
-	snprintf(pattern, sizeof(pattern),
-	"([a-z]+)/(%s)	([0-9]+).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
-
-	re = pcre2_compile(
-		(unsigned char *)pattern,               /* the pattern */
-		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
-		0,                     /* default options */
-		&error_number,         /* for error number */
-		&error_offset,         /* for error offset */
-		NULL);   
-
-	if (re == NULL)
-	{
-		fprintf(stderr, "Invalid pattern: %s\n", pattern);
-		return true;
-	}
-
-	int rc;
-
-	char buffer[256];
-	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-		pcre2_match_data *match_data =
-		pcre2_match_data_create_from_pattern(re, NULL);
-		rc = pcre2_match(
-			re,
-			(unsigned char *)buffer,
-			strlen(buffer),
-			0,
-			0,
-			match_data,
-			NULL);
-		if (rc == PCRE2_ERROR_NOMATCH)
-		{
-						memset(buffer, 0, sizeof(buffer));
-			continue ;
-		}
-		else if (rc < 0)
-		{
-			fprintf(stderr, "Matching error\n");
-			break ;
-		}
-		else
-		{
-			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
-			if (ovector == NULL)
-			{
-				fprintf(stderr, "%s\n", strerror(errno));
-				pcre2_match_data_free(match_data);   /* Free resources */
-				return true;
-			}
-
-			t_port *new = calloc(1, sizeof(t_port));
-			if (new == NULL)
-			{
-				fprintf(stderr, "%s\n", strerror(errno));
-				pcre2_match_data_free(match_data);   /* Free resources */
-				return true;
-			}
-			char	*protocol;
-			char *port;
-			char *service;
-
-			if (substr(buffer, ovector[2], ovector[3], &service) ||
-				substr(buffer, ovector[4], ovector[5], &protocol) ||
-				substr(buffer, ovector[6], ovector[7], &port))
-			{
-				pcre2_match_data_free(match_data);   /* Free resources */
-				return true;
-			}
-			
-			int port_nb = atoi(port);
-			for (int i = 0; i < port_count; i++)
-			{
-				if (port_nb == ports[i])
-				{
-					// printf("port %s service: %s\n", port, service);
-					t_port_svc_lst *new = calloc(1, sizeof(t_port_svc_lst));
-					if (new == NULL)
-					{
-						//TODO: handle error
-						return true;
-					}
-					else
-					{
-						new->port = ports[i];
-						new->name = service;
-						bool tcp_svc_port = (strcmp(protocol, "tcp") == 0);
-						bool udp_svc_port = (strcmp(protocol, "udp") == 0);
-						if (tcp_svc_port && *tcp_svc_head == NULL)
-						{
-							*tcp_svc_head = new;
-						}
-						else if (udp_svc_port && *udp_svc_head == NULL)
-						{
-							*udp_svc_head = new;
-						}
-						else
-						{
-							t_port_svc_lst *tmp;
-							tmp = tcp_svc_port ?  *tcp_svc_head : *udp_svc_head;
-							while (tmp->next)
-							{
-								tmp = tmp->next;
-							}
-							tmp->next = new;
-						}
-					}
-					break;
-				}
-			}
-			memset(buffer, 0, sizeof(buffer));
-		}
-		pcre2_match_data_free(match_data);   /* Free resources */
-	}
-	// Close the file
-	fclose(fp);
-	return false;
-}
-
 static void set_scan_presence(t_args *args)
 {
 	for (u8 i = 0; i < args->nb_scan_types; i++)
@@ -220,6 +62,25 @@ static void set_scan_presence(t_args *args)
 		args->udp_scan |= (args->scan_types[i] == SCAN_UDP);
 		args->tcp_scan |= (args->scan_types[i] != SCAN_UDP);
 	}
+}
+
+
+static bool init_port_map(t_args *args)
+{
+	u16 max_port_nb = get_max_port_number(args->ports);
+	printf("max port: %u\n", max_port_nb);
+	args->port_map = calloc(max_port_nb, sizeof(int));
+	if (args->port_map == NULL)
+	{
+		LOG("ft_nmap: ft_calloc: %s\n", strerror(errno));
+		return true;
+	}
+	memset(args->port_map, -1, max_port_nb * sizeof(int));
+	for (u16 j = 0; j < args->port_count; j++)
+	{
+		args->port_map[args->ports[j]] = j;
+	}
+	return false;
 }
 
 bool nmap_main(t_ctx *ctx)
@@ -236,7 +97,7 @@ bool nmap_main(t_ctx *ctx)
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
-		printf("failed to initialize shared data\n");
+		LOG("failed to initialize shared data\n");
 		return true;
 	}
 	t_receiver_data *pcap_ctxs = NULL;
@@ -246,17 +107,24 @@ bool nmap_main(t_ctx *ctx)
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
-		printf("failed to initialize probe request\n");
+		LOG("failed to initialize probe request\n");
 		return true;
 	}
 
-	if (resolve_services_name(ctx->args.ports, ctx->args.port_count,
-		&ctx->port_svc_lst, ctx->args.udp_scan, ctx->args.tcp_scan))
+	if (init_port_map(&ctx->args))
 	{
-		//TODO: use /etc/services instead
+		LOG("failed to initialize the port map\n");
+		return true;
 	}
 
-	print_debug_services_lst(ctx->port_svc_lst);
+	if (resolve_services_name(ctx->args.port_count, ctx->args.port_map,
+		&ctx->port_svc, ctx->args.udp_scan, ctx->args.tcp_scan))
+	{
+		LOG("failed to resolve services\n");
+		return true;
+	}
+
+	print_debug_services(ctx->port_svc, ctx->args.port_count);
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
@@ -343,7 +211,7 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (link_port_list_to_each_target(&ctx))
+	if (init_port_lists(&ctx))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
 		return EXIT_FAILURE;
@@ -385,6 +253,10 @@ error:
 	if (ctx.handles)
 	{
 		free(ctx.handles);
+	}
+	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
+	{
+		free_services(ctx.port_svc);
 	}
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_FAILURE;

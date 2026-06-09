@@ -89,23 +89,26 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	return false;
 }
 
-void print_debug_services_lst(t_port_svc_lst **services_lst)
+void print_debug_services(t_port_svc *services_arr[MAX_PROTO_COUNT], u16 port_count)
 {
-	t_port_svc_lst *tmp = services_lst[TCP_INDEX];
+	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nServices per port:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 
-	while (tmp)
+	u16 i = 0;
+	while (i < port_count)
 	{
-		printf("%d %s\n", tmp->port, tmp->name);
-		tmp = tmp->next;
+		printf(ANSI_COLOR_BLUE "  • %s	%d/tcp\n" ANSI_COLOR_RESET, services_arr[TCP_INDEX][i].name, services_arr[TCP_INDEX][i].port);
+		i++;
 	}
-
-	tmp = services_lst[UDP_INDEX];
-
-	while (tmp)
+	i = 0;
+	while (i < port_count)
 	{
-		printf("%d %s\n", tmp->port, tmp->name);
-		tmp = tmp->next;
+		printf(ANSI_COLOR_BLUE "  • %s	%d/tcp\n" ANSI_COLOR_RESET, services_arr[UDP_INDEX][i].name, services_arr[UDP_INDEX][i].port);
+		i++;
 	}
+	printf(ANSI_COLOR_BLUE
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 }
 
 bool print_debug_packet_recv(const struct ip	  *ip_hdr,

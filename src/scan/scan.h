@@ -124,11 +124,10 @@ typedef struct s_port_range_scan_type
 } t_port_range_scan_type;
 
 
-typedef struct s_port_svc_lst {
+typedef struct s_port_svc {
 	u16 port;
 	char *name;
-	struct s_port_svc_lst *next;
-}	t_port_svc_lst;
+}	t_port_svc;
 
 typedef struct s_ctx
 {
@@ -137,7 +136,7 @@ typedef struct s_ctx
 	t_iface_info  *ifaces;
 	size_t		   iface_count;
 	t_args		   args;
-	t_port_svc_lst *port_svc_lst[MAX_PROTO_COUNT];
+	t_port_svc *port_svc[MAX_PROTO_COUNT];
 	t_program_info program_info;
 	pcap_t		 **handles;
 } t_ctx;
@@ -146,7 +145,7 @@ bool init_portlist(t_port_list *port_list, u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
 				   u8 nb_scan_type, bool tcp_scan, bool udp_scan, u16 *max_port_nb);
 
-bool link_port_list_to_each_target(t_ctx *ctx);
+bool init_port_lists(t_ctx *ctx);
 
 void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 
@@ -160,4 +159,10 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason);
 void grab_versions(t_target *target, t_args *args);
 
 const char *guess_os(u8 ttl, u16 tcp_window);
+
+bool resolve_services_name(u16 port_count, int *port_map,
+								 t_port_svc *(*head)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan);
+
+void free_services(t_port_svc *head[MAX_PROTO_COUNT]);
+
 #endif
