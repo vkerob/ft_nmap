@@ -1,0 +1,169 @@
+
+#include "args.h"
+#include "commons.h"
+#include "debug.h"
+#include "my_signal.h"
+#include "parsing.h"
+#include "scan.h"
+#include "shared.h"
+#include "utils.h"
+
+#include <pcap/pcap.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <regex.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+
+
+bool resolve_services_name(u16 port_count, int *port_map,
+								 t_port_svc *(*arr)[MAX_PROTO_COUNT], bool udp_scan, bool tcp_scan)
+{
+	PCRE2_SIZE error_offset;
+	pcre2_code *re = NULL;
+	char pattern[512] = { 0 };
+	int error_number;
+  if (tcp_scan)
+  {
+    (*arr)[TCP_INDEX] = calloc(port_count, sizeof(t_port_svc));
+    if ((*arr)[TCP_INDEX] == NULL)
+    {
+      LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
+      return true;
+    }
+  }
+
+  if (udp_scan)
+  {
+    (*arr)[UDP_INDEX] = calloc(port_count, sizeof(t_port_svc));
+    if ((*arr)[UDP_INDEX] == NULL)
+    {
+      LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
+      return true;
+    }
+  }
+
+	FILE *fp = fopen("/usr/share/nmap/nmap-services", "r");
+	if (!fp)
+	{
+		LOG("ft_nmap: unable to open nmap-services file, resort to /etc/services\n");
+		fp = fopen("/etc/services", "r");
+		if (!fp)
+		{
+			LOG("ft_nmap: unable to read services file\n");
+			return true;
+		}
+	}
+	// This file contains a list of services running on each port in general for both protocols (tcp and udp)
+	snprintf(pattern, sizeof(pattern),
+	"([a-z]+)	([0-9]{1,5})/(%s).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
+
+	re = pcre2_compile(
+		(unsigned char *)pattern,
+		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED,
+		0,
+		&error_number,
+		&error_offset,
+		NULL);
+
+	if (re == NULL)
+	{
+		LOG("Invalid pattern: %s\n", pattern);
+		return true;
+	}
+
+	int line_nb = 0;
+
+	int rc = -1;
+
+	char buffer[256];
+	while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+		line_nb++;
+		pcre2_match_data *match_data =
+		pcre2_match_data_create_from_pattern(re, NULL);
+		rc = pcre2_match(
+			re,
+			(unsigned char *)buffer,
+			strlen(buffer),
+			0,
+			0,
+			match_data,
+			NULL);
+		if (rc == PCRE2_ERROR_NOMATCH)
+		{
+			memset(buffer, 0, sizeof(buffer));
+			continue ;
+		}
+		else if (rc < 0)
+		{
+			LOG("ft_nmap: pcre2_match: Matching error\n");
+			fclose(fp);
+			break ;
+		}
+		else
+		{
+			PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
+			if (ovector == NULL)
+			{
+				LOG("ft_nmap: pcre2_get_ovector_pointer: %s\n", strerror(errno));
+				pcre2_match_data_free(match_data);
+				fclose(fp);
+				return true;
+			}
+
+			char *protocol = NULL;
+			char *port = NULL;
+			char *service = NULL;
+
+  
+			if (substr(buffer, ovector[2], ovector[3], &service) ||
+				substr(buffer, ovector[4], ovector[5], &port) ||
+				substr(buffer, ovector[6], ovector[7], &protocol))
+			{
+				pcre2_match_data_free(match_data);
+				fclose(fp);
+				return true;
+			}
+
+			char *endptr;
+			int port_nb = strtoimax(port, &endptr, 10);
+
+			if (port_nb == 0)
+			{
+				LOG("ft_nmap: error at line %d\n", line_nb);
+				memset(buffer, 0, sizeof(buffer));
+				continue ;
+			}
+      const int idx = port_map[port_nb];
+      printf("%u\n", idx);
+      // Means it's a port that's not scanned
+      if (idx == -1)
+      {
+        memset(buffer, 0, sizeof(buffer));
+        continue ;
+      }
+      (*arr)[idx]->port = port_nb;
+      (*arr)[idx]->name = service;
+			memset(buffer, 0, sizeof(buffer));
+		}
+		pcre2_match_data_free(match_data);
+	}
+	fclose(fp);
+	return false;
+}
+
+
+void free_services(t_port_svc *head[MAX_PROTO_COUNT])
+{
+  if (head[TCP_INDEX])
+  {
+    free(head[TCP_INDEX]);
+  }
+  if (head[UDP_INDEX])
+  {
+    free(head[UDP_INDEX]);
+  }
+}
