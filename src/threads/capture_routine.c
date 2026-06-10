@@ -23,7 +23,7 @@
 
 static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 							   bpf_u_int32	   l3_caplen,
-							   struct timeval *relative_recv_time, u8 flags)
+							   struct timeval *relative_recv_time, u16 flags)
 {
 	const u8	  *protocol_hdr;
 	t_datalink_hdr datalink_hdr = { 0 };
@@ -125,7 +125,7 @@ static bool handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 static bool parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								 const u_char *packet, bpf_u_int32 caplen,
 								 struct timeval *relative_recv_time,
-								 const u8		 flags)
+								 const u16		 flags)
 {
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
@@ -217,7 +217,7 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 
 	// print_debug_packet_start();
 	parse_datalink_layer(user_data->handle, sent_list, packet, header->caplen,
-						 &relative_recv_time, receiver_data->flags);
+						 &relative_recv_time, receiver_data->args->flags);
 	// print_debug_thread_leave(phid, __FUNCTION__);
 }
 

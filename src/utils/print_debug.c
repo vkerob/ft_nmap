@@ -30,22 +30,23 @@ void sync_printf(const char *format, ...)
 }
 
 bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr)
+							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
+							 bool is_decoy)
 {
-
 	char src[32];
 	char target[32];
 
 	static int domain = AF_INET;
 	if (inet_ntop(domain, (const void *)&probe->target->addr, target,
-				  sizeof(src))
+				  sizeof(target))
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return true;
 	}
-	if (inet_ntop(domain, (const void *)&probe->target->iface_info->ip_addr,
-				  src, sizeof(target))
+	// Read actual source IP from the packet header (handles both real and
+	// decoy)
+	if (inet_ntop(domain, (const void *)&ip_hdr->ip_src, src, sizeof(src))
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
@@ -53,6 +54,8 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	}
 
 	pthread_mutex_lock(&printf_mutex);
+	if (is_decoy)
+		printf("[DECOY] ");
 	printf("SENT (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
 		   (unsigned long)relative_sent_time->tv_usec,
 		   probe->type == SCAN_UDP ? "UDP" : "TCP", src,

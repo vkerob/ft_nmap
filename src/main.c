@@ -42,7 +42,12 @@ static void print_usage()
 	printf("SERVICE/VERSION DETECTION:\n");
 	printf(" --version: Probe open ports to determine version info");
 	printf("OS DETECTION\n");
-	printf("--os-detect: Enable OS detection\n");
+	printf(" --os-detect: Enable OS detection\n");
+	printf("\nDECOY SCAN:\n");
+	printf(" --decoy <decoy1,decoy2[,ME],...>: Cloak scan with decoy source "
+		   "IPs\n");
+	printf("  Ex: --decoy 192.168.1.100,10.0.0.5,ME\n");
+	printf("  Max %d decoys\n", MAX_DECOYS);
 	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
 }
@@ -195,7 +200,7 @@ int main(const int argc, char **argv)
 	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
 	printf("Starting ft_nmap at %s\n", date_buf);
 
-	if (nmap_main(&ctx) == false)
+	if (nmap_main(&ctx))
 	{
 		goto error;
 	}

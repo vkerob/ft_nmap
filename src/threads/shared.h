@@ -28,7 +28,7 @@ typedef struct s_shared_data_sender
 	// one for each interface
 	t_probe_queue  *sent;
 	t_program_info *program_info;
-	u8				flags;
+	const t_args   *args;
 } t_shared_data_sender;
 
 
@@ -42,7 +42,7 @@ typedef struct s_receiver_data
 	// reference of sent request list
 	t_probe_queue *sent;
 
-	u8				flags;
+	const t_args   *args;
 	t_program_info *program_info;
 
 } t_receiver_data;

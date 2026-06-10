@@ -350,6 +350,65 @@ bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types,
 	return false;
 }
 
+static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
+						 u8 *decoy_count)
+{
+	char *copy = strdup(decoy_str);
+	if (!copy)
+	{
+		LOG("ft_nmap: strdup failed: %s\n", strerror(errno));
+		return true;
+	}
+
+	bool error = false;
+	char *tok = strtok(copy, ",");
+	while (tok != NULL)
+	{
+		char *trimmed = trim_inplace(tok);
+		if (!trimmed || *trimmed == '\0')
+		{
+			LOG("ft_nmap: empty token in decoy list\n");
+			error = true;
+			break;
+		}
+		if (*decoy_count >= MAX_DECOYS)
+		{
+			LOG("ft_nmap: too many decoys (max %d)\n", MAX_DECOYS);
+			error = true;
+			break;
+		}
+		// ME: sentinel (INADDR_ANY = 0.0.0.0) marks where our real IP goes in the sequence
+		if (strcasecmp(trimmed, "ME") == 0)
+		{
+			decoys[(*decoy_count)++] = (struct in_addr){ .s_addr = INADDR_ANY };
+			tok = strtok(NULL, ",");
+			continue;
+		}
+
+		struct addrinfo  hints;
+		struct addrinfo *res = NULL;
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_INET;
+		const int rc = getaddrinfo(trimmed, NULL, &hints, &res);
+		if (rc != 0)
+		{
+			LOG("ft_nmap: invalid decoy address '%s': %s\n", trimmed,
+				gai_strerror(rc));
+			error = true;
+			break;
+		}
+		memcpy(&decoys[*decoy_count],
+			   &((struct sockaddr_in *)res->ai_addr)->sin_addr,
+			   sizeof(struct in_addr));
+		freeaddrinfo(res);
+		(*decoy_count)++;
+		tok = strtok(NULL, ",");
+	}
+
+	free(copy);
+	return error;
+}
+
 static bool parse_speed_strict(const char *str, u8 *out)
 {
 	while (isspace((unsigned char)*str))
@@ -407,6 +466,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "reason", no_argument, 0, REASON },
 		{ "verbose", no_argument, 0, VERBOSE},
 		{ "version", no_argument, 0, VERSION_DETECT },
+		{ "decoy", required_argument, 0, DECOY },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -470,6 +530,13 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case VERSION_DETECT:
 			SET(args->flags, F_VERSION);
 			break;
+
+			case DECOY:
+			SET(args->flags, F_DECOY);
+			if (parse_decoys(optarg, args->decoys, &args->decoy_count))
+				return true;
+			break;
+
 		case '?':
 		case ':':
 			LOG("ft_nmap: Invalid arguments. Use --help for usage "

@@ -37,7 +37,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	shared_data_probe->to_send.tail = NULL;
 	shared_data_probe->to_send.nb_probe = 0;
 	shared_data_probe->program_info = &ctx->program_info;
-	shared_data_probe->flags = ctx->args.flags;
+	shared_data_probe->args = &ctx->args;
 
 	atomic_init(&shared_data_probe->id, 1);
 	atomic_init(&shared_data_probe->base_seq, rand());
@@ -70,6 +70,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 		(*pcap_ctxs)[i].to_send = &shared_data_probe->to_send;
 		(*pcap_ctxs)[i].sent = &shared_data_probe->sent[i];
 		(*pcap_ctxs)[i].handle = NULL;
+		(*pcap_ctxs)[i].args = shared_data_probe->args;
 		(*pcap_ctxs)[i].program_info = program_info;
 	}
 	return false;

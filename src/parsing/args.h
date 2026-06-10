@@ -4,6 +4,7 @@
 #include "defines.h"
 #include "typesdef.h"
 
+#include <netinet/in.h>
 #include <stdbool.h>
 
 typedef struct	s_args
@@ -16,9 +17,11 @@ typedef struct	s_args
 	u16				max_port_nb;
 	u8				nb_scan;
 	u8				speed;
-	/* Indicate whether we have a UDP and TCP scan among scan_types so we don't have to loop over scan_types we 
+	/* Indicate whether we have a UDP and TCP scan among scan_types so we don't have to loop over scan_types we
 	need that information */
 	bool			tcp_scan;
 	bool			udp_scan;
+	struct in_addr	decoys[MAX_DECOYS];
+	u8				decoy_count;
 }	t_args;
 #endif
