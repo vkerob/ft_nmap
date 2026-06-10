@@ -19,7 +19,8 @@ enum e_flags
 	F_REASON = 1u << 7,
 	F_VERBOSE = 1u << 8,
 	F_VERSION = 1u << 9,
-	F_OS_DETECT = 1u << 10
+	F_OS_DETECT = 1u << 10,
+	F_DECOY     = 1u << 11
 };
 
 bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,

@@ -13,6 +13,9 @@
 #define VERBOSE 1008
 #define VERSION_DETECT 1009
 #define OS_DETECT 1010
+#define DECOY 1011
+/* Maximum number of decoy IPs the user can specify */
+#define MAX_DECOYS 3
 #define MIN_PORT_NUMBER 1
 #define SCAN_INVALID 255
 /* Maximum number of threads our program can run (option set with --speed)*/
