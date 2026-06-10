@@ -64,8 +64,8 @@ bool resolve_services_name(u16 port_count, int *port_map,
 
 	re = pcre2_compile(
 		(unsigned char *)pattern,
-		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED,
-		0,
+		PCRE2_ZERO_TERMINATED,
+		PCRE2_EXTENDED,
 		&error_number,
 		&error_offset,
 		NULL);
@@ -95,11 +95,13 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			NULL);
 		if (rc == PCRE2_ERROR_NOMATCH)
 		{
+			pcre2_match_data_free(match_data);
 			memset(buffer, 0, sizeof(buffer));
 			continue ;
 		}
 		else if (rc < 0)
 		{
+			pcre2_match_data_free(match_data);
 			LOG("ft_nmap: pcre2_match: Matching error\n");
 			fclose(fp);
 			break ;
@@ -111,6 +113,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			{
 				LOG("ft_nmap: pcre2_get_ovector_pointer: %s\n", strerror(errno));
 				pcre2_match_data_free(match_data);
+				pcre2_code_free(re);
 				fclose(fp);
 				return true;
 			}
@@ -125,10 +128,12 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				substr(buffer, ovector[6], ovector[7], &protocol))
 			{
 				pcre2_match_data_free(match_data);
+				pcre2_code_free(re);
 				fclose(fp);
 				return true;
 			}
 
+			pcre2_match_data_free(match_data);
 			char *endptr;
 			intmax_t port_nb = strtoimax(port, &endptr, 10);
 
@@ -171,6 +176,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			(*arr)[TCP_INDEX][i].name = "unknown";
 		}
 	}
+	pcre2_code_free(re);
 	fclose(fp);
 	return false;
 }
