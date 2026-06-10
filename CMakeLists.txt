@@ -85,7 +85,7 @@ target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS})
 
 #set(CMAKE_FIND_DEBUG_MODE FALSE)
 
-target_link_libraries(ft_nmap PRIVATE ${LIBPCAP})
+target_link_libraries(ft_nmap PRIVATE ${LIBPCAP} pcre2-8)
 
 target_link_libraries(tests_ft_nmap ${LIBPCAP} pcre2-8)
 
