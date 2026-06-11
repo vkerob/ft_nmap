@@ -22,13 +22,13 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 		return;
 	}
 
-	pthread_mutex_lock(&sent_list->mut);
+	pthread_mutex_lock(&sent_list->safe_mut.mutex);
 	t_probe *probe
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
 								ip_src, scan_type, &sent_list->nb_probe);
 	if (!probe)
 	{
-		pthread_mutex_unlock(&sent_list->mut);
+		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		sync_printf("Probe not found\n");
 		return;
 	}
@@ -48,12 +48,12 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 				port->port_state = FILTERED;
 			}
 			set_port_state_reason(port, UNREACHABLE);
-			pthread_mutex_unlock(&sent_list->mut);
+			pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 			free(probe);
 			return;
 		}
 	}
 	port->port_state = UNKNOWN;
-	pthread_mutex_unlock(&sent_list->mut);
+	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 	free(probe);
 }

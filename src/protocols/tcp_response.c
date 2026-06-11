@@ -12,11 +12,11 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 						 const u16 tcp_window)
 {
 
-	pthread_mutex_lock(&sent_list->mut);
+	pthread_mutex_lock(&sent_list->safe_mut.mutex);
 	t_probe *probe
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
 								ip_src, scan_type, &sent_list->nb_probe);
-	pthread_mutex_unlock(&sent_list->mut);
+	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 
 	if (!probe)
 	{

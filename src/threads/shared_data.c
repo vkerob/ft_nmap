@@ -19,12 +19,13 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
-		int res = pthread_mutex_init(&shared_data_probe->sent[i].mut, NULL);
+		int res = pthread_mutex_init(&shared_data_probe->sent[i].safe_mut.mutex, NULL);
 		if (res != 0)
 		{
 			LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 			return true;
 		}
+		shared_data_probe->sent[i].safe_mut.initialize = true;
 		shared_data_probe->sent[i].nb_probe = 0;
 		shared_data_probe->sent[i].head = NULL;
 		shared_data_probe->sent[i].tail = NULL;
@@ -42,12 +43,13 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	atomic_init(&shared_data_probe->id, 1);
 	atomic_init(&shared_data_probe->base_seq, rand());
 
-	int res = pthread_mutex_init(&shared_data_probe->to_send.mut, NULL);
+	int res = pthread_mutex_init(&shared_data_probe->to_send.safe_mut.mutex, NULL);
 	if (res != 0)
 	{
 		LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 		return true;
 	}
+	shared_data_probe->to_send.safe_mut.initialize = true;
 
 	return false;
 }
@@ -89,6 +91,16 @@ static void free_probes(t_probe *head)
 	}
 }
 
+
+void safe_destroy_mutex(t_safe_mutex *safe_mutex)
+{
+	if (safe_mutex->initialize)
+	{
+		pthread_mutex_destroy(&safe_mutex->mutex);
+		safe_mutex->initialize = false;
+	}
+}
+
 static void free_sent_queues(size_t iface_count, t_probe_queue *sent_queues)
 {
 	for (size_t i = 0; i < iface_count; i++)
@@ -99,7 +111,7 @@ static void free_sent_queues(size_t iface_count, t_probe_queue *sent_queues)
 		{
 			free_probes(sent_queues[i].head);
 		}
-		pthread_mutex_destroy(&sent_queues[i].mut);
+		safe_destroy_mutex(&sent_queues[i].safe_mut);
 	}
 	free(sent_queues);
 }
@@ -110,7 +122,7 @@ static void free_to_send_queue(t_probe_queue *to_send_queue)
 	{
 		free_probes(to_send_queue->head);
 	}
-	pthread_mutex_destroy(&to_send_queue->mut);
+	safe_destroy_mutex(&to_send_queue->safe_mut);
 }
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,

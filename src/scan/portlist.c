@@ -47,14 +47,6 @@ static void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE],
 	}
 }
 
-// static void delete_port_map(u16 *port_map[MAX_NB_SCAN_TYPE],
-// 							u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
-// {
-// 	for (u8 i = 0; i < index; i++)
-// 	{
-// 		free(port_map[scan_types[i]]);
-// 	}
-// }
 
 bool init_port_lists(t_ctx *ctx)
 {

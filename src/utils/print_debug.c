@@ -686,7 +686,7 @@ void print_debug_receiver_data(const t_receiver_data *receiver_data)
 	printf(ANSI_BOLD ANSI_COLOR_BLUE
 		   "\nsent Request List Mutex:\n" ANSI_COLOR_RESET);
 	printf(ANSI_BOLD ANSI_COLOR_BLUE " • %p\n" ANSI_COLOR_RESET,
-		   (void *)&receiver_data->to_send->mut);
+		   (void *)&receiver_data->to_send->safe_mut.mutex);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
@@ -725,7 +725,7 @@ void print_debug_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		printf(ANSI_COLOR_MAGENTA "	• Queue address: %p\n" ANSI_COLOR_RESET,
 			   (void *)&shared_data_probe->sent[i]);
 		printf(ANSI_COLOR_MAGENTA "	• Queue mutex: %p\n" ANSI_COLOR_RESET,
-			   (void *)&shared_data_probe->sent[i].mut);
+			   (void *)&shared_data_probe->sent[i].safe_mut.mutex);
 	}
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);

@@ -87,22 +87,18 @@ static bool init_port_map(t_args *args)
 }
 
 
-void free_ressources(t_ctx *ctx, t_receiver_data *pcap_ctx, t_shared_data_sender *shared_data_probe)
+static void free_ressources(t_ctx *ctx)
 {
-	better_free(pcap_ctx);
-
 	better_free(ctx->args.port_map);
-
-	deinitialize_shared_data(shared_data_probe, ctx);
 
 	free_services(&ctx->port_svc, ctx->args.port_count);
 
 	free_targets(&ctx->targets, ctx->target_count, ctx->args.port_count, ctx->args.nb_scan_types, ctx->args.scan_types);
 
-	free(ctx->ifaces);
+	better_free(ctx->ifaces);
 }
 
-+
+
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
@@ -133,6 +129,7 @@ bool nmap_main(t_ctx *ctx)
 
 	if (init_port_map(&ctx->args))
 	{
+				better_free(pcap_ctxs);
 		LOG("failed to initialize the port map\n");
 		return true;
 	}
@@ -140,6 +137,7 @@ bool nmap_main(t_ctx *ctx)
 	if (resolve_services_name(ctx->args.port_count, ctx->args.port_map,
 		&ctx->port_svc, ctx->args.udp_scan, ctx->args.tcp_scan))
 	{
+				better_free(pcap_ctxs);
 		LOG("failed to resolve services\n");
 		return true;
 	}
@@ -154,6 +152,8 @@ bool nmap_main(t_ctx *ctx)
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
 									  &shared_data_probe, pcap_ctxs))
 	{
+		better_free(pcap_ctxs);
+		deinitialize_shared_data(&shared_data_probe, ctx);
 		return true;
 	}
 
@@ -167,7 +167,8 @@ bool nmap_main(t_ctx *ctx)
 
 	print_scan_results(ctx);
 
-	free_ressources(ctx, pcap_ctxs, &shared_data_probe);
+	better_free(pcap_ctxs);
+	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
 }
@@ -208,6 +209,7 @@ int main(const int argc, char **argv)
 	{
 		goto error;
 	}
+	free_tabp((void ***)&targets_input, ctx.target_count);
 
 	if (init_port_lists(&ctx))
 	{
@@ -232,18 +234,12 @@ int main(const int argc, char **argv)
 	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
 	printf("Starting ft_nmap at %s\n", date_buf);
 
-	if (nmap_main(&ctx))
-	{
-		goto error;
-	}
+	nmap_main(&ctx);
 
+	free_ressources(&ctx);
 	return EXIT_SUCCESS;
 
 error:
-	free_tabp((void ***)&targets_input, ctx.target_count);
-	better_free(ctx.ifaces);
-	better_free(ctx.handles);
-	free_services(&ctx.port_svc, ctx.args.port_count);
-	free_targets(&ctx.targets, ctx.target_count, ctx.args.port_count, ctx.args.nb_scan_types, ctx.args.scan_types);
+	free_ressources(&ctx);
 	return EXIT_FAILURE;
 }
