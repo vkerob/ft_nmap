@@ -137,7 +137,6 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				better_free(port);
 				ret = true;
 				goto cleanup;
-				return true;
 			}
 
 			pcre2_match_data_free(match_data);
@@ -165,32 +164,41 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				continue ;
 			}
 			port_co++;
-			if (strcmp(protocol, "tcp") == 0)
+			if (tcp_scan && strcmp(protocol, "tcp") == 0)
 			{
 				(*arr)[TCP_INDEX][idx].port = port_nb;
 				(*arr)[TCP_INDEX][idx].name = service;
 			}
-			else if (strcmp(protocol, "udp") == 0)
+			else if (udp_scan && strcmp(protocol, "udp") == 0)
 			{
 				(*arr)[UDP_INDEX][idx].port = port_nb;
 				(*arr)[UDP_INDEX][idx].name = service;
 			}
 			else{
-				LOG("ft_nmap: error at line %d: unknown protocol\n", line_nb);
+				better_free(service);
+
 			}
-			free(port);
-			free(protocol);
+			// else if (strcmp(protocol, "udp") != 0 && strcmp(protocol, "tcp") != 0){
+			// 	LOG("ft_nmap: error at line %d: unknown protocol\n", line_nb);
+			// 	ret = true;
+			// 	better_free(service);
+			// 	better_free(protocol);
+			// 	better_free(port);
+			// 	goto cleanup;
+			// }
+				better_free(protocol);
+				better_free(port);
 			memset(buffer, 0, sizeof(buffer));
 		}
 	}
 	for (u16 i = 0; i < port_count; i++){
 		if (udp_scan && (*arr)[UDP_INDEX][i].name == NULL)
 		{
-			(*arr)[UDP_INDEX][i].name = "unknown";
+			(*arr)[UDP_INDEX][i].name = strdup("unknown");
 		}
 		if (tcp_scan && (*arr)[TCP_INDEX][i].name == NULL)
 		{
-			(*arr)[TCP_INDEX][i].name = "unknown";
+			(*arr)[TCP_INDEX][i].name = strdup("unknown");
 		}
 	}
 	pcre2_code_free(re);
@@ -208,7 +216,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 		}
 		better_free((*arr)[TCP_INDEX]);
 		better_free((*arr)[UDP_INDEX]);
-		return true;
+		return ret;
 }
 
 
