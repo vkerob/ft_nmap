@@ -228,7 +228,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 	// pthread_t phid = pthread_self();
 
 	//	print_debug_thread_startup(phid, __FUNCTION__);
-	pthread_mutex_lock(&sent->mut);
+	pthread_mutex_lock(&sent->safe_mut.mutex);
 	t_probe *tmp = sent->head;
 	while (tmp)
 	{
@@ -294,7 +294,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 				continue;
 			}
 			memset(&tmp->timestamp, 0, sizeof(struct timeval));
-			pthread_mutex_lock(&to_send->mut);
+			pthread_mutex_lock(&to_send->safe_mut.mutex);
 			// update next of current tail or head if list is empty
 			if (to_send->tail)
 			{
@@ -308,7 +308,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 			// update tail to new request
 			to_send->tail = tmp;
 			to_send->nb_probe++;
-			pthread_mutex_unlock(&to_send->mut);
+			pthread_mutex_unlock(&to_send->safe_mut.mutex);
 		}
 		// else
 		//{
@@ -317,7 +317,7 @@ bool purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 		// }
 		tmp = next;
 	}
-	pthread_mutex_unlock(&sent->mut);
+	pthread_mutex_unlock(&sent->safe_mut.mutex);
 	//	print_debug_thread_leave(phid, __FUNCTION__);
 	return false;
 }

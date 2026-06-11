@@ -7,12 +7,18 @@
 
 #include <pcap/pcap.h>
 
+typedef struct s_safe_mutex {
+	pthread_mutex_t	mutex;
+	bool initialize;
+}	t_safe_mutex;
+
+
 typedef struct s_probe_queue
 {
 	t_probe		   *head;
 	t_probe		   *tail;
-	pthread_mutex_t mut;
-	u16				nb_probe;
+	t_safe_mutex	safe_mut;
+	u16						nb_probe;
 } t_probe_queue;
 
 

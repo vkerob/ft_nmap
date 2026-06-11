@@ -119,7 +119,7 @@ void *send_routine(void *arg)
 	while (g_stop != 1)
 	{
 		request = NULL;
-		pthread_mutex_lock(&shared_data->to_send.mut);
+		pthread_mutex_lock(&shared_data->to_send.safe_mut.mutex);
 		if (shared_data->to_send.tail)
 		{
 			pop_probe_request(&shared_data->to_send.head,
@@ -127,10 +127,10 @@ void *send_routine(void *arg)
 		}
 		else
 		{
-			pthread_mutex_unlock(&shared_data->to_send.mut);
+			pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 			continue;
 		}
-		pthread_mutex_unlock(&shared_data->to_send.mut);
+		pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 		if (request->type == SCAN_UDP)
 		{
 			used_socket = udp_socket;
@@ -198,12 +198,12 @@ void *send_routine(void *arg)
 			// Only the real packet (ME) is tracked in the sent queue
 			if (is_me)
 			{
-				pthread_mutex_lock(&shared_data->sent[iface_idx].mut);
+				pthread_mutex_lock(&shared_data->sent[iface_idx].safe_mut.mutex);
 				if (add_to_probe_queue(&shared_data->sent[iface_idx].head,
 									   &shared_data->sent[iface_idx].tail,
 									   request, sent_timestamp))
 				{
-					pthread_mutex_unlock(&shared_data->sent[iface_idx].mut);
+					pthread_mutex_unlock(&shared_data->sent[iface_idx].safe_mut.mutex);
 					break; // skip remaining decoys for this probe too
 				}
 				shared_data->sent[iface_idx].nb_probe++;
@@ -217,7 +217,7 @@ void *send_routine(void *arg)
 											&datalink_hdr, ip_hdr, !is_me))
 				{
 					if (is_me)
-						pthread_mutex_unlock(&shared_data->sent[iface_idx].mut);
+						pthread_mutex_unlock(&shared_data->sent[iface_idx].safe_mut.mutex);
 					return NULL;
 				}
 			}
@@ -230,7 +230,7 @@ void *send_routine(void *arg)
 			}
 
 			if (is_me)
-				pthread_mutex_unlock(&shared_data->sent[iface_idx].mut);
+				pthread_mutex_unlock(&shared_data->sent[iface_idx].safe_mut.mutex);
 		}
 	}
 	close_sockets(&udp_socket, &tcp_socket);
