@@ -68,7 +68,8 @@ static void set_scan_presence(t_args *args)
 static bool init_port_map(t_args *args)
 {
 	u16 max_port_nb = get_max_port_number(args->ports);
-	args->port_map = calloc(max_port_nb, sizeof(int));
+
+	args->port_map = calloc(max_port_nb + 1, sizeof(int));
 	if (args->port_map == NULL)
 	{
 		LOG("ft_nmap: ft_calloc: %s\n", strerror(errno));
@@ -82,7 +83,6 @@ static bool init_port_map(t_args *args)
 	{
 		args->port_map[args->ports[j]] = j;
 	}
-	
 	return false;
 }
 
@@ -127,7 +127,7 @@ bool nmap_main(t_ctx *ctx)
 		return true;
 	}
 
-	print_debug_services(ctx->port_svc, ctx->args.port_count, ctx->args.tcp_scan, ctx->args.udp_scan);
+	// print_debug_services(ctx->port_svc, ctx->args.port_count, ctx->args.tcp_scan, ctx->args.udp_scan);
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
@@ -259,7 +259,7 @@ error:
 	}
 	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
 	{
-		free_services(ctx.port_svc);
+		free_services(ctx.port_svc, ctx.args.port_count);
 	}
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_FAILURE;

@@ -27,13 +27,16 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	char pattern[512] = { 0 };
 	int error_number;
 	u16 port_co = 0;
+	bool ret = false;
+
   if (tcp_scan)
   {
     (*arr)[TCP_INDEX] = calloc(port_count, sizeof(t_port_svc));
     if ((*arr)[TCP_INDEX] == NULL)
     {
       LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
-      return true;
+			ret = true;
+			goto cleanup;
     }
   }
 
@@ -43,7 +46,8 @@ bool resolve_services_name(u16 port_count, int *port_map,
     if ((*arr)[UDP_INDEX] == NULL)
     {
       LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
-      return true;
+			ret = true;
+			goto cleanup;
     }
   }
 
@@ -55,17 +59,18 @@ bool resolve_services_name(u16 port_count, int *port_map,
 		if (!fp)
 		{
 			LOG("ft_nmap: unable to read services file\n");
-			return true;
+			ret = true;
+			goto cleanup;
 		}
 	}
 	// This file contains a list of services running on each port in general for both protocols (tcp and udp)
 	snprintf(pattern, sizeof(pattern),
-	"([a-z]+)	([0-9]{1,5})/(%s).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
+	"([a-zA-Z0-9]+)\\s+([0-9]{1,5})/(%s).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
 
 	re = pcre2_compile(
 		(unsigned char *)pattern,
 		PCRE2_ZERO_TERMINATED,
-		PCRE2_EXTENDED,
+		0,
 		&error_number,
 		&error_offset,
 		NULL);
@@ -127,9 +132,20 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				substr(buffer, ovector[4], ovector[5], &port) ||
 				substr(buffer, ovector[6], ovector[7], &protocol))
 			{
-				pcre2_match_data_free(match_data);
-				pcre2_code_free(re);
-				fclose(fp);
+				if (service)
+				{
+					free(service);
+				}
+				if (protocol)
+				{
+					free(protocol);
+				}
+				if (port)
+				{
+					free(port);
+				}
+				ret = true;
+				goto cleanup;
 				return true;
 			}
 
@@ -139,6 +155,18 @@ bool resolve_services_name(u16 port_count, int *port_map,
 
 			if (port_nb == 0 && *port == '\0')
 			{
+				if (service)
+				{
+					free(service);
+				}
+				if (protocol)
+				{
+					free(protocol);
+				}
+				if (port)
+				{
+					free(port);
+				}
 				LOG("ft_nmap: error at line %d\n", line_nb);
 				memset(buffer, 0, sizeof(buffer));
 				continue ;
@@ -148,6 +176,18 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			// Means it's a port that's not scanned
 			if (idx == -1)
 			{
+				if (service)
+				{
+					free(service);
+				}
+				if (protocol)
+				{
+					free(protocol);
+				}
+				if (port)
+				{
+					free(port);
+				}
 				memset(buffer, 0, sizeof(buffer));
 				continue ;
 			}
@@ -162,9 +202,11 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				(*arr)[UDP_INDEX][idx].port = port_nb;
 				(*arr)[UDP_INDEX][idx].name = service;
 			}
+			free(port);
+			free(protocol);
 			memset(buffer, 0, sizeof(buffer));
 		}
-		pcre2_match_data_free(match_data);
+		// pcre2_match_data_free(match_data);
 	}
 	for (u16 i = 0; i < port_count; i++){
 		if (udp_scan && (*arr)[UDP_INDEX][i].name == NULL)
@@ -178,18 +220,53 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	}
 	pcre2_code_free(re);
 	fclose(fp);
-	return false;
+	return ret;
+
+	cleanup:
+	 if (fp)
+		{
+			fclose(fp);
+		}
+		if (re)
+		{
+			pcre2_code_free(re);
+		}
+		if ((*arr)[TCP_INDEX])
+		{
+			free((*arr)[TCP_INDEX]);
+		}
+		if ((*arr)[UDP_INDEX])
+		{
+			free((*arr)[UDP_INDEX]);
+		}
+		return true;
 }
 
 
-void free_services(t_port_svc *head[MAX_PROTO_COUNT])
+void free_services(t_port_svc *head[MAX_PROTO_COUNT], u16 port_count)
 {
-  if (head[TCP_INDEX])
-  {
-    free(head[TCP_INDEX]);
-  }
-  if (head[UDP_INDEX])
-  {
-    free(head[UDP_INDEX]);
-  }
+	(void)port_count;
+	if (head[TCP_INDEX])
+	{
+		for (u16 i = 0; i < port_count; i++)
+		{
+			if (head[TCP_INDEX][i].name)
+			{
+				free(head[TCP_INDEX][i].name);
+			}
+		}
+		free(head[TCP_INDEX]);
+	}
+	if (head[UDP_INDEX])
+	{
+		for (u16 i = 0; i < port_count; i++)
+		{
+			if (head[UDP_INDEX][i].name)
+			{
+				free(head[UDP_INDEX][i].name);
+			}
+			i++;
+		}
+		free(head[UDP_INDEX]);
+	}
 }
