@@ -89,6 +89,35 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	return false;
 }
 
+void print_debug_services(t_port_svc *services_arr[MAX_PROTO_COUNT], u16 port_count, bool tcp_scan, bool udp_scan)
+{
+	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nServices per port:\n" ANSI_COLOR_RESET);
+	printf(ANSI_COLOR_BLUE
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+
+	u16 i = 0;
+	if (tcp_scan)
+	{
+	while (i < port_count)
+	{
+		printf(ANSI_COLOR_BLUE "  • %s	%d/tcp\n" ANSI_COLOR_RESET, services_arr[TCP_INDEX][i].name, services_arr[TCP_INDEX][i].port);
+		i++;
+	}
+
+	}
+	i = 0;
+	if (udp_scan)
+	{
+		while (i < port_count)
+		{
+			printf(ANSI_COLOR_BLUE "  • %s	%d/tcp\n" ANSI_COLOR_RESET, services_arr[UDP_INDEX][i].name, services_arr[UDP_INDEX][i].port);
+			i++;
+		}
+	}
+	printf(ANSI_COLOR_BLUE
+		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+}
+
 bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,
 							 const t_datalink_hdr *nested_datalink_hdr,

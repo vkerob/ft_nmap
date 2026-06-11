@@ -1,5 +1,6 @@
 #include "defines.h"
 #include "scan.h"
+#include "utils.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -37,20 +38,6 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason)
 	}
 }
 
-static u16 get_max_port_number(u16 ports[MAX_PORT_COUNT])
-{
-	u16 max_port_val = 0;
-
-	for (u16 i = 0; i < MAX_PORT_COUNT; i++)
-	{
-		if (ports[i] > max_port_val)
-		{
-			max_port_val = ports[i];
-		}
-	}
-	return max_port_val;
-}
-
 static void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE],
 								u8 scan_types[MAX_NB_SCAN_TYPE], u8 index)
 {
@@ -69,7 +56,7 @@ static void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE],
 // 	}
 // }
 
-bool link_port_list_to_each_target(t_ctx *ctx)
+bool init_port_lists(t_ctx *ctx)
 {
 	for (u16 i = 0; i < ctx->target_count; i++)
 	{
@@ -110,7 +97,6 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 
 	if (tcp_scan)
 	{
-		// printf("port count: %d\n", port_count);
 		port_list->port_final_state[TCP_INDEX]
 			= calloc(port_count + 1, sizeof(t_port_output));
 		if (port_list->port_final_state[TCP_INDEX] == NULL)
@@ -148,7 +134,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	 * (max_port_nb + 1) entries (port 0 unused, ports 1..max_port_nb usable).
 	 * The subject allows scanning ports < 1024 (default range is 1-1024). */
 	const size_t port_map_count = (size_t)(*max_port_nb) + 1;
-	port_list->port_map = malloc(port_map_count * sizeof(int));
+	port_list->port_map = calloc(port_map_count, sizeof(int));
 	if (port_list->port_map == NULL)
 	{
 		LOG("ft_nmap: malloc failed: %s\n", strerror(errno));

@@ -5,10 +5,14 @@
 #include "parsing.h"
 #include "scan.h"
 #include "shared.h"
+#include "utils.h"
 
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 sig_atomic_t volatile g_stop = 0;
 
@@ -40,7 +44,7 @@ static void print_usage()
 	printf(" --verbose: No port states are ignored\n");
 	printf(" --reason: Show the reason why the port is in that state\n");
 	printf("SERVICE/VERSION DETECTION:\n");
-	printf(" --version: Probe open ports to determine version info");
+	printf(" --version: Probe open ports to determine version info\n");
 	printf("OS DETECTION\n");
 	printf(" --os-detect: Enable OS detection\n");
 	printf("\nDECOY SCAN:\n");
@@ -51,7 +55,6 @@ static void print_usage()
 	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
 }
-
 static void set_scan_presence(t_args *args)
 {
 	for (u8 i = 0; i < args->nb_scan_types; i++)
@@ -59,6 +62,28 @@ static void set_scan_presence(t_args *args)
 		args->udp_scan |= (args->scan_types[i] == SCAN_UDP);
 		args->tcp_scan |= (args->scan_types[i] != SCAN_UDP);
 	}
+}
+
+
+static bool init_port_map(t_args *args)
+{
+	u16 max_port_nb = get_max_port_number(args->ports);
+
+	args->port_map = calloc(max_port_nb + 1, sizeof(int));
+	if (args->port_map == NULL)
+	{
+		LOG("ft_nmap: ft_calloc: %s\n", strerror(errno));
+		return true;
+	}
+	for (u16 i = 0; i < max_port_nb; i++)
+	{
+		args->port_map[i] = -1;
+	}
+	for (u16 j = 0; j < args->port_count; j++)
+	{
+		args->port_map[args->ports[j]] = j;
+	}
+	return false;
 }
 
 bool nmap_main(t_ctx *ctx)
@@ -75,7 +100,7 @@ bool nmap_main(t_ctx *ctx)
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
-		printf("failed to initialize shared data\n");
+		LOG("failed to initialize shared data\n");
 		return true;
 	}
 	t_receiver_data *pcap_ctxs = NULL;
@@ -85,9 +110,24 @@ bool nmap_main(t_ctx *ctx)
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
-		printf("failed to initialize probe request\n");
+		LOG("failed to initialize probe request\n");
 		return true;
 	}
+
+	if (init_port_map(&ctx->args))
+	{
+		LOG("failed to initialize the port map\n");
+		return true;
+	}
+
+	if (resolve_services_name(ctx->args.port_count, ctx->args.port_map,
+		&ctx->port_svc, ctx->args.udp_scan, ctx->args.tcp_scan))
+	{
+		LOG("failed to resolve services\n");
+		return true;
+	}
+
+	// print_debug_services(ctx->port_svc, ctx->args.port_count, ctx->args.tcp_scan, ctx->args.udp_scan);
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
@@ -174,7 +214,7 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (link_port_list_to_each_target(&ctx))
+	if (init_port_lists(&ctx))
 	{
 		free_targets(&ctx.targets, ctx.target_count);
 		return EXIT_FAILURE;
@@ -216,6 +256,10 @@ error:
 	if (ctx.handles)
 	{
 		free(ctx.handles);
+	}
+	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
+	{
+		free_services(ctx.port_svc, ctx.args.port_count);
 	}
 	free_targets(&ctx.targets, ctx.target_count);
 	return EXIT_FAILURE;
