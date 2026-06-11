@@ -2,6 +2,7 @@
 #include "tests.h"
 #include "utils.h"
 #include "typesdef.h"
+
 #include <errno.h>
 #include <regex.h>
 #include <stdint.h>
@@ -86,13 +87,6 @@ void run_command(char **args, char **output)
 	}
 }
 
-void better_free(void *ptr)
-{
-	if (ptr)
-	{
-		free(ptr);
-	}
-}
 
 static void free_port(t_port *port)
 {

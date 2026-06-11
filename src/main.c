@@ -86,27 +86,23 @@ static bool init_port_map(t_args *args)
 	return false;
 }
 
-void free_port_state_and_reason(t_port_state_and_reason *head)
+
+void free_ressources(t_ctx *ctx, t_receiver_data *pcap_ctx, t_shared_data_sender *shared_data_probe)
 {
-	t_port_state_and_reason *tmp = head; 
-	t_port_state_and_reason *next = tmp->next;
-	while (tmp)
-	{
-		if (tmp->first_reason)
-		{
-			free(tmp->first_reason);
-		}
-		if (tmp->second_reason)
-		{
-			free(tmp->first_reason);
-		}
-		next = tmp->next;
-		free(tmp);
-		tmp = next;
-	}
+	better_free(pcap_ctx);
+
+	better_free(ctx->args.port_map);
+
+	deinitialize_shared_data(shared_data_probe, ctx);
+
+	free_services(&ctx->port_svc, ctx->args.port_count);
+
+	free_targets(&ctx->targets, ctx->target_count, ctx->args.port_count, ctx->args.nb_scan_types, ctx->args.scan_types);
+
+	free(ctx->ifaces);
 }
 
-
++
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
@@ -148,8 +144,6 @@ bool nmap_main(t_ctx *ctx)
 		return true;
 	}
 
-	// print_debug_services(ctx->port_svc, ctx->args.port_count, ctx->args.tcp_scan, ctx->args.udp_scan);
-
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
 
 	/* set_scan_presence is now invoked from main() before init_portlist;
@@ -173,32 +167,7 @@ bool nmap_main(t_ctx *ctx)
 
 	print_scan_results(ctx);
 
-	free(pcap_ctxs);
-
-	for (size_t i = 0; i < ctx->target_count; i++)
-	{
-		free(ctx->targets[i].port_list.port_map);
-		if (ctx->args.tcp_scan)
-		{
-			free_port_state_and_reason(ctx->targets[i].port_list.state_and_reason[TCP_INDEX]);
-			free(ctx->targets[i].port_list.port_final_state[TCP_INDEX]);
-		}
-		if (ctx->args.udp_scan)
-		{
-			free_port_state_and_reason(ctx->targets[i].port_list.state_and_reason[UDP_INDEX]);
-			free(ctx->targets[i].port_list.port_final_state[UDP_INDEX]);
-		}
-
-		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
-		{
-			const t_scan_type scan_type = ctx->args.scan_types[j];
-			free(ctx->targets[i].port_list.port_map_rev[scan_type]);
-		}
-	}
-
-	free(ctx->args.port_map);
-
-	deinitialize_shared_data(&shared_data_probe, ctx);
+	free_ressources(ctx, pcap_ctxs, &shared_data_probe);
 
 	return false;
 }
@@ -237,28 +206,24 @@ int main(const int argc, char **argv)
 
 	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
 	{
-		free_tabp((void ***)&targets_input, ctx.target_count);
-		return EXIT_FAILURE;
+		goto error;
 	}
 
 	if (init_port_lists(&ctx))
 	{
-		free_targets(&ctx.targets, ctx.target_count);
-		return EXIT_FAILURE;
+		goto error;
 	}
 
 	free_tabp((void ***)&targets_input, ctx.target_count);
 	if (setup_signal_handlers())
 	{
-		free_targets(&ctx.targets, ctx.target_count);
-		return EXIT_FAILURE;
+		goto error;
 	}
 
 	if (get_iface_info(&ctx.ifaces, &ctx.iface_count, ctx.targets,
 					   ctx.target_count))
 	{
-		free_targets(&ctx.targets, ctx.target_count);
-		return EXIT_FAILURE;
+		goto error;
 	}
 
 	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
@@ -272,28 +237,13 @@ int main(const int argc, char **argv)
 		goto error;
 	}
 
-	free_targets(&ctx.targets, ctx.target_count);
-	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
-	{
-		free_services(ctx.port_svc, ctx.args.port_count);
-	}
-	free(ctx.ifaces);
 	return EXIT_SUCCESS;
 
 error:
-	if (ctx.ifaces)
-	{
-		free(ctx.ifaces);
-	}
-	if (ctx.handles)
-	{
-		free(ctx.handles);
-	}
-	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
-	{
-		free_services(ctx.port_svc, ctx.args.port_count);
-	}
-	free_targets(&ctx.targets, ctx.target_count);
-	free(ctx.ifaces);
+	free_tabp((void ***)&targets_input, ctx.target_count);
+	better_free(ctx.ifaces);
+	better_free(ctx.handles);
+	free_services(&ctx.port_svc, ctx.args.port_count);
+	free_targets(&ctx.targets, ctx.target_count, ctx.args.port_count, ctx.args.nb_scan_types, ctx.args.scan_types);
 	return EXIT_FAILURE;
 }
