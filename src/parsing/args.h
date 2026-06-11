@@ -25,4 +25,5 @@ typedef struct	s_args
 	struct in_addr	decoys[MAX_DECOYS];
 	u8				decoy_count;
 }	t_args;
+
 #endif

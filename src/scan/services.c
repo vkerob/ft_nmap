@@ -65,7 +65,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	}
 	// This file contains a list of services running on each port in general for both protocols (tcp and udp)
 	snprintf(pattern, sizeof(pattern),
-	"([a-zA-Z0-9]+)\\s+([0-9]{1,5})/(%s).*$\n", udp_scan && tcp_scan ? "tcp|udp" : (udp_scan ? "udp" : "tcp"));
+	"([a-zA-Z0-9]+)\\s+([0-9]{1,5})/([a-z]+).*$\n");
 
 	re = pcre2_compile(
 		(unsigned char *)pattern,
@@ -132,18 +132,9 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				substr(buffer, ovector[4], ovector[5], &port) ||
 				substr(buffer, ovector[6], ovector[7], &protocol))
 			{
-				if (service)
-				{
-					free(service);
-				}
-				if (protocol)
-				{
-					free(protocol);
-				}
-				if (port)
-				{
-					free(port);
-				}
+				better_free(service);
+				better_free(protocol);
+				better_free(port);
 				ret = true;
 				goto cleanup;
 				return true;
@@ -155,18 +146,9 @@ bool resolve_services_name(u16 port_count, int *port_map,
 
 			if (port_nb == 0 && *port == '\0')
 			{
-				if (service)
-				{
-					free(service);
-				}
-				if (protocol)
-				{
-					free(protocol);
-				}
-				if (port)
-				{
-					free(port);
-				}
+				better_free(service);
+				better_free(protocol);
+				better_free(port);
 				LOG("ft_nmap: error at line %d\n", line_nb);
 				memset(buffer, 0, sizeof(buffer));
 				continue ;
@@ -176,18 +158,9 @@ bool resolve_services_name(u16 port_count, int *port_map,
 			// Means it's a port that's not scanned
 			if (idx == -1)
 			{
-				if (service)
-				{
-					free(service);
-				}
-				if (protocol)
-				{
-					free(protocol);
-				}
-				if (port)
-				{
-					free(port);
-				}
+				better_free(service);
+				better_free(protocol);
+				better_free(port);
 				memset(buffer, 0, sizeof(buffer));
 				continue ;
 			}
@@ -202,11 +175,13 @@ bool resolve_services_name(u16 port_count, int *port_map,
 				(*arr)[UDP_INDEX][idx].port = port_nb;
 				(*arr)[UDP_INDEX][idx].name = service;
 			}
+			else{
+				LOG("ft_nmap: error at line %d: unknown protocol\n", line_nb);
+			}
 			free(port);
 			free(protocol);
 			memset(buffer, 0, sizeof(buffer));
 		}
-		// pcre2_match_data_free(match_data);
 	}
 	for (u16 i = 0; i < port_count; i++){
 		if (udp_scan && (*arr)[UDP_INDEX][i].name == NULL)
@@ -223,7 +198,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	return ret;
 
 	cleanup:
-	 if (fp)
+		if (fp)
 		{
 			fclose(fp);
 		}
@@ -231,40 +206,31 @@ bool resolve_services_name(u16 port_count, int *port_map,
 		{
 			pcre2_code_free(re);
 		}
-		if ((*arr)[TCP_INDEX])
-		{
-			free((*arr)[TCP_INDEX]);
-		}
-		if ((*arr)[UDP_INDEX])
-		{
-			free((*arr)[UDP_INDEX]);
-		}
+		better_free((*arr)[TCP_INDEX]);
+		better_free((*arr)[UDP_INDEX]);
 		return true;
 }
 
 
-void free_services(t_port_svc *head[MAX_PROTO_COUNT], u16 port_count)
+void free_services(t_port_svc *(*head)[MAX_PROTO_COUNT], u16 port_count)
 {
-	if (head[TCP_INDEX])
+	(void)port_count;
+	if ((*head)[TCP_INDEX])
 	{
 		for (u16 i = 0; i < port_count; i++)
 		{
-			if (head[TCP_INDEX][i].name)
-			{
-				free(head[TCP_INDEX][i].name);
-			}
+			better_free((*head)[TCP_INDEX][i].name);
 		}
-		free(head[TCP_INDEX]);
+		free((*head)[TCP_INDEX]);
+		(*head)[TCP_INDEX] = NULL;
 	}
-	if (head[UDP_INDEX])
+	if ((*head)[UDP_INDEX])
 	{
 		for (u16 i = 0; i < port_count; i++)
 		{
-			if (head[UDP_INDEX][i].name)
-			{
-				free(head[UDP_INDEX][i].name);
-			}
+			better_free((*head)[UDP_INDEX][i].name);
 		}
-		free(head[UDP_INDEX]);
+		free((*head)[UDP_INDEX]);
+		(*head)[UDP_INDEX] = NULL;
 	}
 }

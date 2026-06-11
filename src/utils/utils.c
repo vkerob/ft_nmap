@@ -6,6 +6,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+void better_free(void *ptr)
+{
+	if (ptr)
+	{
+		free(ptr);
+	}
+}
 
 bool substr(char *str, int start, int end, char **ptr)
 {

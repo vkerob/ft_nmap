@@ -1,6 +1,7 @@
 #include "args.h"
 #include "defines.h"
 #include "parsing.h"
+#include "utils.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -15,16 +16,52 @@
 #include <string.h>
 #include <sys/types.h>
 
-void free_targets(t_target **targets, size_t count)
+
+static void free_port_state_and_reason(t_port_state_and_reason *head)
 {
+	t_port_state_and_reason *tmp = head; 
+	t_port_state_and_reason *next = tmp->next;
+
+	while (tmp)
+	{
+		better_free(tmp->first_reason);
+		better_free(tmp->second_reason);
+		next = tmp->next;
+		free(tmp);
+		tmp = next;
+	}
+}
+
+
+void free_targets(t_target **targets, size_t count, u16 port_count, u8 nb_scan_types, u8 *scan_types)
+{
+	(void)scan_types;
+	(void)nb_scan_types;
 	if (!targets || !*targets)
 		return;
+	(void)port_count;
 	for (size_t i = 0; i < count; i++)
 	{
-		free((*targets)[i].input);
-		free((*targets)[i].hostname);
+		for (u8 j = 0; j < nb_scan_types; j++)
+		{
+			const t_scan_type scan_type = scan_types[j];
+			for (u16 k = 0; k < port_count; k++)
+			{
+				better_free((*targets[i]).port_list.port_map_rev[scan_type][k].reasons[0]);
+				better_free((*targets[i]).port_list.port_map_rev[scan_type][k].reasons[1]);
+			}
+			free((*targets)[i].port_list.port_map_rev[scan_type]);
+		}
+
+		better_free((*targets[i]).port_list.port_map);
+		free_port_state_and_reason((*targets)[i].port_list.state_and_reason[TCP_INDEX]);
+		free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
+		// free_port_state_and_reason((*targets)[i].port_list.state_and_reason[UDP_INDEX]);
+		better_free((*targets)[i].port_list.port_final_state[UDP_INDEX]);
+		better_free((*targets)[i].input);
+		better_free((*targets)[i].hostname);
 	}
-	free(*targets);
+	better_free(*targets);
 	*targets = NULL;
 }
 
@@ -80,13 +117,11 @@ bool resolve_targets(char **inputs, const size_t count, t_target **targets)
 		if (!tmp[i].input)
 		{
 			LOG("ft_nmap: strdup failed: %s\n", strerror(errno));
-			free_targets(&tmp, i);
 			return true;
 		}
 
 		if (!resolve_target(inputs[i], &tmp[i].addr))
 		{
-			free_targets(&tmp, i + 1);
 			return true;
 		}
 
