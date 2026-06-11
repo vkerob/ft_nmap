@@ -245,7 +245,6 @@ bool resolve_services_name(u16 port_count, int *port_map,
 
 void free_services(t_port_svc *head[MAX_PROTO_COUNT], u16 port_count)
 {
-	(void)port_count;
 	if (head[TCP_INDEX])
 	{
 		for (u16 i = 0; i < port_count; i++)
@@ -265,7 +264,6 @@ void free_services(t_port_svc *head[MAX_PROTO_COUNT], u16 port_count)
 			{
 				free(head[UDP_INDEX][i].name);
 			}
-			i++;
 		}
 		free(head[UDP_INDEX]);
 	}

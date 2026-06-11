@@ -86,6 +86,27 @@ static bool init_port_map(t_args *args)
 	return false;
 }
 
+void free_port_state_and_reason(t_port_state_and_reason *head)
+{
+	t_port_state_and_reason *tmp = head; 
+	t_port_state_and_reason *next = tmp->next;
+	while (tmp)
+	{
+		if (tmp->first_reason)
+		{
+			free(tmp->first_reason);
+		}
+		if (tmp->second_reason)
+		{
+			free(tmp->first_reason);
+		}
+		next = tmp->next;
+		free(tmp);
+		tmp = next;
+	}
+}
+
+
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
@@ -159,12 +180,15 @@ bool nmap_main(t_ctx *ctx)
 		free(ctx->targets[i].port_list.port_map);
 		if (ctx->args.tcp_scan)
 		{
+			free_port_state_and_reason(ctx->targets[i].port_list.state_and_reason[TCP_INDEX]);
 			free(ctx->targets[i].port_list.port_final_state[TCP_INDEX]);
 		}
 		if (ctx->args.udp_scan)
 		{
+			free_port_state_and_reason(ctx->targets[i].port_list.state_and_reason[UDP_INDEX]);
 			free(ctx->targets[i].port_list.port_final_state[UDP_INDEX]);
 		}
+
 		for (u8 j = 0; j < ctx->args.nb_scan_types; j++)
 		{
 			const t_scan_type scan_type = ctx->args.scan_types[j];
@@ -172,10 +196,13 @@ bool nmap_main(t_ctx *ctx)
 		}
 	}
 
+	free(ctx->args.port_map);
+
 	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
 }
+
 
 int main(const int argc, char **argv)
 {
@@ -246,6 +273,11 @@ int main(const int argc, char **argv)
 	}
 
 	free_targets(&ctx.targets, ctx.target_count);
+	if (ctx.port_svc[TCP_INDEX] || ctx.port_svc[UDP_INDEX])
+	{
+		free_services(ctx.port_svc, ctx.args.port_count);
+	}
+	free(ctx.ifaces);
 	return EXIT_SUCCESS;
 
 error:
@@ -262,5 +294,6 @@ error:
 		free_services(ctx.port_svc, ctx.args.port_count);
 	}
 	free_targets(&ctx.targets, ctx.target_count);
+	free(ctx.ifaces);
 	return EXIT_FAILURE;
 }
