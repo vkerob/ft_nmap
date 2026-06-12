@@ -53,7 +53,7 @@ void free_targets(t_target **targets, size_t count, u16 port_count, u8 nb_scan_t
 			free((*targets)[i].port_list.port_map_rev[scan_type]);
 		}
 
-		better_free((*targets[i]).port_list.port_map);
+		// better_free((*targets[i]).port_list.port_map);
 		free_port_state_and_reason((*targets)[i].port_list.state_and_reason[TCP_INDEX]);
 		free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
 		// free_port_state_and_reason((*targets)[i].port_list.state_and_reason[UDP_INDEX]);

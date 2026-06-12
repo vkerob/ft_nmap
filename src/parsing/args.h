@@ -10,6 +10,8 @@
 typedef struct	s_args
 {
 	u16				flags;
+	/* Can't be an array of u16 even though the max port is 65535 because we use -1 as the value
+	to represent a port that is not part of our scan since 0 is a valid port numbers*/
 	int				*port_map;
 	u16				ports[MAX_PORT_COUNT];
 	u16				port_count;

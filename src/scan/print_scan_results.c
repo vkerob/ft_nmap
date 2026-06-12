@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "parsing.h"
 #include "scan.h"
+#include "port_services.h"
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -512,8 +513,7 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 
 static void print_port_states(t_target *target, t_args *args,
 							  const bool *ignored_tcp,
-							  const bool *ignored_udp,
-							t_port_svc *port_svc[MAX_PROTO_COUNT])
+							  const bool *ignored_udp)
 {
 	char recap_udp[65535] = { 0 };
 	char recap_tcp[65535] = { 0 };
@@ -574,7 +574,7 @@ static void print_port_states(t_target *target, t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 			
-			char *svc = port_svc[UDP_INDEX][idx].name;
+			const char *svc = port_services_udp[port];
 		
 			// const char *color = port_state_color(final_port_state.port_state);
 			const char *state = port_state_to_str(final_port_state.port_state);
@@ -616,11 +616,13 @@ snprintf(recap_udp + recap_udp_len,
 					   .port_state)
 				   == false || HAS(args->flags, F_VERBOSE)))
 		{
+			const char *svc = port_services_tcp[port];
+
 			t_port_output final_port_state
 				= target->port_list.port_final_state[TCP_INDEX][idx];
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/tcp", port);
-			const char *svc = port_svc[TCP_INDEX][idx].name;
+			// const char *svc = port_svc[TCP_INDEX][idx].name;
 			
 			const char *state = port_state_to_str(
 				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
@@ -726,8 +728,7 @@ snprintf(recap_udp + recap_udp_len,
 	}
 }
 
-static void print_target_results(t_target *target, t_args *args,
-	t_port_svc *port_svc[MAX_PROTO_COUNT])
+static void print_target_results(t_target *target, t_args *args)
 {
 	/* Per-protocol "is this state hidden in Not shown ?" lookup tables.
 	 * Indexed by t_port_state value. We need two tables because a state
@@ -757,7 +758,7 @@ static void print_target_results(t_target *target, t_args *args,
 
 	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
 	{
-		print_port_states(target, args, ignored_tcp, ignored_udp, port_svc);
+		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
 }
 
@@ -771,7 +772,7 @@ void print_scan_results(t_ctx *ctx)
 		  + (double)(now.tv_usec - ctx->program_info.start.tv_usec) / 1e6;
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
-		print_target_results(&ctx->targets[i], &ctx->args, ctx->port_svc);
+		print_target_results(&ctx->targets[i], &ctx->args);
 	}
 
 	printf("\nft_nmap done: %zu IP address%s (%zu host%s up) scanned in %.2f "

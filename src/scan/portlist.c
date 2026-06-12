@@ -55,7 +55,7 @@ bool init_port_lists(t_ctx *ctx)
 		if (init_portlist(&ctx->targets[i].port_list, ctx->args.port_count,
 						  ctx->args.ports, ctx->args.scan_types,
 						  ctx->args.nb_scan_types, ctx->args.tcp_scan,
-						  ctx->args.udp_scan, &ctx->args.max_port_nb))
+						  ctx->args.udp_scan, &ctx->args.max_port_nb, ctx->args.port_map))
 		{
 			return true;
 		}
@@ -79,7 +79,7 @@ static void free_port_final_state(t_port_output **final_port_state,
 bool init_portlist(t_port_list *port_list, const u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
 				   const u8 nb_scan_type, const bool tcp_scan,
-				   const bool udp_scan, u16 *max_port_nb)
+				   const bool udp_scan, u16 *max_port_nb, int *port_map)
 {
 	*max_port_nb = get_max_port_number(ports);
 
@@ -121,19 +121,22 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	/* port_map is indexed by raw destination port number, so we need
 	 * (max_port_nb + 1) entries (port 0 unused, ports 1..max_port_nb usable).
 	 * The subject allows scanning ports < 1024 (default range is 1-1024). */
-	const size_t port_map_count = (size_t)(*max_port_nb) + 1;
-	port_list->port_map = calloc(port_map_count, sizeof(int));
-	if (port_list->port_map == NULL)
-	{
-		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
-		return true;
-	}
-	memset(port_list->port_map, -1, port_map_count * sizeof(int));
+	// const size_t port_map_count = (size_t)(*max_port_nb) + 1;
+	// port_list->port_map = calloc(port_map_count, sizeof(int));
+	// if (port_list->port_map == NULL)
+	// {
+	// 	LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+	// 	free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
+	// 	return true;
+	// }
+	// memset(port_list->port_map, -1, port_map_count * sizeof(int));
+
+
+	port_list->port_map = port_map;
 
 	for (u16 j = 0; j < port_count; j++)
 	{
-		port_list->port_map[ports[j]] = j;
+		// port_list->port_map[ports[j]] = j;
 		if (udp_scan)
 		{
 			port_list->port_final_state[UDP_INDEX][j].port_number = ports[j];
@@ -143,6 +146,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 			port_list->port_final_state[TCP_INDEX][j].port_number = ports[j];
 		}
 	}
+
 	for (u8 i = 0; i < nb_scan_type; i++)
 	{
 		const t_scan_type scan_type = scan_types[i];
