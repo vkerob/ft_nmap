@@ -2,6 +2,7 @@
 #include "parsing.h"
 #include "scan.h"
 #include "port_services.h"
+#include "utils.h"
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -580,35 +581,28 @@ static void print_port_states(t_target *target, t_args *args,
 			const char *state = port_state_to_str(final_port_state.port_state);
 
 			size_t recap_udp_len = strlen(recap_udp);
-			if (multi_scan)
-			{
-				char results_buf[256];
-				build_results_str(target, args, port, results_buf,
-								  sizeof(results_buf), IPPROTO_UDP);
-snprintf(recap_udp + recap_udp_len,
+
+			char results_buf[256];
+			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
+
+
+			snprintf(recap_udp + recap_udp_len,
          sizeof(recap_udp) - recap_udp_len,
-         "%-*s %-*s %-*s %s\n", col_port, port_str,
-         col_state, state, col_svc, svc,
+         "%-*s %-*s %-*s %-*s  ", col_port, port_str,
+         col_state, state, col_svc, svc, col_scan_result,
          results_buf);
-			}
-			else
+recap_udp_len = strlen(recap_udp);
+
+			if (HAS(args->flags, F_REASON))
 			{
-snprintf(recap_udp + recap_udp_len,
-         sizeof(recap_udp) - recap_udp_len,
-         "%-*s %-*s %-*s", col_port, port_str,
-         col_state, state, col_svc, svc);
-				recap_udp_len = strlen(recap_udp);
-				if (HAS(args->flags, F_REASON))
-				{
-					snprintf(recap_udp + recap_udp_len,
-							 sizeof(recap_udp) - recap_udp_len, " %-*s",
-							 col_reason, final_port_state.reasons[0]);
-				}
-				recap_udp_len = strlen(recap_udp);
 				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len, "\n");
+						 sizeof(recap_udp) - recap_udp_len, " %-*s",
+						 col_reason, final_port_state.reasons[0]);
+				recap_udp_len = strlen(recap_udp);
 			}
-		}
+							snprintf(recap_udp + recap_udp_len,
+						 sizeof(recap_udp) - recap_udp_len, "\n");
+		}	
 		if (args->tcp_scan
 			&& (is_ignored_state(
 				   ignored_tcp,
@@ -637,8 +631,8 @@ snprintf(recap_udp + recap_udp_len,
 								  sizeof(results_buf), IPPROTO_TCP);
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s %s%s%s  ",
-						 col_port, port_str, col_state, state, col_svc, svc,
+						 "%-*s %-*s %-*s %-*s%s%s  ",
+						 col_port, port_str, col_state, state, col_svc, svc, col_scan_result,
 						 results_buf,
 						 (show_version && ver[0]) ? "  " : "",
 						 ver);
@@ -655,6 +649,7 @@ snprintf(recap_udp + recap_udp_len,
 
 						// printf("first reason: %s second reason %s\n", first_reason, second_reason);
 						char *reasons = NULL;
+						bool alloc = false;
 	
 						if (first_reason && second_reason)
 						{
@@ -667,6 +662,7 @@ snprintf(recap_udp + recap_udp_len,
 								LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 								continue;
 							}
+							alloc = true;
 							strncpy(reasons, first_reason, len_first_reason);
 							const char *comma = ", ";
 							strncat(reasons + len_first_reason, comma, 2);
@@ -674,11 +670,11 @@ snprintf(recap_udp + recap_udp_len,
 						}
 						else if (second_reason == NULL)
 						{
-							reasons = first_reason;
+							reasons = first_reason ? first_reason : "";
 						}
 						else
 						{
-							reasons = second_reason;
+							reasons = second_reason ? second_reason : "";
 						}
 						snprintf(recap_tcp + recap_tcp_len,
 							 sizeof(recap_tcp) - recap_tcp_len, " %-*s\n",
@@ -686,7 +682,9 @@ snprintf(recap_udp + recap_udp_len,
 							 reasons);
 
 						recap_tcp_len = strlen(recap_tcp);
-						// free(reasons);
+						//TODO: probably a problem there
+						if (alloc)
+							better_free(reasons);
 				}
 			}
 			else
