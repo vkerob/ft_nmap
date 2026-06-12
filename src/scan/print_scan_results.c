@@ -35,19 +35,6 @@ char *port_state_to_str(t_port_state state)
 	}
 }
 
-// Pas les même service entre tcp et udp donc non
-// const char *get_service_name(u16 port)
-// {
-// 	const struct servent *svc = getservbyport(htons(port), "tcp");
-// 	if (svc){
-// 		// fprintf(stderr, "service name: %s\n", svc->s_name);
-// 		return svc->s_name;
-// 	}
-// 	svc = getservbyport(htons(port), "udp");
-// 	if (svc)
-// 		return svc->s_name;
-// 	return "unknown";
-// }
 
 static void update_port_reasons(t_port_output *port_conclusion,
 								const t_port  *port)
@@ -448,6 +435,7 @@ bool find_or_update_state_and_reason_combination(
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
+
 	prev->next->reason = reason;
 	prev->next->count = 1;
 	prev->next->port_state = port_state;
@@ -532,16 +520,18 @@ static void print_port_states(t_target *target, t_args *args,
 
 	const int  col_port = compute_port_col_width(args);
 	const int  col_state = 14;
-	const int  col_svc = 10;
-	const int  col_reason = 12;
+	const int  col_svc = 20;
 	const int  col_version = 28;
+	const int	 col_scan_result = args->nb_scan_types * 11;
+	const int  col_reason = 12;
+
 	const bool multi_scan = args->nb_scan_types > 1;
 	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
 
 	if (multi_scan)
 	{
-		printf("%-*s %-*s %-*s %s ", col_port, "PORT", col_state, "STATE",
-			   col_svc, "SERVICE", "SCAN RESULTS");
+		printf("%-*s %-*s %-*s %-*s ", col_port, "PORT", col_state, "STATE",
+			   col_svc, "SERVICE", col_scan_result, "SCAN RESULTS");
 		if (HAS(args->flags, F_REASON))
 			printf(" %-*s", col_reason, "REASON");
 		if (show_version)
@@ -555,7 +545,7 @@ static void print_port_states(t_target *target, t_args *args,
 		if (HAS(args->flags, F_REASON))
 			printf(" %-*s", col_reason, "REASON");
 		if (show_version)
-			printf(" %s", "VERSION");
+			printf(" %-*s", col_version, "VERSION");
 		printf("\n");
 	}
 	// For each port we check that his state is not among the "ignored states"
@@ -583,7 +573,6 @@ static void print_port_states(t_target *target, t_args *args,
 				= target->port_list.port_final_state[UDP_INDEX][idx];
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
-
 			
 			char *svc = port_svc[UDP_INDEX][idx].name;
 		
@@ -646,11 +635,57 @@ snprintf(recap_udp + recap_udp_len,
 								  sizeof(results_buf), IPPROTO_TCP);
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s %s%s%s\n",
+						 "%-*s %-*s %-*s %s%s%s  ",
 						 col_port, port_str, col_state, state, col_svc, svc,
 						 results_buf,
 						 (show_version && ver[0]) ? "  " : "",
 						 ver);
+
+				recap_tcp_len = strlen(recap_tcp);
+				
+				// Print reason for each type of scan ran
+				if (HAS(args->flags, F_REASON))
+				{
+						// const t_scan_type stype = args->scan_types[i];
+						const int		idx = target->port_list.port_map[port];
+						char *first_reason = target->port_list.port_final_state[TCP_INDEX][idx].reasons[0];
+						char *second_reason = target->port_list.port_final_state[TCP_INDEX][idx].reasons[1];
+
+						// printf("first reason: %s second reason %s\n", first_reason, second_reason);
+						char *reasons = NULL;
+	
+						if (first_reason && second_reason)
+						{
+							size_t len_first_reason = strlen(first_reason);
+							size_t len_second_reason = strlen(second_reason);
+
+							reasons = calloc(strlen(first_reason) + strlen(second_reason) + 3, sizeof(char));
+							if (reasons == NULL)
+							{
+								LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+								continue;
+							}
+							strncpy(reasons, first_reason, len_first_reason);
+							const char *comma = ", ";
+							strncat(reasons + len_first_reason, comma, 2);
+							strncpy(reasons + len_first_reason + 2, second_reason, len_second_reason);
+						}
+						else if (second_reason == NULL)
+						{
+							reasons = first_reason;
+						}
+						else
+						{
+							reasons = second_reason;
+						}
+						snprintf(recap_tcp + recap_tcp_len,
+							 sizeof(recap_tcp) - recap_tcp_len, " %-*s\n",
+							 col_reason,
+							 reasons);
+
+						recap_tcp_len = strlen(recap_tcp);
+						// free(reasons);
+				}
 			}
 			else
 			{
@@ -705,9 +740,13 @@ static void print_target_results(t_target *target, t_args *args,
 	 * otherwise fall back to whatever the user typed. */
 	const char *ip_str = inet_ntoa(target->addr);
 	if (target->hostname && strcmp(target->hostname, target->input) != 0)
+	{
 		printf("Nmap scan report for %s (%s)\n", target->hostname, ip_str);
+	}
 	else
+	{
 		printf("Nmap scan report for %s\n", target->input);
+	}
 	printf("Host is up.\n");
 
 	resolve_final_port_state(args, target);
@@ -731,7 +770,9 @@ void print_scan_results(t_ctx *ctx)
 		= (double)(now.tv_sec - ctx->program_info.start.tv_sec)
 		  + (double)(now.tv_usec - ctx->program_info.start.tv_usec) / 1e6;
 	for (size_t i = 0; i < ctx->target_count; i++)
+	{
 		print_target_results(&ctx->targets[i], &ctx->args, ctx->port_svc);
+	}
 
 	printf("\nft_nmap done: %zu IP address%s (%zu host%s up) scanned in %.2f "
 		   "seconds\n",

@@ -77,11 +77,19 @@ t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
 {
 	t_probe *tmp = *head;
 
+	/* The source port contained in the IP header of the response is the port we sent a probe to.
+	Since our program can run multiple types of scan TCP at once we use the destination port contained
+	in the IP header to find back which type of scan was used by the probe.
+	
+	See determine_tcp_scan_type() and g_port_range_tcp in determine_tcp_scan_type.c
+	*/
 	while (tmp)
 	{
 		if (source_port == tmp->port && scan_type == tmp->type
 			&& ip_src.s_addr == tmp->target->addr.s_addr)
+			{
 			break;
+			}
 		tmp = tmp->next;
 	}
 	if (tmp)

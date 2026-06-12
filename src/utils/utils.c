@@ -21,7 +21,7 @@ bool substr(char *str, int start, int end, char **ptr)
 	*ptr = calloc(len + 1, sizeof(char));
 	if (*ptr == NULL)
 	{
-		fprintf(stderr, "%s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
 	strncpy(*ptr, str + start, len);

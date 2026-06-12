@@ -125,7 +125,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 	port_list->port_map = calloc(port_map_count, sizeof(int));
 	if (port_list->port_map == NULL)
 	{
-		LOG("ft_nmap: malloc failed: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
 		return true;
 	}
