@@ -4,6 +4,7 @@
 #include "tcp.h"
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 
 void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
@@ -72,5 +73,6 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	default:
 		break;
 	}
+	atomic_fetch_sub(sent_list->outstanding, 1);
 	free(probe);
 }

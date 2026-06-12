@@ -14,7 +14,8 @@ u16	calculate_checksum(void *buffer, int len)
 	}
 	if (odd != 0)
 	{
-		u8 b = (u8)*ptr;
+		/* Only one byte left: read it as a byte to avoid a 2-byte over-read. */
+		u8 b = *(const u8 *)ptr;
 		checksum += b;
 	}
 	checksum = (checksum >> 16) + (checksum & 0x0000FFFF);

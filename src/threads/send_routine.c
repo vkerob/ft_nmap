@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 /*
@@ -20,7 +21,7 @@
  * computation — pass the real interface IP for normal probes, or a decoy IP
  * when sending spoofed cover packets.
  */
-static void build_scan_packets(const t_probe *request, u_char *packet,
+static bool build_scan_packets(const t_probe *request, u_char *packet,
 							   struct in_addr src_ip, _Atomic u16 *id,
 							   u32 *packet_len)
 {
@@ -38,7 +39,9 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 	t_ip ip_hdr;
 	build_ip_header(&ip_hdr, request, src_ip, id);
 
-	build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf, ip_hdr.ip_p);
+	if (build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf,
+							   ip_hdr.ip_p))
+		return true;
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
 		|| request->type == SCAN_NULL)
@@ -66,13 +69,12 @@ static void build_scan_packets(const t_probe *request, u_char *packet,
 		memcpy(packet + sizeof(ip_hdr), &hdr.udp_hdr, sizeof(hdr.udp_hdr));
 	else
 		memcpy(packet + sizeof(ip_hdr), &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
+	return false;
 }
 
 static bool send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp, u32 packet_len)
 {
-	// printf("Sending packet to %s:%u\n", inet_ntoa(socket->sin.sin_addr),
-	//   ntohs(socket->sin.sin_port));
 	const ssize_t res
 		= sendto(socket->sfd, packet, packet_len, 0,
 				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
@@ -83,7 +85,6 @@ static bool send_packet(t_socket *socket, const u8 *packet,
 		return true;
 	}
 
-	// sync_printf("Number of bytes sent: %d\n", res);
 	gettimeofday(sent_timestamp, NULL);
 	return false;
 }
@@ -104,8 +105,6 @@ void *send_routine(void *arg)
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
-	// pthread_t phid = pthread_self();
-	// print_debug_thread_startup(phid, __FUNCTION__);
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP)
 		|| init_socket(&udp_socket, IPPROTO_UDP))
@@ -120,25 +119,31 @@ void *send_routine(void *arg)
 	{
 		request = NULL;
 		pthread_mutex_lock(&shared_data->to_send.safe_mut.mutex);
-		if (shared_data->to_send.tail)
+		if (!shared_data->to_send.tail)
 		{
-			pop_probe_request(&shared_data->to_send.head,
-							  &shared_data->to_send.tail, &request);
-		}
-		else
-		{
+			/* Queue empty: sleep on the condvar instead of busy-waiting.
+			 * A timed wait lets us re-check g_stop periodically even if no
+			 * producer signals us (e.g. shutdown set from a signal handler,
+			 * which cannot safely broadcast a condvar). */
+			struct timespec ts;
+			clock_gettime(CLOCK_REALTIME, &ts);
+			ts.tv_nsec += 50 * 1000 * 1000; // 50 ms
+			if (ts.tv_nsec >= 1000000000L)
+			{
+				ts.tv_sec += 1;
+				ts.tv_nsec -= 1000000000L;
+			}
+			pthread_cond_timedwait(&shared_data->to_send.cond,
+								   &shared_data->to_send.safe_mut.mutex, &ts);
 			pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 			continue;
 		}
+		pop_probe_request(&shared_data->to_send.head,
+						  &shared_data->to_send.tail, &request);
+		/* The probe is removed from to_send here: decrement its counter
+		 * while we still hold to_send's mutex to avoid a data race. */
+		shared_data->to_send.nb_probe--;
 		pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
-		if (request->type == SCAN_UDP)
-		{
-			used_socket = udp_socket;
-		}
-		else
-		{
-			used_socket = tcp_socket;
-		}
 		// Compute relative timestamp once for the whole probe (decoys + real)
 		gettimeofday(&sent_timestamp, NULL);
 		long seconds_elapsed
@@ -169,7 +174,8 @@ void *send_routine(void *arg)
 		if (!has_me)
 			send_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
 
-		u8 iface_idx = request->target->iface_info->iface_index;
+		u8	 iface_idx = request->target->iface_info->iface_index;
+		bool tracked = false; // true once the real probe lives in the sent queue
 
 		for (u8 i = 0; i < send_count; i++)
 		{
@@ -180,8 +186,13 @@ void *send_routine(void *arg)
 
 			memset(packet, 0, sizeof(packet));
 			u32 packet_len = 0;
-			build_scan_packets(request, packet, src, &shared_data->id,
-							   &packet_len);
+			if (build_scan_packets(request, packet, src, &shared_data->id,
+								   &packet_len))
+			{
+				/* Header build failed (bad address): skip this source.
+				 * The real probe will simply time out and be retried. */
+				continue;
+			}
 
 			t_datalink_hdr datalink_hdr = { 0 };
 			if (request->type == SCAN_UDP)
@@ -207,7 +218,7 @@ void *send_routine(void *arg)
 					break; // skip remaining decoys for this probe too
 				}
 				shared_data->sent[iface_idx].nb_probe++;
-				shared_data->to_send.nb_probe--;
+				tracked = true;
 			}
 
 			t_ip *ip_hdr = (t_ip *)packet;
@@ -232,8 +243,16 @@ void *send_routine(void *arg)
 			if (is_me)
 				pthread_mutex_unlock(&shared_data->sent[iface_idx].safe_mut.mutex);
 		}
+
+		/* The probe was popped from to_send but never made it into the sent
+		 * queue (build/add failure): it will never get a response, so resolve
+		 * it now to keep the outstanding counter accurate and avoid a leak. */
+		if (!tracked)
+		{
+			atomic_fetch_sub(&shared_data->outstanding, 1);
+			free(request);
+		}
 	}
 	close_sockets(&udp_socket, &tcp_socket);
-	// print_debug_thread_leave(phid, __FUNCTION__);
 	return NULL;
 }

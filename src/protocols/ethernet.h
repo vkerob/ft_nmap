@@ -6,6 +6,4 @@
 #include <netinet/if_ether.h>
 #include <net/ethernet.h>
 
-void build_ethernet_header(struct ether_header *eth_hdr);
-
 #endif

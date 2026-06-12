@@ -18,7 +18,15 @@ typedef struct s_probe_queue
 	t_probe		   *head;
 	t_probe		   *tail;
 	t_safe_mutex	safe_mut;
-	u16						nb_probe;
+	u16				nb_probe;
+	/* Signalled when work is added to (or should be re-checked on) the queue,
+	 * so senders can sleep instead of busy-waiting on an empty queue. */
+	pthread_cond_t	cond;
+	/* Shared probe-resolution counter (points to s_shared_data_sender.
+	 * outstanding). Drives capture-thread termination: a probe is counted
+	 * once when queued and decremented once when definitively resolved
+	 * (response handled or dropped after max retries). */
+	_Atomic int	   *outstanding;
 } t_probe_queue;
 
 
@@ -26,8 +34,10 @@ typedef struct s_shared_data_sender
 {
 	_Atomic u16 id;
 	_Atomic u16 base_seq;
+	/* Number of probes not yet definitively resolved; capture threads run
+	 * while this is > 0. Independent from per-queue nb_probe counters. */
+	_Atomic int outstanding;
 	size_t		iface_count;
-	u16			port_count;
 
 	t_probe_queue to_send;
 

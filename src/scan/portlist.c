@@ -81,10 +81,6 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 				   const u8 nb_scan_type, const bool tcp_scan,
 				   const bool udp_scan, u16 *max_port_nb)
 {
-	// If not scan specified run all of them
-	// if (!HAS(args->flags, F_SCAN_TYPE))
-
-
 	*max_port_nb = get_max_port_number(ports);
 
 	if (tcp_scan)
@@ -155,7 +151,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		if (port_list->port_map_rev[scan_type] == NULL)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			delete_port_map_rev(port_list->port_map_rev, scan_types, i - 1);
+			delete_port_map_rev(port_list->port_map_rev, scan_types, i);
 			free(port_list->port_map);
 			free_port_final_state(port_list->port_final_state, tcp_scan,
 								  udp_scan);
@@ -164,8 +160,8 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 
 		for (u16 j = 0; j < port_count; j++)
 		{
-			port_list->port_map_rev[scan_type]->port_number = ports[j];
-			port_list->port_map_rev[scan_type]->port_state = DEFAULT;
+			port_list->port_map_rev[scan_type][j].port_number = ports[j];
+			port_list->port_map_rev[scan_type][j].port_state = DEFAULT;
 		}
 	}
 	return false;

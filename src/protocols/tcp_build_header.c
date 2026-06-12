@@ -3,11 +3,6 @@
 #include <stdatomic.h>
 #include <string.h>
 
-void update_port_tcp_header(struct tcphdr *tcp_hdr, u16 port)
-{
-	tcp_hdr->th_dport = htons(port);
-}
-
 static u8 scan_type_to_flag(t_scan_type scan_type)
 {
 	if (scan_type == SCAN_SYN)
@@ -36,7 +31,6 @@ void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
 	memset(tcp_hdr, 0, sizeof(struct tcphdr));
 	/* Source port */
 	u16 src_port = get_random_source_port_in_scantype_interval(scan_type);
-	// printf("SRC PORT: %hu\n", src_port);
 	tcp_hdr->th_sport = htons(src_port);
 	/* Destination port */
 	tcp_hdr->th_dport = htons(destination_port);

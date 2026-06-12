@@ -87,7 +87,6 @@ typedef struct s_iface_info
 {
 	char		   name[IFNAMSIZ];
 	struct in_addr ip_addr; // ip of the interface, used as source ip in packets
-	struct ether_addr mac_addr;	   // not defined yet, mac of the interface.
 	u8				  iface_index; // index of the interface
 } t_iface_info;
 
@@ -140,7 +139,6 @@ typedef struct s_ctx
 	t_args		   args;
 	t_port_svc *port_svc[MAX_PROTO_COUNT];
 	t_program_info program_info;
-	pcap_t		 **handles;
 } t_ctx;
 
 bool init_portlist(t_port_list *port_list, u16 port_count,

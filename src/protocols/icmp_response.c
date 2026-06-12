@@ -6,6 +6,7 @@
 #include "tcp.h"
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #define ICMP_ERROR_HIGHEST_IDX 6
 
@@ -14,7 +15,6 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 						  const struct in_addr ip_src, t_icmp_hdr icmp_hdr,
 						  const t_scan_type scan_type, const u8 protocol)
 {
-	(void)protocol;
 	// ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
 	static u8 icmp_error_codes[6] = { 1, 2, 3, 9, 10, 13 };
 	if (ICMP_TYPE(icmp_hdr) != 3)
@@ -29,7 +29,6 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 	if (!probe)
 	{
 		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
-		sync_printf("Probe not found\n");
 		return;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
@@ -48,12 +47,14 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 				port->port_state = FILTERED;
 			}
 			set_port_state_reason(port, UNREACHABLE);
+			atomic_fetch_sub(sent_list->outstanding, 1);
 			pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 			free(probe);
 			return;
 		}
 	}
 	port->port_state = UNKNOWN;
+	atomic_fetch_sub(sent_list->outstanding, 1);
 	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 	free(probe);
 }

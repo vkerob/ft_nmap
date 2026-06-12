@@ -28,40 +28,58 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 		free(*pcap_threads);
 		return true;
 	}
+
+	size_t created_pcap = 0;
+	u8	   created_send = 0;
+
 	// launch thread to handle captured packets
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
 		char errbuf[PCAP_ERRBUF_SIZE];
 		if (pcap_setup(&pcap_ctxs[i], errbuf, ctx->targets, ctx->target_count))
-			return true;
-		// print_debug_receiver_data(&receiver_data[i]);
+			goto fail;
 
-		int ret = pthread_create(&(*pcap_threads)[i], NULL, capture_routine,
-								 &pcap_ctxs[i]);
-		if (ret != 0)
+		if (pthread_create(&(*pcap_threads)[i], NULL, capture_routine,
+						   &pcap_ctxs[i])
+			!= 0)
 		{
-			free(*send_threads);
-			free(*pcap_threads);
-			LOG("ft_nmap: pthread_create failed: %s\n", strerror(ret));
-			return true;
+			LOG("ft_nmap: pthread_create failed\n");
+			goto fail;
 		}
+		created_pcap++;
 	}
-
-	// print_debug_shared_data_probe(shared_data_probe, ifaces);
 
 	for (u8 i = 0; i < ctx->args.speed; i++)
 	{
-		int ret = pthread_create(&(*send_threads)[i], NULL, send_routine,
-								 shared_data_probe);
-		if (ret != 0)
+		if (pthread_create(&(*send_threads)[i], NULL, send_routine,
+						   shared_data_probe)
+			!= 0)
 		{
-			LOG("ft_nmap: pthread_create failed: %s\n", strerror(ret));
-			free(*send_threads);
-			free(*pcap_threads);
-			return true;
+			LOG("ft_nmap: pthread_create failed\n");
+			goto fail;
 		}
+		created_send++;
 	}
 	return false;
+
+fail:
+	/* Stop and reap whatever was already launched so they don't run on memory
+	 * the caller is about to free. */
+	g_stop = 1;
+	for (size_t j = 0; j < created_pcap; j++)
+		pthread_join((*pcap_threads)[j], NULL);
+	for (u8 j = 0; j < created_send; j++)
+		pthread_join((*send_threads)[j], NULL);
+	for (size_t j = 0; j < created_pcap; j++)
+	{
+		if (pcap_ctxs[j].handle)
+			pcap_close(pcap_ctxs[j].handle);
+	}
+	free(*pcap_threads);
+	free(*send_threads);
+	*pcap_threads = NULL;
+	*send_threads = NULL;
+	return true;
 }
 
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,

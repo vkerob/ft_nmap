@@ -14,7 +14,6 @@ typedef struct s_probe
 	struct timeval	 timestamp;
 	u32				 id;
 	u8				 retries;
-	u8				 status;
 	struct s_probe	*prev;
 	struct s_probe	*next;
 } t_probe;

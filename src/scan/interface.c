@@ -16,6 +16,8 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 	{
 		if (strcmp((*ifaces)[i].name, ifname) == 0)
 		{
+			/* Already known: report its existing index to the caller. */
+			*iface_index = (u8)i;
 			return false;
 		}
 	}
@@ -42,7 +44,11 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 	strncpy((*ifaces)[*iface_count].name, ifname, IFNAMSIZ);
 	(*ifaces)[*iface_count].name[IFNAMSIZ - 1] = '\0';
 	(*ifaces)[*iface_count].ip_addr = local_addr;
-	*iface_index = (*iface_count)++;
+	/* Persist the index inside the struct: senders and the pcap filter rely
+	 * on iface_info->iface_index to pick the right per-interface queue. */
+	(*ifaces)[*iface_count].iface_index = (u8)*iface_count;
+	*iface_index = (u8)*iface_count;
+	(*iface_count)++;
 	return false;
 }
 
@@ -61,7 +67,6 @@ static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
 		if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET)
 			continue;
 
-		// in the future, we might want to get the mac address
 		struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
 		if (sa->sin_addr.s_addr == ip_addr.s_addr)
 		{
@@ -75,12 +80,21 @@ static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
 	freeifaddrs(ifaddr);
 }
 
-// bool get_iface_info(char (**iface_names)[IFNAMSIZ], size_t *iface_count,
-//					t_target *targets, size_t target_count)
 bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count)
 {
 	u8 iface_index = 0;
+
+	/* add_unique_dev() may realloc *ifaces, which moves the array and would
+	 * dangle any t_iface_info* stored earlier. So we record each target's
+	 * resolved index here and only bind the pointers once, after the loop,
+	 * when *ifaces is final. */
+	u8 *target_iface_idx = calloc(target_count, sizeof(u8));
+	if (target_count > 0 && target_iface_idx == NULL)
+	{
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+		return true;
+	}
 
 	for (size_t i = 0; i < target_count; i++)
 	{
@@ -90,6 +104,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		if (fd == -1)
 		{
 			perror("socket");
+			free(target_iface_idx);
 			return true;
 		}
 
@@ -111,6 +126,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		{
 			perror("connect");
 			close(fd);
+			free(target_iface_idx);
 			return true;
 		}
 
@@ -125,6 +141,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		{
 			perror("getsockname");
 			close(fd);
+			free(target_iface_idx);
 			return true;
 		}
 		close(fd);
@@ -137,9 +154,16 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 						   &iface_index))
 		{
 			LOG("ft_nmap: Failed to add interface name\n");
+			free(target_iface_idx);
 			return true;
 		}
-		targets[i].iface_info = &(*ifaces[iface_index]);
+		target_iface_idx[i] = iface_index;
 	}
+
+	/* Second pass: *ifaces is now stable, bind the pointers. */
+	for (size_t i = 0; i < target_count; i++)
+		targets[i].iface_info = &(*ifaces)[target_iface_idx[i]];
+
+	free(target_iface_idx);
 	return false;
 }

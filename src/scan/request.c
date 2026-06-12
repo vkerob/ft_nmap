@@ -25,20 +25,23 @@ void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
 
 bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 {
-	*popped_request = *tail;
+	t_probe *node = *tail;
 
-	(void)popped_request;
-	if ((*tail)->prev)
+	*popped_request = node;
+
+	if (node->prev)
 	{
-		*tail = (*tail)->prev;
+		*tail = node->prev;
+		(*tail)->next = NULL;
 	}
 	else
 	{
 		*head = NULL;
 		*tail = NULL;
-		// print_debug_concise_probe(*popped_request);
 	}
-	// print_debug_probe_request(*popped_request);
+	/* Fully detach the popped node so no dangling links remain. */
+	node->prev = NULL;
+	node->next = NULL;
 	return true;
 }
 
@@ -54,9 +57,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 
 	new_request->type = scan_type;
 	new_request->id = id;
-	// new_request->timestamp = 0;
 	new_request->retries = 0;
-	new_request->status = 0;
 
 	new_request->next = NULL;
 	new_request->prev = *tail;
@@ -65,10 +66,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 		(*tail)->next = new_request;
 	else
 		*head = new_request;
-	// update tail to new request
 	*tail = new_request;
-
-	// print_debug_probe_request(new_request);
 
 	return false;
 }

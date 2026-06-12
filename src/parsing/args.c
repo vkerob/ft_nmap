@@ -151,7 +151,7 @@ static char *trim_inplace(char *str)
 static bool parse_port_strict(const char *s, u16 *out)
 {
 	if (!s || !*s)
-		return false;
+		return true; // empty input is not a valid port
 
 	errno = 0;
 	char			   *end = NULL;
@@ -252,7 +252,11 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
 
 	for (u32 port = port_left; port <= port_right; port++)
 	{
-		push_port(ports, count, (u16)port, duplicate_port_number);
+		if (push_port(ports, count, (u16)port, duplicate_port_number))
+		{
+			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
+			return true;
+		}
 	}
 
 	return false;
@@ -343,8 +347,8 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 	return true;
 }
 
-bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types,
-							 bool *tcp_scan, bool *udp_scan)
+bool parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
+					  u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
 {
 	char *saveptr = NULL;
 	char *token = NULL;
@@ -364,6 +368,21 @@ bool parse_scan_types(char *scan_str, u8 (*out)[6], u8 *nb_scan_types,
 		{
 			if (parse_scan_type(token, &scan_type))
 			{
+				return true;
+			}
+			/* Reject duplicates and bound the write into out[]. */
+			for (u8 i = 0; i < *nb_scan_types; i++)
+			{
+				if ((*out)[i] == scan_type)
+				{
+					LOG("ft_nmap: duplicate scan type: '%s'\n", token);
+					return true;
+				}
+			}
+			if (*nb_scan_types >= MAX_NB_SCAN_TYPE)
+			{
+				LOG("ft_nmap: too many scan types (max %d)\n",
+					MAX_NB_SCAN_TYPE);
 				return true;
 			}
 			(*out)[*nb_scan_types] = scan_type;
