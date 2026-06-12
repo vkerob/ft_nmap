@@ -74,10 +74,8 @@ static bool init_port_map(t_args *args)
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
-	for (u16 i = 0; i < max_port_nb; i++)
-	{
-		args->port_map[i] = -1;
-	}
+
+	memset(args->port_map, -1, sizeof(int) * (max_port_nb + 1));
 	for (u16 j = 0; j < args->port_count; j++)
 	{
 		args->port_map[args->ports[j]] = j;
