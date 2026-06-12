@@ -161,7 +161,7 @@ bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 			printf("SYN ");
 		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
 			printf("FIN ");
-		if (datalink_hdr->tcp_hdr.th_flags & 0x00)
+		if (datalink_hdr->tcp_hdr.th_flags == 0)
 			printf(". ");
 		printf("ttl: %d ", ip_hdr->ip_ttl);
 		printf("id: %d ", ntohs(ip_hdr->ip_id));
@@ -175,7 +175,7 @@ bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 	{
 		printf("UDP %s:%d > %s:%d ", src, ntohs(datalink_hdr->udp_hdr.uh_sport),
 			   dst, ntohs(datalink_hdr->udp_hdr.uh_dport));
-		printf("ttl: %d ", ntohs(ip_hdr->ip_ttl));
+		printf("ttl: %d ", ip_hdr->ip_ttl);
 		printf("id: %d ", ntohs(ip_hdr->ip_id));
 		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
 	}
@@ -234,7 +234,7 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 		   probe->timestamp.tv_sec, (unsigned int)probe->timestamp.tv_usec);
 	printf(ANSI_COLOR_YELLOW "  • Current time: %ld.%06u\n" ANSI_COLOR_RESET,
 		   current_time->tv_sec, (unsigned int)current_time->tv_usec);
-	printf(ANSI_COLOR_YELLOW "  • Elapsed time: %ld \n" ANSI_COLOR_RESET,
+	printf(ANSI_COLOR_YELLOW "  • Elapsed time: %lu \n" ANSI_COLOR_RESET,
 		   seconds_elapsed);
 	printf(ANSI_COLOR_YELLOW "  • Number of retries: %d\n" ANSI_COLOR_RESET,
 		   probe->retries);
@@ -373,7 +373,7 @@ void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
 		printf("SYN ");
 	if (tcp_hdr->th_flags & TH_FIN)
 		printf("FIN ");
-	if (tcp_hdr->th_flags & 0x00)
+	if (tcp_hdr->th_flags == 0)
 		printf("None");
 
 	printf("\n" ANSI_COLOR_RESET);
@@ -515,8 +515,6 @@ void print_debug_probe_request(const t_probe *request)
 	printf(ANSI_COLOR_GREEN "  • ID: %u\n" ANSI_COLOR_RESET, request->id);
 	printf(ANSI_COLOR_GREEN "  • Retries: %u\n" ANSI_COLOR_RESET,
 		   request->retries);
-	printf(ANSI_COLOR_GREEN "  • Status: %u\n" ANSI_COLOR_RESET,
-		   request->status);
 	printf(ANSI_COLOR_GREEN "  • Interface: %s\n" ANSI_COLOR_RESET,
 		   request->target->iface_info->name);
 	printf(ANSI_COLOR_GREEN "  • IP src Address: %s\n" ANSI_COLOR_RESET,
@@ -629,10 +627,6 @@ void print_debug_parsing_args(const t_ctx ctx)
 	printf(ANSI_COLOR_CYAN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 
-	// for (u8 i = 0; i < ctx.args.nb_scan_types; i++)
-	// {
-	// 	scan_type_to_str(ctx.args.scan_types[i]);
-	// }
 	printf(ANSI_BOLD "\nOther parameters:\n" ANSI_COLOR_RESET);
 	printf("--------------------------------------------\n");
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
@@ -708,7 +702,7 @@ void print_debug_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	printf(ANSI_BOLD ANSI_COLOR_MAGENTA
 		   "Number of ports to scan:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_MAGENTA " • %d\n" ANSI_COLOR_RESET,
-		   shared_data_probe->port_count);
+		   shared_data_probe->args->port_count);
 	printf(ANSI_COLOR_MAGENTA "Number of probe to send: \n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_MAGENTA " • %d\n" ANSI_COLOR_RESET,
 		   shared_data_probe->to_send.nb_probe);

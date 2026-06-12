@@ -6,6 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void destroy_sent_mutexes(t_probe_queue *sent, size_t count)
+{
+	for (size_t i = 0; i < count; i++)
+		pthread_mutex_destroy(&sent[i].safe_mut.mutex);
+	free(sent);
+}
+
 bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 								  t_ctx				   *ctx)
 {
@@ -17,26 +24,30 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		return true;
 	}
 
+	atomic_init(&shared_data_probe->outstanding, 0);
+
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
 		int res = pthread_mutex_init(&shared_data_probe->sent[i].safe_mut.mutex, NULL);
 		if (res != 0)
 		{
 			LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
+			destroy_sent_mutexes(shared_data_probe->sent, i);
 			return true;
 		}
 		shared_data_probe->sent[i].safe_mut.initialize = true;
 		shared_data_probe->sent[i].nb_probe = 0;
 		shared_data_probe->sent[i].head = NULL;
 		shared_data_probe->sent[i].tail = NULL;
+		shared_data_probe->sent[i].outstanding = &shared_data_probe->outstanding;
 	}
 
 	// init the probe request list
 	shared_data_probe->iface_count = ctx->iface_count;
-	shared_data_probe->port_count = ctx->args.port_count;
 	shared_data_probe->to_send.head = NULL;
 	shared_data_probe->to_send.tail = NULL;
 	shared_data_probe->to_send.nb_probe = 0;
+	shared_data_probe->to_send.outstanding = &shared_data_probe->outstanding;
 	shared_data_probe->program_info = &ctx->program_info;
 	shared_data_probe->args = &ctx->args;
 
@@ -47,9 +58,20 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	if (res != 0)
 	{
 		LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
+		destroy_sent_mutexes(shared_data_probe->sent, ctx->iface_count);
 		return true;
 	}
+
 	shared_data_probe->to_send.safe_mut.initialize = true;
+
+	res = pthread_cond_init(&shared_data_probe->to_send.cond, NULL);
+	if (res != 0)
+	{
+		LOG("ft_nmap: pthread_cond_init: %s\n", strerror(res));
+		pthread_mutex_destroy(&shared_data_probe->to_send.safe_mut.mutex);
+		destroy_sent_mutexes(shared_data_probe->sent, ctx->iface_count);
+		return true;
+	}
 
 	return false;
 }
@@ -122,6 +144,7 @@ static void free_to_send_queue(t_probe_queue *to_send_queue)
 	{
 		free_probes(to_send_queue->head);
 	}
+	pthread_cond_destroy(&to_send_queue->cond);
 	safe_destroy_mutex(&to_send_queue->safe_mut);
 }
 
@@ -147,27 +170,16 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 				if (append_probe_request(
 						&to_send->head, &to_send->tail, &ctx->targets[i],
 						ctx->args.ports[j], ctx->args.scan_types[k],
-						(u32)(i * ctx->args.port_count
+						(u32)(i * ctx->args.port_count * ctx->args.nb_scan_types
 							  + j * ctx->args.nb_scan_types + k)))
 				{
 					return true;
 				}
 				to_send->nb_probe++;
+				atomic_fetch_add(to_send->outstanding, 1);
 			}
 		}
 	}
 
 	return false;
-}
-
-void free_requests_list(t_probe **head)
-{
-	t_probe *current = *head;
-	while (current)
-	{
-		t_probe *next = current->next;
-		free(current);
-		current = next;
-	}
-	*head = NULL;
 }

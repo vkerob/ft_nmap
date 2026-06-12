@@ -16,7 +16,6 @@ typedef struct	s_args
 	u8				scan_types[MAX_NB_SCAN_TYPE];
 	u8				nb_scan_types;
 	u16				max_port_nb;
-	u8				nb_scan;
 	u8				speed;
 	/* Indicate whether we have a UDP and TCP scan among scan_types so we don't have to loop over scan_types we
 	need that information */

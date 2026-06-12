@@ -49,9 +49,15 @@ static char *build_filter_expr(const char *ip_src_interface, t_target *targets,
 		return NULL;
 	}
 
-	int written
-		= snprintf(filter_expr, filter_len,
-				   "(tcp or udp or icmp) and dst host %s", ip_src_interface);
+	int n = snprintf(filter_expr, filter_len,
+					 "(tcp or udp or icmp) and dst host %s", ip_src_interface);
+	if (n < 0 || (size_t)n >= filter_len)
+	{
+		LOG("ft_nmap: filter expression truncated\n");
+		free(filter_expr);
+		return NULL;
+	}
+	size_t off = (size_t)n;
 
 	bool first_target = true;
 	for (size_t i = 0; i < target_count; i++)
@@ -62,20 +68,28 @@ static char *build_filter_expr(const char *ip_src_interface, t_target *targets,
 		char ip_buf[INET_ADDRSTRLEN];
 		inet_ntop(AF_INET, &targets[i].addr, ip_buf, sizeof(ip_buf));
 
-		if (first_target)
+		n = snprintf(filter_expr + off, filter_len - off,
+					 first_target ? " and (src host %s" : " or src host %s",
+					 ip_buf);
+		if (n < 0 || (size_t)n >= filter_len - off)
 		{
-			written += snprintf(filter_expr + written, filter_len - written,
-								" and (src host %s", ip_buf);
-			first_target = false;
+			LOG("ft_nmap: filter expression truncated\n");
+			free(filter_expr);
+			return NULL;
 		}
-		else
-		{
-			written += snprintf(filter_expr + written, filter_len - written,
-								" or src host %s", ip_buf);
-		}
+		off += (size_t)n;
+		first_target = false;
 	}
 	if (!first_target)
-		snprintf(filter_expr + written, filter_len - written, ")");
+	{
+		n = snprintf(filter_expr + off, filter_len - off, ")");
+		if (n < 0 || (size_t)n >= filter_len - off)
+		{
+			LOG("ft_nmap: filter expression truncated\n");
+			free(filter_expr);
+			return NULL;
+		}
+	}
 
 	return filter_expr;
 }

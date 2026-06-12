@@ -9,8 +9,6 @@
 void build_ip_header(t_ip *ip_hdr, const t_probe *request,
 					 struct in_addr src_ip, _Atomic uint16_t *id_counter)
 {
-	(void)ip_hdr;
-	(void)request;
 	ip_hdr->ip_v = IP_VERSION;
 	ip_hdr->ip_hl = IP_IHL;
 	ip_hdr->ip_ttl = IP_TTL_DEFAULT;
@@ -27,7 +25,5 @@ void build_ip_header(t_ip *ip_hdr, const t_probe *request,
 	ip_hdr->ip_tos = 0;
 	// In linux the checksum is filled by the kernel when using socket raw
 	ip_hdr->ip_sum = 0;
-	//ip_hdr->ip_sum = calculate_checksum(ip_hdr, ip_hdr->ip_hl * 4);
-	//printf("size ip header: %ld\n", sizeof(*ip_hdr));
 }
 

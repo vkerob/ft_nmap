@@ -156,90 +156,6 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 	}
 }
 
-/* Return true and filled next_ignored_port_state (which have the highest number
-of port in this state accross both protocol TCP and UDP) or false if no ignored
-state are left */
-bool get_next_ignored_port_state(int		  *state_count,
-								 t_port_state *next_ignored_state)
-{
-	static t_port_state previous_ignored_port_state = UNKNOWN;
-	u16					max = PRINT_LIMIT;
-	u16 max_prev_ignored_port_state = state_count[previous_ignored_port_state];
-
-	for (t_port_state i = DEFAULT; i < UNKNOWN; i++)
-	{
-		if (state_count[i] > max)
-		{
-			if (previous_ignored_port_state != DEFAULT)
-			{
-				if (state_count[i] > max_prev_ignored_port_state)
-					continue;
-			}
-			max = state_count[i];
-			*next_ignored_state = i;
-		}
-	}
-	bool ret = previous_ignored_port_state != *next_ignored_state;
-	previous_ignored_port_state = *next_ignored_state;
-	return ret;
-}
-
-// Return true and filled next_ignored_port_state_reason with the reason /
-// occurences associated with the ignored port state given
-bool get_reason_for_port_state(
-	t_port_state_and_reason **head,
-	t_port_state_and_reason	 *next_ignored_port_state_reason,
-	t_port_state			  ignored_port_state)
-{
-	t_port_state_and_reason *tmp = *head;
-	t_port_state_and_reason *prev = NULL;
-
-	while (tmp)
-	{
-		if (tmp->port_state == ignored_port_state)
-		{
-			memcpy(next_ignored_port_state_reason, tmp,
-				   sizeof(t_port_state_and_reason));
-			// erase node
-			if (prev)
-			{
-				prev->next = tmp->next;
-			}
-			else
-			{
-				*head = tmp->next;
-			}
-			return true;
-		}
-		prev = tmp;
-		tmp = tmp->next;
-	}
-
-	return false;
-}
-
-char *state_to_label(t_port_state state)
-{
-	switch (state)
-	{
-	case DEFAULT:
-		return "default";
-	case OPEN_FILTERED:
-		return "open|filtered";
-	case UNFILTERED:
-		return "unfiltered";
-	case FILTERED:
-		return "filtered";
-	case CLOSE:
-		return "close";
-	case OPEN:
-		return "open";
-	case UNKNOWN:
-		return "unknown";
-	}
-	return NULL;
-}
-
 // Ignored states are print from the most common to the least common and with a
 // reason associated (no-response, reset, ...)
 /* Count the number of ports in each state for a given protocol slot
@@ -511,11 +427,6 @@ bool find_or_update_state_and_reason_combination(
 					// Copy from parent node to first child node
 					tmp->first_reason->count = tmp->count;
 					tmp->first_reason->reason = tmp->reason;
-					if (tmp->first_reason == NULL)
-					{
-						printf("%s\n", port_state_to_str(tmp->port_state));
-						exit(EXIT_FAILURE);
-					}
 
 					// This will now track the total count (both reasons)
 					tmp->count++;
@@ -532,6 +443,11 @@ bool find_or_update_state_and_reason_combination(
 	}
 	// The port state - reason is not registered so we store it
 	prev->next = calloc(1, sizeof(t_port_state_and_reason));
+	if (prev->next == NULL)
+	{
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+		return true;
+	}
 	prev->next->reason = reason;
 	prev->next->count = 1;
 	prev->next->port_state = port_state;

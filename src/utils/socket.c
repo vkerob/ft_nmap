@@ -7,23 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-static void update_socket_port(struct sockaddr_in *socket_addr, u16 port)
-{
-	socket_addr->sin_port = htons(port);
-}
-
-static void update_socket_addr(struct sockaddr_in *socket_addr,
-							   struct in_addr	   addr)
-{
-	socket_addr->sin_addr = addr;
-}
-
-void update_socket(struct sockaddr_in *socket, t_target target, u16 port)
-{
-	update_socket_port(socket, port);
-	update_socket_addr(socket, target.addr);
-}
-
 bool init_socket(t_socket *sock, const int proto)
 {
 	sock->sfd = socket(PF_INET, SOCK_RAW, proto);
@@ -36,6 +19,7 @@ bool init_socket(t_socket *sock, const int proto)
 	if (setsockopt(sock->sfd, IPPROTO_IP, IP_HDRINCL, &opt, sizeof(opt)) == -1)
 	{
 		LOG("ft_nmap: %s\n", strerror(errno));
+		close(sock->sfd);
 		return true;
 	}
 	return false;

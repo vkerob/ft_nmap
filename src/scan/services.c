@@ -28,6 +28,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	int error_number;
 	u16 port_co = 0;
 	bool ret = false;
+	FILE *fp = NULL;
 
   if (tcp_scan)
   {
@@ -51,7 +52,7 @@ bool resolve_services_name(u16 port_count, int *port_map,
     }
   }
 
-	FILE *fp = fopen("/usr/share/nmap/nmap-services", "r");
+	fp = fopen("/usr/share/nmap/nmap-services", "r");
 	if (!fp)
 	{
 		LOG("ft_nmap: unable to open nmap-services file, resort to /etc/services\n");

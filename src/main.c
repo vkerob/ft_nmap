@@ -7,11 +7,11 @@
 #include "shared.h"
 #include "utils.h"
 
+#include <errno.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 
 sig_atomic_t volatile g_stop = 0;
@@ -64,7 +64,6 @@ static void set_scan_presence(t_args *args)
 	}
 }
 
-
 static bool init_port_map(t_args *args)
 {
 	u16 max_port_nb = get_max_port_number(args->ports);
@@ -86,30 +85,23 @@ static bool init_port_map(t_args *args)
 	return false;
 }
 
-
 static void free_ressources(t_ctx *ctx)
 {
 	better_free(ctx->args.port_map);
 
 	free_services(&ctx->port_svc, ctx->args.port_count);
 
-	free_targets(&ctx->targets, ctx->target_count, ctx->args.port_count, ctx->args.nb_scan_types, ctx->args.scan_types);
+	free_targets(&ctx->targets, ctx->target_count, ctx->args.port_count,
+				 ctx->args.nb_scan_types, ctx->args.scan_types);
 
 	better_free(ctx->ifaces);
 }
-
 
 bool nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
 	pthread_t			*pcap_threads = NULL;
 	pthread_t			*send_threads = NULL;
-
-	// if (HAS(ctx->args.flags, F_SPOOF))
-	//{
-	//	printf(ANSI_BOLD ANSI_COLOR_YELLOW
-	//		   "[*] Spoofing enabled (bonus feature)\n" ANSI_COLOR_RESET);
-	// }
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
@@ -118,8 +110,13 @@ bool nmap_main(t_ctx *ctx)
 	}
 	t_receiver_data *pcap_ctxs = NULL;
 
-	initialize_receiver_data(&pcap_ctxs, ctx->iface_count, &shared_data_probe,
-							 ctx->ifaces, &ctx->program_info);
+	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
+								 &shared_data_probe, ctx->ifaces,
+								 &ctx->program_info))
+	{
+		deinitialize_shared_data(&shared_data_probe, ctx);
+		return true;
+	}
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
@@ -129,25 +126,22 @@ bool nmap_main(t_ctx *ctx)
 
 	if (init_port_map(&ctx->args))
 	{
-				better_free(pcap_ctxs);
+		better_free(pcap_ctxs);
 		LOG("failed to initialize the port map\n");
 		return true;
 	}
 
 	if (resolve_services_name(ctx->args.port_count, ctx->args.port_map,
-		&ctx->port_svc, ctx->args.udp_scan, ctx->args.tcp_scan))
+							  &ctx->port_svc, ctx->args.udp_scan,
+							  ctx->args.tcp_scan))
 	{
-				better_free(pcap_ctxs);
+		better_free(pcap_ctxs);
 		LOG("failed to resolve services\n");
+		deinitialize_shared_data(&shared_data_probe, ctx);
 		return true;
 	}
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
-
-	/* set_scan_presence is now invoked from main() before init_portlist;
-	 * keeping it here would be redundant. */
-	// shared_data_probe.to_send.nb_probe
-	// 	= ctx->args.port_count * ctx->target_count * ctx->args.nb_scan_types;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
 									  &shared_data_probe, pcap_ctxs))
@@ -168,20 +162,14 @@ bool nmap_main(t_ctx *ctx)
 	print_scan_results(ctx);
 
 	better_free(pcap_ctxs);
+
 	deinitialize_shared_data(&shared_data_probe, ctx);
 
 	return false;
 }
 
-
 int main(const int argc, char **argv)
 {
-	// if (geteuid() != 0)
-	// {
-	// 	LOG("ft_nmap: You must be root to run this program.\n");
-	// 	return 1;
-	// }
-
 	char **targets_input = NULL;
 	t_ctx  ctx = { 0 };
 

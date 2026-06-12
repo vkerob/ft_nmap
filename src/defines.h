@@ -20,15 +20,19 @@
 /* Maximum number of threads our program can run (option set with --speed)*/
 #define SPEED_MAX 250
 #define SPEED_MIN 0
+#ifndef EXIT_FAILURE
 #define EXIT_FAILURE 1
+#endif
+#ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
+#endif
 /* Lengt of ethernet header */
 #define ETH_ALEN 6
 /* Maximum number of port a user can scan with one execution of the program */
 #define MAX_PORT_COUNT 1024
 /* Maximum port number possible */
 #define MAX_PORT_NUMBER 65535
-/* ??? */
+/* Lowest source port we use when crafting probes */
 #define MIN_SRC_PORT_NUMBER 1024
 #define MAX_PROTO_COUNT 2
 /* Number of type of scan a user can perform simultaneously */
@@ -61,6 +65,7 @@
 #define SET(flags, flag) ((flags) |= (flag))
 #define HAS(flags, flag) (((flags) & (flag)) != 0)
 
+#include <stdio.h>
 #include <stdlib.h>
 #define LOG(fmt, ...)                                                          \
 	do                                                                         \
@@ -71,4 +76,4 @@
 		}                                                                      \
 	} while (0)
 
-#endif // PARSING_H
+#endif // DEFINES_H
