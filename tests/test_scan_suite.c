@@ -26,7 +26,7 @@ SUITE(scan_suite);
 
 extern t_server *g_server_data; 
 
-void run_command(char **args, char **output)
+bool run_command(char **args, char **output)
 {
 	int pipe_fds[2];
 	pid_t	pid;
@@ -64,17 +64,34 @@ void run_command(char **args, char **output)
 					{
 						continue;
 					}
+					close(pipe_fds[0]);
+					wait(NULL);
 					perror("read");
-					break;
+					return true;
 			}
 			if (*output == NULL)
 			{
 				*output = strndup(buf, nbytes);
+				if (output == NULL)
+				{
+					LOG("test_ft_nmap: calloc failed: %s\n", strerror(errno));
+					close(pipe_fds[0]);
+					wait(NULL);
+					return true;
+				}
 			}
 			else
 			{
 				size_t old_len = strlen(*output);
 				char  *new_output = calloc(old_len + nbytes + 1, sizeof(char));
+				if (new_output == NULL)
+				{
+					LOG("test_ft_nmap: calloc failed: %s\n", strerror(errno));
+					close(pipe_fds[0]);
+					wait(NULL);
+					better_free(*output);
+					return true;
+				}
 				strncpy(new_output, *output, old_len);
 				strncat(new_output + old_len, buf, nbytes);
 				free(*output);
@@ -85,6 +102,7 @@ void run_command(char **args, char **output)
 		close(pipe_fds[0]);
 		wait(NULL);
 	}
+	return false;
 }
 
 
@@ -133,7 +151,7 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 			if (ovector == NULL)
 			{
 				fprintf(stderr, "%s\n", strerror(errno));
-				pcre2_match_data_free(match_data);   /* Free resources */
+				pcre2_match_data_free(match_data);
 				return true;
 			}
 
@@ -141,7 +159,7 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 			if (new == NULL)
 			{
 				fprintf(stderr, "%s\n", strerror(errno));
-				pcre2_match_data_free(match_data);   /* Free resources */
+				pcre2_match_data_free(match_data);
 				return true;
 			}
 			if (*head)
@@ -160,12 +178,12 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 				substr(ptr, ovector[6], ovector[7], &new->port_state) || 
 				substr(ptr, ovector[8], ovector[9], &new->service))
 			{
-				pcre2_match_data_free(match_data);   /* Free resources */
+				pcre2_match_data_free(match_data);
 				return true;
 			}
 			ptr += ovector[1];
 		}
-		pcre2_match_data_free(match_data);   /* Free resources */
+		pcre2_match_data_free(match_data);
 	}
 	return false;
 }
@@ -208,8 +226,11 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	PCRE2_SIZE error_offset;
 	pcre2_code *re = NULL;
 
-	run_command(args_ft_nmap, &ft_nmap_output);
-	run_command(args_nmap, &nmap_output);
+	if (run_command(args_ft_nmap, &ft_nmap_output) || 	run_command(args_nmap, &nmap_output))
+	{
+		goto fail;
+	}
+
 
 	if (ft_nmap_output == NULL || nmap_output == NULL)
 	{
@@ -224,7 +245,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 
 	re = pcre2_compile(
 		(unsigned char *)pattern,               /* the pattern */
-		PCRE2_EXTENDED | PCRE2_NEWLINE_ANY | PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
+		PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
 		0,                     /* default options */
 		&error_number,         /* for error number */
 		&error_offset,         /* for error offset */
@@ -237,6 +258,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	}
 	if (get_port_list(ft_nmap_output, re, &port_list_ft_nmap) || get_port_list(nmap_output, re, &port_list_nmap))
 	{
+		pcre2_code_free(re);
 		goto fail;
 	}
 	pcre2_code_free(re);

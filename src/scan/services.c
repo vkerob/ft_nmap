@@ -30,27 +30,27 @@ bool resolve_services_name(u16 port_count, int *port_map,
 	bool ret = false;
 	FILE *fp = NULL;
 
-  if (tcp_scan)
-  {
-    (*arr)[TCP_INDEX] = calloc(port_count, sizeof(t_port_svc));
-    if ((*arr)[TCP_INDEX] == NULL)
-    {
-      LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
+	if (tcp_scan)
+	{
+		(*arr)[TCP_INDEX] = calloc(port_count, sizeof(t_port_svc));
+		if ((*arr)[TCP_INDEX] == NULL)
+		{
+			LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
 			ret = true;
 			goto cleanup;
-    }
-  }
+		}
+	}
 
-  if (udp_scan)
-  {
-    (*arr)[UDP_INDEX] = calloc(port_count, sizeof(t_port_svc));
-    if ((*arr)[UDP_INDEX] == NULL)
-    {
-      LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
+	if (udp_scan)
+	{
+		(*arr)[UDP_INDEX] = calloc(port_count, sizeof(t_port_svc));
+		if ((*arr)[UDP_INDEX] == NULL)
+		{
+			LOG("ft_nmap: calloc: '%s'\n", strerror(errno));
 			ret = true;
 			goto cleanup;
-    }
-  }
+		}
+	}
 
 	fp = fopen("/usr/share/nmap/nmap-services", "r");
 	if (!fp)

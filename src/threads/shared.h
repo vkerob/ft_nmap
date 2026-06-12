@@ -53,9 +53,12 @@ typedef struct s_receiver_data
 	pcap_t *handle;
 
 	t_iface_info *iface_info;
-	// reference of sent request list of corresponding interface
+	/* reference to the list used accrosed */
 	t_probe_queue *to_send;
-	// reference of sent request list
+	/* reference to the list used accross all receiver threads and where are store all probe request
+ 	sent to target(s), since there is one thread per interface (pcap thread safety limitation), each
+	have a reference to a different to_send list but that is shared with the sender thread (thread responsible
+	to send probe the the targets)*/ 
 	t_probe_queue *sent;
 
 	const t_args   *args;

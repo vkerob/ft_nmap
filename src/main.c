@@ -54,6 +54,7 @@ static void print_usage()
 	printf("\nHELP: \n");
 	printf(" --help: Display this menu\n");
 }
+
 static void set_scan_presence(t_args *args)
 {
 	for (u8 i = 0; i < args->nb_scan_types; i++)
@@ -70,7 +71,7 @@ static bool init_port_map(t_args *args)
 	args->port_map = calloc(max_port_nb + 1, sizeof(int));
 	if (args->port_map == NULL)
 	{
-		LOG("ft_nmap: ft_calloc: %s\n", strerror(errno));
+		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
 	for (u16 i = 0; i < max_port_nb; i++)
