@@ -6,7 +6,6 @@
 #include "scan.h"
 #include "shared.h"
 #include "utils.h"
-
 #include <errno.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
@@ -26,7 +25,7 @@ static void print_usage()
 		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
 	printf("\nSCAN TECHNIQUES: \n");
 	printf(" If no scan types are specified all will be run\n");
-	printf(" --scan <SYN, ACK, XMAS, NULL, URG, UDP>\n");
+	printf(" --scan <SYN, ACK, XMAS, NULL, FIN, UDP>\n");
 	printf(" Ex: --scan SYN --scan SYN,XMAS \n");
 	printf("\nPORT SPECIFICATION: \n");
 	printf(" The number of port specified cannot exceed 1024\n");
