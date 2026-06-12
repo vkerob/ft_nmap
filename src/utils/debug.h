@@ -41,9 +41,6 @@ void print_debug_packet_end();
 
 void print_debug_ethernet_header(t_eth_hdr *eth_header);
 
-// void	print_debug_icmp_header(struct icmphdr *icmp_hdr);
-void print_debug_services(t_port_svc *services_arr[MAX_PROTO_COUNT], u16 port_count, bool tcp_scan, bool udp_scan);
-
 void print_debug_protocol(int protocol);
 
 void print_debug_ethernet_type(int ether_type);
