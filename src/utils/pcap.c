@@ -12,30 +12,30 @@
 #define PCAP_BUFFER_SIZE (4 * 1024 * 1024) // 4MB
 #define PCAP_IMMEDIATE_MODE true
 
-static bool pcap_configure(pcap_t *handle, int snaplen, int promisc,
+static int pcap_configure(pcap_t *handle, int snaplen, int promisc,
 						   int buffer_size_bytes, bool immediate_mode)
 {
 	if (pcap_set_snaplen(handle, snaplen) != 0)
 	{
 		LOG("ft_nmap: pcap_set_snaplen failed\n");
-		return true;
+		return FAILURE;
 	}
 	if (pcap_set_promisc(handle, promisc) != 0)
 	{
 		LOG("ft_nmap: pcap_set_promisc failed\n");
-		return true;
+		return FAILURE;
 	}
 	if (pcap_set_buffer_size(handle, buffer_size_bytes) != 0)
 	{
 		LOG("ft_nmap: pcap_set_buffer_size failed\n");
-		return true;
+		return FAILURE;
 	}
 	if (pcap_set_immediate_mode(handle, immediate_mode) != 0)
 	{
 		LOG("ft_nmap: pcap_set_immediate_mode failed\n");
-		return true;
+		return FAILURE;
 	}
-	return false;
+	return SUCCESS;
 }
 
 static char *build_filter_expr(const char *ip_src_interface, t_target *targets,
@@ -94,25 +94,25 @@ static char *build_filter_expr(const char *ip_src_interface, t_target *targets,
 	return filter_expr;
 }
 
-static bool pcap_apply_filter(pcap_t *handle, const char *filter_expr)
+static int pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 {
 	struct bpf_program fp;
 	if (pcap_compile(handle, &fp, filter_expr, 1, PCAP_NETMASK_UNKNOWN) == -1)
 	{
 		LOG("pcap_compile failed: %s\n", pcap_geterr(handle));
-		return true;
+		return FAILURE;
 	}
 	if (pcap_setfilter(handle, &fp) == -1)
 	{
 		LOG("pcap_setfilter failed: %s\n", pcap_geterr(handle));
 		pcap_freecode(&fp);
-		return true;
+		return FAILURE;
 	}
 	pcap_freecode(&fp);
-	return false;
+	return SUCCESS;
 }
 
-bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
+int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
 				size_t target_count)
 {
 	const char *ip_src_interface = inet_ntoa(pcap_ctx->iface_info->ip_addr);
@@ -120,14 +120,14 @@ bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
 	if (!pcap_ctx->handle)
 	{
 		LOG("ft_nmap: pcap_create failed: %s\n", errbuf);
-		return true;
+		return FAILURE;
 	}
 	// Configure the handle
 	if (pcap_configure(pcap_ctx->handle, PCAP_SNAPLEN, PCAP_PROMISC,
 					   PCAP_BUFFER_SIZE, PCAP_IMMEDIATE_MODE))
 	{
 		pcap_close(pcap_ctx->handle);
-		return true;
+		return FAILURE;
 	}
 	// Activate the handle
 	int rc = pcap_activate(pcap_ctx->handle);
@@ -136,7 +136,7 @@ bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
 		LOG("ft_nmap: pcap_activate failed: %s\n",
 			pcap_geterr(pcap_ctx->handle));
 		pcap_close(pcap_ctx->handle);
-		return true;
+		return FAILURE;
 	}
 	else if (rc > 0)
 	{
@@ -150,7 +150,7 @@ bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
 	if (!filter_expr)
 	{
 		pcap_close(pcap_ctx->handle);
-		return true;
+		return FAILURE;
 	}
 
 	if (pcap_apply_filter(pcap_ctx->handle, filter_expr))
@@ -158,8 +158,8 @@ bool pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
 		LOG("ft_nmap: pcap_apply_filter failed\n");
 		free(filter_expr);
 		pcap_close(pcap_ctx->handle);
-		return true;
+		return FAILURE;
 	}
 	free(filter_expr);
-	return false;
+	return SUCCESS;
 }

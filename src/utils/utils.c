@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-bool substr(char *str, int start, int end, char **ptr)
+int substr(char *str, int start, int end, char **ptr)
 {
 	int	  len = end - start;
 
@@ -14,10 +14,10 @@ bool substr(char *str, int start, int end, char **ptr)
 	if (*ptr == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 	strncpy(*ptr, str + start, len);
-	return false;
+	return SUCCESS;
 }
 
 u16 get_max_port_number(u16 ports[MAX_PORT_COUNT])

@@ -64,7 +64,7 @@ static void set_scan_presence(t_args *args)
 	}
 }
 
-static bool init_port_map(t_args *args)
+static int init_port_map(t_args *args)
 {
 	u16 max_port_nb = get_max_port_number(args->ports);
 
@@ -72,7 +72,7 @@ static bool init_port_map(t_args *args)
 	if (args->port_map == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	memset(args->port_map, -1, sizeof(int) * (max_port_nb + 1));
@@ -80,7 +80,7 @@ static bool init_port_map(t_args *args)
 	{
 		args->port_map[args->ports[j]] = j;
 	}
-	return false;
+	return SUCCESS;
 }
 
 static void free_ressources(t_ctx *ctx)
@@ -93,7 +93,7 @@ static void free_ressources(t_ctx *ctx)
 	free(ctx->ifaces);
 }
 
-bool nmap_main(t_ctx *ctx)
+int nmap_main(t_ctx *ctx)
 {
 	t_shared_data_sender shared_data_probe;
 	pthread_t			*pcap_threads = NULL;
@@ -103,7 +103,7 @@ bool nmap_main(t_ctx *ctx)
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
 		LOG("failed to initialize shared data\n");
-		return true;
+		return FAILURE;
 	}
 
 	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
@@ -111,7 +111,7 @@ bool nmap_main(t_ctx *ctx)
 								 &ctx->program_info))
 	{
 		deinitialize_shared_data(&shared_data_probe, ctx);
-		return true;
+		return FAILURE;
 	}
 
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
@@ -119,7 +119,7 @@ bool nmap_main(t_ctx *ctx)
 		LOG("failed to initialize probe request\n");
 		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
-		return true;
+		return FAILURE;
 	}
 
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : (u8)0x01;
@@ -129,7 +129,7 @@ bool nmap_main(t_ctx *ctx)
 	{
 		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
-		return true;
+		return FAILURE;
 	}
 
 	join_and_free_threads(&pcap_threads, &send_threads, ctx->args.speed,
@@ -146,7 +146,7 @@ bool nmap_main(t_ctx *ctx)
 
 	deinitialize_shared_data(&shared_data_probe, ctx);
 
-	return false;
+	return SUCCESS;
 }
 
 static void display_program_header(t_ctx *ctx)

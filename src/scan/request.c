@@ -23,7 +23,7 @@ void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
 	(*nb_probe)--;
 }
 
-bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
+int pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 {
 	t_probe *node = *tail;
 
@@ -42,16 +42,16 @@ bool pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 	/* Fully detach the popped node so no dangling links remain. */
 	node->prev = NULL;
 	node->next = NULL;
-	return true;
+	return FAILURE;
 }
 
-bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
+int append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 						  const u16 port, const t_scan_type scan_type,
 						  const u32 id)
 {
 	t_probe *new_request = malloc(sizeof(t_probe));
 	if (!new_request)
-		return true;
+		return FAILURE;
 	new_request->target = target;
 	new_request->port = port;
 
@@ -68,7 +68,7 @@ bool append_probe_request(t_probe **head, t_probe **tail, t_target *target,
 		*head = new_request;
 	*tail = new_request;
 
-	return false;
+	return SUCCESS;
 }
 
 t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,

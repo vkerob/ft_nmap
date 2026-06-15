@@ -27,6 +27,8 @@
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
 #endif
+#define SUCCESS  0
+#define FAILURE -1
 /* Lengt of ethernet header */
 #define ETH_ALEN 6
 /* Maximum number of port a user can scan with one execution of the program */

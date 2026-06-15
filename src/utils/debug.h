@@ -21,11 +21,11 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 									  const struct timeval *current_time,
 									  const unsigned long	seconds_elapsed);
 
-bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
 							 bool is_decoy);
 
-bool print_debug_packet_recv(const struct ip	  *ip_hdr,
+int print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,
 							 const t_datalink_hdr *nested_datalink_hdr,
 							 const struct ip	  *nested_ip_hdr,

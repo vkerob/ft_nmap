@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
+int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								   pthread_t		   **send_threads,
 								   t_shared_data_sender *shared_data_probe,
 								   t_receiver_data		*pcap_ctxs)
@@ -19,14 +19,14 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 	if (*pcap_threads == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 	*send_threads = calloc(ctx->args.speed, sizeof(pthread_t));
 	if (*send_threads == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		free(*pcap_threads);
-		return true;
+		return FAILURE;
 	}
 
 	size_t created_pcap = 0;
@@ -60,7 +60,7 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 		}
 		created_send++;
 	}
-	return false;
+	return SUCCESS;
 
 fail:
 	/* Stop and reap whatever was already launched so they don't run on memory
@@ -79,7 +79,7 @@ fail:
 	free(*send_threads);
 	*pcap_threads = NULL;
 	*send_threads = NULL;
-	return true;
+	return FAILURE;
 }
 
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,

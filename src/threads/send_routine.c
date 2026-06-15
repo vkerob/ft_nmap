@@ -21,7 +21,7 @@
  * computation — pass the real interface IP for normal probes, or a decoy IP
  * when sending spoofed cover packets.
  */
-static bool build_scan_packets(const t_probe *request, u_char *packet,
+static int build_scan_packets(const t_probe *request, u_char *packet,
 							   struct in_addr src_ip, _Atomic u16 *id,
 							   u32 *packet_len)
 {
@@ -41,7 +41,7 @@ static bool build_scan_packets(const t_probe *request, u_char *packet,
 
 	if (build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf,
 							   ip_hdr.ip_p))
-		return true;
+		return FAILURE;
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
 		|| request->type == SCAN_NULL)
@@ -69,10 +69,10 @@ static bool build_scan_packets(const t_probe *request, u_char *packet,
 		memcpy(packet + sizeof(ip_hdr), &hdr.udp_hdr, sizeof(hdr.udp_hdr));
 	else
 		memcpy(packet + sizeof(ip_hdr), &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
-	return false;
+	return SUCCESS;
 }
 
-static bool send_packet(t_socket *socket, const u8 *packet,
+static int send_packet(t_socket *socket, const u8 *packet,
 						struct timeval *sent_timestamp, u32 packet_len)
 {
 	const ssize_t res
@@ -82,11 +82,11 @@ static bool send_packet(t_socket *socket, const u8 *packet,
 	if (res < 0)
 	{
 		perror("sendto: ");
-		return true;
+		return FAILURE;
 	}
 
 	gettimeofday(sent_timestamp, NULL);
-	return false;
+	return SUCCESS;
 }
 
 static void close_sockets(const t_socket *udp_socket,

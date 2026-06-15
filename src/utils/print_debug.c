@@ -29,7 +29,7 @@ void sync_printf(const char *format, ...)
 	va_end(args);
 }
 
-bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
+int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
 							 bool is_decoy)
 {
@@ -42,7 +42,7 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 	// Read actual source IP from the packet header (handles both real and
 	// decoy)
@@ -50,7 +50,7 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	pthread_mutex_lock(&printf_mutex);
@@ -86,10 +86,10 @@ bool print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);
-	return false;
+	return SUCCESS;
 }
 
-bool print_debug_packet_recv(const struct ip	  *ip_hdr,
+int print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,
 							 const t_datalink_hdr *nested_datalink_hdr,
 							 const struct ip	  *nested_ip_hdr,
@@ -103,13 +103,13 @@ bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 	if (inet_ntop(domain, (const void *)&ip_hdr->ip_dst, dst, sizeof(dst))
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	pthread_mutex_lock(&printf_mutex);
@@ -175,7 +175,7 @@ bool print_debug_packet_recv(const struct ip	  *ip_hdr,
 	}
 	printf("\n");
 	pthread_mutex_unlock(&printf_mutex);
-	return false;
+	return SUCCESS;
 }
 
 void print_debug_max_retries_exceeded(const t_probe *probe)

@@ -60,7 +60,7 @@ void free_targets(t_target **targets, size_t count, u8 nb_scan_types,
 }
 
 // Forward resolution: hostname/IP -> IPv4
-static bool resolve_target(const char *host, struct in_addr *dst)
+static int resolve_target(const char *host, struct in_addr *dst)
 {
 	struct addrinfo	 hints;
 	struct addrinfo *res = NULL;
@@ -71,7 +71,7 @@ static bool resolve_target(const char *host, struct in_addr *dst)
 	if (rc != 0)
 	{
 		LOG("Error: Invalid/unknown host '%s': %s\n", host, gai_strerror(rc));
-		return true;
+		return FAILURE;
 	}
 
 	// Copy the first IPv4 result
@@ -79,7 +79,7 @@ static bool resolve_target(const char *host, struct in_addr *dst)
 		   sizeof(struct in_addr));
 
 	freeaddrinfo(res);
-	return false;
+	return SUCCESS;
 }
 
 // Reverse DNS: IPv4 -> hostname (returns heap-allocated string or NULL)
@@ -99,13 +99,13 @@ static char *reverse_dns(struct in_addr addr)
 	return strdup(host);
 }
 
-bool resolve_targets(char **inputs, const size_t count, t_target **targets)
+int resolve_targets(char **inputs, const size_t count, t_target **targets)
 {
 	*targets = calloc(count, sizeof(t_target));
 	if (*targets == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 	t_target *tmp = *targets;
 
@@ -117,18 +117,18 @@ bool resolve_targets(char **inputs, const size_t count, t_target **targets)
 
 		if (resolve_target(inputs[i], &tmp[i].addr))
 		{
-			return true;
+			return FAILURE;
 		}
 
 		// Reverse DNS: only useful if input was an IP (hostname already known)
 		tmp[i].hostname = reverse_dns(tmp[i].addr);
 		if (tmp[i].hostname == NULL)
 		{
-			return true;
+			return FAILURE;
 		}
 	}
 
-	return false;
+	return SUCCESS;
 }
 
 static char *trim_inplace(char *str)
@@ -146,27 +146,27 @@ static char *trim_inplace(char *str)
 	return str;
 }
 
-static bool parse_port_strict(const char *s, u16 *out)
+static int parse_port_strict(const char *s, u16 *out)
 {
 	if (!s || !*s)
-		return true; // empty input is not a valid port
+		return FAILURE; // empty input is not a valid port
 
 	errno = 0;
 	char			   *end = NULL;
 	const unsigned long value = strtoul(s, &end, 10);
 
 	if (errno == ERANGE)
-		return true; // overflow/underflow
+		return FAILURE; // overflow/underflow
 	if (end == s)
-		return true; // no digits parsed
+		return FAILURE; // no digits parsed
 	if (*end != '\0')
-		return true; // extra characters after number
+		return FAILURE; // extra characters after number
 
 	if (value < MIN_PORT_NUMBER || value > MAX_PORT_NUMBER)
-		return true;
+		return FAILURE;
 
 	*out = (u16)value;
-	return false;
+	return SUCCESS;
 }
 
 static bool contains_port(const u16 *ports, const size_t count, const u16 port)
@@ -177,20 +177,20 @@ static bool contains_port(const u16 *ports, const size_t count, const u16 port)
 	return false;
 }
 
-static bool push_port(u16 *ports, u16 *count, const u16 port,
+static int push_port(u16 *ports, u16 *count, const u16 port,
 					  int *duplicate_port_number)
 {
 	*duplicate_port_number |= contains_port(ports, *count, port);
 
 	if (*count >= MAX_PORT_COUNT)
-		return true;
+		return FAILURE;
 
 	ports[*count] = port;
 	(*count)++;
-	return false;
+	return SUCCESS;
 }
 
-static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
+static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 								 int *duplicate_port_number)
 {
 	char *dash = strchr(token, '-');
@@ -201,20 +201,20 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
 		if (parse_port_strict(token, &port))
 		{
 			LOG("ft_nmap: invalid port: '%s'\n", token);
-			return true;
+			return FAILURE;
 		}
 		if (push_port(ports, count, port, duplicate_port_number))
 		{
 			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
-			return true;
+			return FAILURE;
 		}
-		return false;
+		return SUCCESS;
 	}
 
 	if (strchr(dash + 1, '-') != NULL)
 	{
 		LOG("ft_nmap: invalid port range: '%s'\n", token);
-		return true;
+		return FAILURE;
 	}
 
 	*dash = '\0';
@@ -224,7 +224,7 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
 	if (*left == '\0' || *right == '\0')
 	{
 		LOG("ft_nmap: invalid port range: '%s-%s'\n", left, right);
-		return true;
+		return FAILURE;
 	}
 
 	u16 port_left, port_right;
@@ -232,20 +232,20 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
 		|| parse_port_strict(right, &port_right))
 	{
 		LOG("ft_nmap: invalid port range: '%s-%s'\n", left, right);
-		return true;
+		return FAILURE;
 	}
 
 	if (port_left > port_right)
 	{
 		LOG("ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?",
 			port_left, port_right, port_left, port_right);
-		return true;
+		return FAILURE;
 	}
 
 	if (port_right - port_left > 1024)
 	{
 		LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
-		return true;
+		return FAILURE;
 	}
 
 	for (u32 port = port_left; port <= port_right; port++)
@@ -253,14 +253,14 @@ static bool parse_token_and_push(char *token, u16 *ports, u16 *count,
 		if (push_port(ports, count, (u16)port, duplicate_port_number))
 		{
 			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
-			return true;
+			return FAILURE;
 		}
 	}
 
-	return false;
+	return SUCCESS;
 }
 
-bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
+int parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 {
 	*port_count = 0;
 	int duplicate_port_number = 0;
@@ -269,10 +269,10 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 	if (!copy)
 	{
 		LOG("ft_nmap: strdup failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
-	bool error = false;
+	int error = SUCCESS;
 
 	char *tok = strtok(copy, ",");
 	while (tok != NULL)
@@ -282,14 +282,14 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 		if (!trim_str || *trim_str == '\0')
 		{
 			LOG("ft_nmap: invalid empty port token in: '%s'\n", port_str);
-			error = true;
+			error = FAILURE;
 			break;
 		}
 
 		if (parse_token_and_push(trim_str, ports, port_count,
 								 &duplicate_port_number))
 		{
-			error = true;
+			error = FAILURE;
 			break;
 		}
 
@@ -303,7 +303,7 @@ bool parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 	return error;
 }
 
-static bool parse_scan_type(char *scan_str, u8 *out)
+static int parse_scan_type(char *scan_str, u8 *out)
 {
 	char upper_scan_str[strlen(scan_str) + 1];
 	strcpy(upper_scan_str, scan_str);
@@ -314,38 +314,38 @@ static bool parse_scan_type(char *scan_str, u8 *out)
 	if (strcmp(upper_scan_str, "SYN") == 0)
 	{
 		*out = SCAN_SYN;
-		return false;
+		return SUCCESS;
 	}
 	if (strcmp(upper_scan_str, "NULL") == 0)
 	{
 		*out = SCAN_NULL;
-		return false;
+		return SUCCESS;
 	}
 	if (strcmp(upper_scan_str, "ACK") == 0)
 	{
 		*out = SCAN_ACK;
-		return false;
+		return SUCCESS;
 	}
 	if (strcmp(upper_scan_str, "FIN") == 0)
 	{
 		*out = SCAN_FIN;
-		return false;
+		return SUCCESS;
 	}
 	if (strcmp(upper_scan_str, "XMAS") == 0)
 	{
 		*out = SCAN_XMAS;
-		return false;
+		return SUCCESS;
 	}
 	if (strcmp(upper_scan_str, "UDP") == 0)
 	{
 		*out = SCAN_UDP;
-		return false;
+		return SUCCESS;
 	}
 	LOG("ft_nmap: invalid scan type: '%s'\n", scan_str);
-	return true;
+	return FAILURE;
 }
 
-bool parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
+int parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 					  u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
 {
 	char *saveptr = NULL;
@@ -366,7 +366,7 @@ bool parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 		{
 			if (parse_scan_type(token, &scan_type))
 			{
-				return true;
+				return FAILURE;
 			}
 			/* Reject duplicates and bound the write into out[]. */
 			for (u8 i = 0; i < *nb_scan_types; i++)
@@ -374,14 +374,14 @@ bool parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 				if ((*out)[i] == scan_type)
 				{
 					LOG("ft_nmap: duplicate scan type: '%s'\n", token);
-					return true;
+					return FAILURE;
 				}
 			}
 			if (*nb_scan_types >= MAX_NB_SCAN_TYPE)
 			{
 				LOG("ft_nmap: too many scan types (max %d)\n",
 					MAX_NB_SCAN_TYPE);
-				return true;
+				return FAILURE;
 			}
 			(*out)[*nb_scan_types] = scan_type;
 			if (scan_type == SCAN_UDP)
@@ -395,24 +395,24 @@ bool parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 		}
 		else if (token == NULL)
 		{
-			return *nb_scan_types == 0;
+			return *nb_scan_types == 0 ? FAILURE : SUCCESS;
 		}
 		(*nb_scan_types)++;
 	} while (saveptr != NULL);
-	return false;
+	return SUCCESS;
 }
 
-static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
+static int parse_decoys(const char *decoy_str, struct in_addr *decoys,
 						 u8 *decoy_count)
 {
 	char *copy = strdup(decoy_str);
 	if (!copy)
 	{
 		LOG("ft_nmap: strdup failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
-	bool  error = false;
+	int  error = SUCCESS;
 	char *tok = strtok(copy, ",");
 	while (tok != NULL)
 	{
@@ -420,13 +420,13 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 		if (!trimmed || *trimmed == '\0')
 		{
 			LOG("ft_nmap: empty token in decoy list\n");
-			error = true;
+			error = FAILURE;
 			break;
 		}
 		if (*decoy_count >= MAX_DECOYS)
 		{
 			LOG("ft_nmap: too many decoys (max %d)\n", MAX_DECOYS);
-			error = true;
+			error = FAILURE;
 			break;
 		}
 		// ME: sentinel (INADDR_ANY = 0.0.0.0) marks where our real IP goes in
@@ -447,7 +447,7 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 		{
 			LOG("ft_nmap: invalid decoy address '%s': %s\n", trimmed,
 				gai_strerror(rc));
-			error = true;
+			error = FAILURE;
 			break;
 		}
 		memcpy(&decoys[*decoy_count],
@@ -462,7 +462,7 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 	return error;
 }
 
-static bool parse_speed_strict(const char *str, u8 *out)
+static int parse_speed_strict(const char *str, u8 *out)
 {
 	while (isspace((unsigned char)*str))
 		str++;
@@ -470,7 +470,7 @@ static bool parse_speed_strict(const char *str, u8 *out)
 	if (*str == '\0' || *str == '-' || *str == '+')
 	{
 		LOG("ft_nmap: invalid speed value: '%s'\n", str);
-		return true;
+		return FAILURE;
 	}
 
 	errno = 0;
@@ -480,7 +480,7 @@ static bool parse_speed_strict(const char *str, u8 *out)
 	if (errno != 0 || end == str)
 	{
 		LOG("ft_nmap: invalid speed value: '%s'\n", str);
-		return true;
+		return FAILURE;
 	}
 
 	while (isspace((unsigned char)*end))
@@ -489,20 +489,20 @@ static bool parse_speed_strict(const char *str, u8 *out)
 	if (*end != '\0')
 	{
 		LOG("ft_nmap: invalid characters in speed value: '%s'\n", str);
-		return true;
+		return FAILURE;
 	}
 
 	if (value > SPEED_MAX)
 	{
 		LOG("ft_nmap: speed must be between %d and %d\n", SPEED_MIN, SPEED_MAX);
-		return true;
+		return FAILURE;
 	}
 
 	*out = (u8)value;
-	return false;
+	return SUCCESS;
 }
 
-bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
+int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 				size_t *target_count)
 {
 	// short options (: argument required)
@@ -537,20 +537,20 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_IP_MODE);
 			if (get_targets_input(optarg, target_count, targets_input, IP_MODE,
 								  args->flags))
-				return true;
+				return FAILURE;
 			break;
 
 		case FILE_MODE:
 			SET(args->flags, F_FILE_MODE);
 			if (get_targets_input(optarg, target_count, targets_input,
 								  FILE_MODE, args->flags))
-				return true;
+				return FAILURE;
 			break;
 
 		case PORTS:
 			SET(args->flags, F_PORTS);
 			if (parse_ports(optarg, args->ports, &args->port_count))
-				return true;
+				return FAILURE;
 			break;
 
 		case SCAN:
@@ -559,14 +559,14 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 								 &args->nb_scan_types, &args->tcp_scan,
 								 &args->udp_scan))
 			{
-				return true;
+				return FAILURE;
 			}
 			break;
 
 		case SPEED:
 			SET(args->flags, F_SPEED);
 			if (parse_speed_strict(optarg, &args->speed))
-				return true;
+				return FAILURE;
 			break;
 
 		case PACKET_TRACE:
@@ -592,14 +592,14 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case DECOY:
 			SET(args->flags, F_DECOY);
 			if (parse_decoys(optarg, args->decoys, &args->decoy_count))
-				return true;
+				return FAILURE;
 			break;
 
 		case '?':
 		case ':':
 			LOG("ft_nmap: Invalid arguments. Use --help for usage "
 				"information.\n");
-			return true;
+			return FAILURE;
 		default:
 			break;
 		}
@@ -607,7 +607,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 	if (optind < argc)
 	{
 		LOG("ft_nmap: unexpected argument: %s\n", argv[optind]);
-		return true;
+		return FAILURE;
 	}
 	if (!HAS(args->flags, F_PORTS))
 	{
@@ -627,5 +627,5 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			args->scan_types[i] = i;
 		}
 	}
-	return false;
+	return SUCCESS;
 }

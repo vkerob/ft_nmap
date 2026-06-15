@@ -38,7 +38,7 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason)
 	}
 }
 
-bool init_port_lists(t_ctx *ctx)
+int init_port_lists(t_ctx *ctx)
 {
 	for (u16 i = 0; i < ctx->target_count; i++)
 	{
@@ -48,13 +48,13 @@ bool init_port_lists(t_ctx *ctx)
 						  ctx->args.udp_scan, &ctx->args.max_port_nb,
 						  ctx->args.port_map))
 		{
-			return true;
+			return FAILURE;
 		}
 	}
-	return false;
+	return SUCCESS;
 }
 
-bool init_portlist(t_port_list *port_list, const u16 port_count,
+int init_portlist(t_port_list *port_list, const u16 port_count,
 				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
 				   const u8 nb_scan_type, const bool tcp_scan,
 				   const bool udp_scan, u16 *max_port_nb, int *port_map)
@@ -68,7 +68,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		if (port_list->port_final_state[TCP_INDEX] == NULL)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 		for (u16 i = 0; i < port_count; i++)
 		{
@@ -85,7 +85,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		if (port_list->port_final_state[UDP_INDEX] == NULL)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 		for (u16 i = 0; i < port_count; i++)
 		{
@@ -118,7 +118,7 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		if (port_list->port_map_rev[scan_type] == NULL)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 
 		for (u16 j = 0; j < port_count; j++)
@@ -127,5 +127,5 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 			port_list->port_map_rev[scan_type][j].port_state = DEFAULT;
 		}
 	}
-	return false;
+	return SUCCESS;
 }

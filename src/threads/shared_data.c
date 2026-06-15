@@ -13,7 +13,7 @@ static void destroy_sent_mutexes(t_probe_queue *sent, size_t count)
 	free(sent);
 }
 
-bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
+int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 								  t_ctx				   *ctx)
 {
 	// init the sent request list for each interface
@@ -21,7 +21,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	if (!shared_data_probe->sent)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	atomic_init(&shared_data_probe->outstanding, 0);
@@ -33,7 +33,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		{
 			LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 			destroy_sent_mutexes(shared_data_probe->sent, i);
-			return true;
+			return FAILURE;
 		}
 		shared_data_probe->sent[i].safe_mut.initialize = true;
 		shared_data_probe->sent[i].nb_probe = 0;
@@ -59,7 +59,7 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	{
 		LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
 		destroy_sent_mutexes(shared_data_probe->sent, ctx->iface_count);
-		return true;
+		return FAILURE;
 	}
 
 	shared_data_probe->to_send.safe_mut.initialize = true;
@@ -70,13 +70,13 @@ bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		LOG("ft_nmap: pthread_cond_init: %s\n", strerror(res));
 		pthread_mutex_destroy(&shared_data_probe->to_send.safe_mut.mutex);
 		destroy_sent_mutexes(shared_data_probe->sent, ctx->iface_count);
-		return true;
+		return FAILURE;
 	}
 
-	return false;
+	return SUCCESS;
 }
 
-bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
+int initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_shared_data_sender *shared_data_probe,
 							  t_iface_info		   *ifaces,
 							  t_program_info	   *program_info)
@@ -85,7 +85,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 	if (!*pcap_ctxs)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	for (size_t i = 0; i < iface_count; i++)
@@ -97,7 +97,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 		(*pcap_ctxs)[i].args = shared_data_probe->args;
 		(*pcap_ctxs)[i].program_info = program_info;
 	}
-	return false;
+	return SUCCESS;
 }
 
 static void free_probes(t_probe *head)
@@ -155,7 +155,7 @@ void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
 	free_to_send_queue(&shared_data_probe->to_send);
 }
 
-bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
+int initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 {
 	to_send->head = NULL;
 	to_send->tail = NULL;
@@ -173,7 +173,7 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 						(u32)(i * ctx->args.port_count * ctx->args.nb_scan_types
 							  + j * ctx->args.nb_scan_types + k)))
 				{
-					return true;
+					return FAILURE;
 				}
 				to_send->nb_probe++;
 				atomic_fetch_add(to_send->outstanding, 1);
@@ -181,5 +181,5 @@ bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 		}
 	}
 
-	return false;
+	return SUCCESS;
 }
