@@ -13,7 +13,6 @@
 #include "udp.h"
 
 #include <netinet/in.h>
-#include <netinet/ip_icmp.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -23,8 +22,8 @@
 #include <unistd.h>
 
 static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
-							   bpf_u_int32	   l3_caplen,
-							   struct timeval *relative_recv_time, u16 flags)
+							  bpf_u_int32	  l3_caplen,
+							  struct timeval *relative_recv_time, u16 flags)
 {
 	const u8	  *protocol_hdr;
 	t_datalink_hdr datalink_hdr = { 0 };
@@ -61,6 +60,8 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		break;
 
 	case IPPROTO_UDP:
+		/* Only certain services will respond us to our UDP probe request , most
+		of them need a specific options inside the probe in order to respond */
 		if (l4_len < sizeof(struct udphdr))
 			return FAILURE;
 		/* Copy the header BEFORE reading any field from it. */
@@ -88,9 +89,8 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			|| l4_len < sizeof(t_icmp_hdr) + ip2_hlen)
 			return FAILURE;
 
-		u8 *datalink_header = (u8 *)nested_ip_header + ip2_hlen;
-		const size_t nested_l4_len
-			= l4_len - sizeof(t_icmp_hdr) - ip2_hlen;
+		u8			*datalink_header = (u8 *)nested_ip_header + ip2_hlen;
+		const size_t nested_l4_len = l4_len - sizeof(t_icmp_hdr) - ip2_hlen;
 
 		switch (nested_ip_header->ip_p)
 		{
@@ -139,9 +139,9 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 }
 
 static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
-								 const u_char *packet, bpf_u_int32 caplen,
-								 struct timeval *relative_recv_time,
-								 const u16		 flags)
+								const u_char *packet, bpf_u_int32 caplen,
+								struct timeval *relative_recv_time,
+								const u16		flags)
 {
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
@@ -171,7 +171,7 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 		if (caplen < l2_len + sizeof(struct ip))
 			return SUCCESS;
 
-		uint32_t af_type;
+		u32 af_type;
 		memcpy(&af_type, packet, 4); // no ntohl: already in host byte order
 		if (af_type != AF_INET)
 			return SUCCESS;
@@ -260,9 +260,8 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 			if (tmp->retries > MAX_SCAN_RETRIES)
 			{
-				const int index
-					= tmp->target->port_list.port_map[tmp->port];
-				t_port *port
+				const int index = tmp->target->port_list.port_map[tmp->port];
+				t_port	 *port
 					= &tmp->target->port_list.port_map_rev[tmp->type][index];
 				switch (tmp->type)
 				{

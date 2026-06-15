@@ -126,6 +126,8 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 		{
 			return FAILURE;
 		}
+		tmp[i].nb_probe_sent = 0;
+
 	}
 
 	return SUCCESS;

@@ -514,32 +514,37 @@ static void print_port_states(t_target *target, t_args *args,
 	const int col_state = 14;
 	const int col_svc = 20;
 	const int col_version = 28;
-	const int col_scan_result = args->nb_scan_types * 11;
+
+	static u8 nb_scan_type_tcp = 0;
+	if (nb_scan_type_tcp == 0)
+	{
+		for (u8 i = 0; i < args->nb_scan_types; i++)
+		{
+			if (args->scan_types[i] != SCAN_UDP)
+			{
+				nb_scan_type_tcp++;
+			}
+		}
+	}
+	const int col_scan_result
+		= (args->nb_scan_types == 1 || nb_scan_type_tcp == 1)
+			  ? 18
+			  : args->nb_scan_types * 12;
 	const int col_reason = 12;
 
 	const bool multi_scan = args->nb_scan_types > 1;
 	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
 
-	if (multi_scan)
-	{
-		printf("%-*s %-*s %-*s %-*s ", col_port, "PORT", col_state, "STATE",
-			   col_svc, "SERVICE", col_scan_result, "SCAN RESULTS");
-		if (HAS(args->flags, F_REASON))
-			printf(" %-*s", col_reason, "REASON");
-		if (show_version)
-			printf(" %s", "VERSION");
-		printf("\n");
-	}
-	else
-	{
-		printf("%-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
-			   "SERVICE");
-		if (HAS(args->flags, F_REASON))
-			printf(" %-*s", col_reason, "REASON");
-		if (show_version)
-			printf(" %-*s", col_version, "VERSION");
-		printf("\n");
-	}
+	// Multi scan is only usefull for tcp, but we put it also for UDP because
+	// otherwise we have an empty column when mixing UDP,TCP scan
+	printf("%-*s %-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
+		   "SERVICE", col_scan_result, "SCAN RESULTS");
+	if (HAS(args->flags, F_REASON))
+		printf(" %-*s", col_reason, "REASON");
+	if (show_version)
+		printf(" %s", "VERSION");
+	printf("\n");
+
 	// For each port we check that his state is not among the "ignored states"
 	// which are all the state with more than 25 ports in If thats not the case
 	// we add a row to the table
@@ -577,7 +582,7 @@ static void print_port_states(t_target *target, t_args *args,
 			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
 
 			snprintf(recap_udp + recap_udp_len,
-					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s ",
+					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s",
 					 col_port, port_str, col_state, state, col_svc, svc,
 					 col_scan_result, results_buf);
 			recap_udp_len = strlen(recap_udp);
@@ -619,7 +624,7 @@ static void print_port_states(t_target *target, t_args *args,
 								  sizeof(results_buf), IPPROTO_TCP);
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s %-*s%s%s ", col_port, port_str,
+						 "%-*s %-*s %-*s %-*s%s%s", col_port, port_str,
 						 col_state, state, col_svc, svc, col_scan_result,
 						 results_buf, (show_version && ver[0]) ? "  " : "",
 						 ver);
@@ -680,9 +685,20 @@ static void print_port_states(t_target *target, t_args *args,
 			}
 			else
 			{
+				char results_buf[256];
+				build_results_str(target, args, port, results_buf,
+								  sizeof(results_buf), IPPROTO_TCP);
+				// snprintf(recap_tcp + recap_tcp_len,
+				// 		 sizeof(recap_tcp) - recap_tcp_len,
+				// 		 "%-*s %-*s %-*s %-*s%s%s ", col_port, port_str,
+				// 		 col_state, state, col_svc, svc, col_scan_result,
+				// 		 results_buf, (show_version && ver[0]) ? "  " : "",
+				// 		 ver);
+
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len, "%-*s %-*s %-*s",
-						 col_port, port_str, col_state, state, col_svc, svc);
+						 sizeof(recap_tcp) - recap_tcp_len,
+						 "%-*s %-*s %-*s %-*s", col_port, port_str, col_state,
+						 state, col_svc, svc, col_scan_result, results_buf);
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{

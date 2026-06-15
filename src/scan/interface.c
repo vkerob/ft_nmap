@@ -81,7 +81,7 @@ static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
 }
 
 int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
-					t_target *targets, size_t target_count)
+				   t_target *targets, size_t target_count)
 {
 	u8 iface_index = 0;
 
