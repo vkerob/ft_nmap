@@ -27,7 +27,7 @@
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
 #endif
-#define SUCCESS  0
+#define SUCCESS 0
 #define FAILURE -1
 /* Lengt of ethernet header */
 #define ETH_ALEN 6
@@ -45,9 +45,9 @@
 #define IP_VERSION 4
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64
-#define MAX_SCAN_RETRIES 1
+#define MAX_SCAN_RETRIES 3
 /* Timeout after which we consider the server didn't responde us */
-#define TIMEOUT_DELAY 0.3
+#define TIMEOUT_DELAY 1
 /* Index used in final_port_state */
 #define TCP_INDEX 0
 #define UDP_INDEX 1

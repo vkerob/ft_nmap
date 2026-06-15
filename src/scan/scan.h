@@ -103,6 +103,18 @@ typedef struct s_target
 	t_iface_info  *iface_info;
 	u8			   os_ttl; // TTL from first SYN-ACK received (0 = not captured)
 	u16			   os_tcp_window; // TCP window from first SYN-ACK received
+
+	/* How much ICMP errors (icmp_kernel_throttle[0]) the target returns in some
+	 amount of time (icmp_kernel_throttle[1]) */
+	double icmp_kernel_throttle[2];
+
+	bool			first_burst_sent;
+	struct timeval	first_burst_time;
+	pthread_mutex_t mutex;
+
+	/* For each retries we need to keep track of how much probe we sent in each
+	 * burst*/
+	u32 nb_probe_sent;
 } t_target;
 
 typedef enum e_scan_type
@@ -135,16 +147,16 @@ typedef struct s_ctx
 } t_ctx;
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
-				   const u8 nb_scan_type, const bool tcp_scan,
-				   const bool udp_scan, u16 *max_port_nb, int *port_map);
+				  u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
+				  const u8 nb_scan_type, const bool tcp_scan,
+				  const bool udp_scan, u16 *max_port_nb, int *port_map);
 
 int init_port_lists(t_ctx *ctx);
 
 void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 
 int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
-					t_target *targets, size_t target_count);
+				   t_target *targets, size_t target_count);
 
 void print_scan_results(t_ctx *ctx);
 
