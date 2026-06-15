@@ -2,9 +2,12 @@
 #include "parsing.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define FOPEN_READTEXT "r"
 
 static char *trim_inplace(char *s)
 {
@@ -86,10 +89,11 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 	}
 	else if (mode == FILE_MODE)
 	{
-		FILE *file = fopen(arg, "r");
+		FILE *file = fopen(arg, FOPEN_READTEXT);
 		if (!file)
 		{
-			LOG("ft_nmap: Could not open file %s\n", arg);
+			LOG("ft_nmap: Could not open file %s because %s\n", arg,
+				strerror(errno));
 			return true;
 		}
 
@@ -104,7 +108,6 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 			if (push_target(targets, &count, &cap, target) != 0)
 			{
 				fclose(file);
-				free_tabp((void ***)targets, count);
 				return true;
 			}
 		}
@@ -113,7 +116,6 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		if (count == 0)
 		{
 			LOG("ft_nmap: No targets found in file %s\n", arg);
-			free_tabp((void ***)targets, 0);
 			return true;
 		}
 
@@ -122,7 +124,6 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		if (!tmp)
 		{
 			LOG("ft_nmap: memory allocation failed\n");
-			free_tabp((void ***)targets, count);
 			return true;
 		}
 

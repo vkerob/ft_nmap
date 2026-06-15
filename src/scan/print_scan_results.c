@@ -1,7 +1,7 @@
 #include "debug.h"
 #include "parsing.h"
-#include "scan.h"
 #include "port_services.h"
+#include "scan.h"
 #include "utils.h"
 
 #include <arpa/inet.h>
@@ -36,7 +36,6 @@ char *port_state_to_str(t_port_state state)
 		return NULL;
 	}
 }
-
 
 static void update_port_reasons(t_port_output *port_conclusion,
 								const t_port  *port)
@@ -81,7 +80,7 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 	if (port_conclusion->port_state == UNKNOWN)
 	{
 		port_conclusion->port_state = port->port_state;
-		return ;
+		return;
 	}
 	switch (port->port_state)
 	{
@@ -151,7 +150,8 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
  * (TCP_INDEX or UDP_INDEX). Avoids relying on the shared state_count which
  * mixes TCP and UDP totals together. */
 static void count_states_for_proto(const t_target *target, u8 proto_index,
-								   u16 port_count, int counts[HIGHEST_PORT_STATE])
+								   u16 port_count,
+								   int counts[HIGHEST_PORT_STATE])
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 		counts[s] = 0;
@@ -170,12 +170,10 @@ static void count_states_for_proto(const t_target *target, u8 proto_index,
 /* Append one "Not shown" segment for a given (state, protocol) by walking the
  * state_and_reason linked list of that protocol and printing every reason
  * subtotal. */
-static size_t append_not_shown_segment(char *buf, size_t buf_size,
-									   size_t					 buf_len,
-									   t_port_state_and_reason  *head,
-									   t_port_state              state,
-									   const char               *proto_str,
-									   bool                     *first_segment)
+static size_t
+append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
+						 t_port_state_and_reason *head, t_port_state state,
+						 const char *proto_str, bool *first_segment)
 {
 	for (t_port_state_and_reason *r = head; r != NULL; r = r->next)
 	{
@@ -188,25 +186,22 @@ static size_t append_not_shown_segment(char *buf, size_t buf_size,
 		 * first_reason / second_reason. Print them both. */
 		if (r->reason == NULL && r->first_reason && r->second_reason)
 		{
-			const char *r1 = r->first_reason->reason
-								 ? r->first_reason->reason
-								 : "unknown";
-			const char *r2 = r->second_reason->reason
-								 ? r->second_reason->reason
-								 : "unknown";
-			buf_len += snprintf(
-				buf + buf_len, buf_size - buf_len,
-				"%s%d %s %s ports (%s, %s)",
-				*first_segment ? "" : ", ",
-				r->count, state_str, proto_str, r1, r2);
+			const char *r1
+				= r->first_reason->reason ? r->first_reason->reason : "unknown";
+			const char *r2 = r->second_reason->reason ? r->second_reason->reason
+													  : "unknown";
+			buf_len += snprintf(buf + buf_len, buf_size - buf_len,
+								"%s%d %s %s ports (%s, %s)",
+								*first_segment ? "" : ", ", r->count, state_str,
+								proto_str, r1, r2);
 		}
 		else
 		{
 			const char *reason = r->reason ? r->reason : "unknown";
-			buf_len += snprintf(buf + buf_len, buf_size - buf_len,
-								"%s%d %s %s ports (%s)",
-								*first_segment ? "" : ", ",
-								r->count, state_str, proto_str, reason);
+			buf_len
+				+= snprintf(buf + buf_len, buf_size - buf_len,
+							"%s%d %s %s ports (%s)", *first_segment ? "" : ", ",
+							r->count, state_str, proto_str, reason);
 		}
 		*first_segment = false;
 	}
@@ -226,8 +221,7 @@ static size_t append_not_shown_segment(char *buf, size_t buf_size,
  * left to display in the detailed table). */
 static bool print_ignored_port_states(t_target *target, bool tcp_scan,
 									  bool udp_scan, u16 port_count,
-									  bool *ignored_tcp,
-									  bool *ignored_udp)
+									  bool *ignored_tcp, bool *ignored_udp)
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 	{
@@ -243,8 +237,8 @@ static bool print_ignored_port_states(t_target *target, bool tcp_scan,
 	char   buf[BUF_SIZE] = { 0 };
 	size_t buf_len = 0;
 	bool   first_segment = true;
-	u16    tcp_hidden = 0;
-	u16    udp_hidden = 0;
+	u16	   tcp_hidden = 0;
+	u16	   udp_hidden = 0;
 
 	for (t_port_state state = DEFAULT; state < HIGHEST_PORT_STATE; state++)
 	{
@@ -262,8 +256,8 @@ static bool print_ignored_port_states(t_target *target, bool tcp_scan,
 		{
 			buf_len = append_not_shown_segment(
 				buf, sizeof(buf), buf_len,
-				target->port_list.state_and_reason[TCP_INDEX],
-				state, "tcp", &first_segment);
+				target->port_list.state_and_reason[TCP_INDEX], state, "tcp",
+				&first_segment);
 			ignored_tcp[state] = true;
 			tcp_hidden += tcp_counts[state];
 		}
@@ -271,15 +265,15 @@ static bool print_ignored_port_states(t_target *target, bool tcp_scan,
 		{
 			buf_len = append_not_shown_segment(
 				buf, sizeof(buf), buf_len,
-				target->port_list.state_and_reason[UDP_INDEX],
-				state, "udp", &first_segment);
+				target->port_list.state_and_reason[UDP_INDEX], state, "udp",
+				&first_segment);
 			ignored_udp[state] = true;
 			udp_hidden += udp_counts[state];
 		}
 	}
 
-	const u16 tcp_total = tcp_scan ? port_count : 0;
-	const u16 udp_total = udp_scan ? port_count : 0;
+	const u16  tcp_total = tcp_scan ? port_count : 0;
+	const u16  udp_total = udp_scan ? port_count : 0;
 	const bool all_ignored
 		= (tcp_total + udp_total) > 0
 		  && (tcp_hidden + udp_hidden) == (tcp_total + udp_total);
@@ -308,8 +302,6 @@ static void build_results_str(const t_target *target, const t_args *args,
 	{
 		const t_scan_type stype = args->scan_types[i];
 		if (stype == SCAN_UDP && protocol != IPPROTO_UDP)
-			continue;
-		if (stype != SCAN_UDP && protocol == IPPROTO_UDP)
 			continue;
 		const int		   idx = target->port_list.port_map[port];
 		const t_port_state state
@@ -444,8 +436,8 @@ bool find_or_update_state_and_reason_combination(
 	return false;
 }
 
-static bool is_ignored_state(const bool   *ignored_states_by_idx,
-							 t_port_state  port_state)
+static bool is_ignored_state(const bool	 *ignored_states_by_idx,
+							 t_port_state port_state)
 {
 	if (port_state >= HIGHEST_PORT_STATE)
 		return false;
@@ -513,18 +505,17 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 }
 
 static void print_port_states(t_target *target, t_args *args,
-							  const bool *ignored_tcp,
-							  const bool *ignored_udp)
+							  const bool *ignored_tcp, const bool *ignored_udp)
 {
 	char recap_udp[65535] = { 0 };
 	char recap_tcp[65535] = { 0 };
 
-	const int  col_port = compute_port_col_width(args);
-	const int  col_state = 14;
-	const int  col_svc = 20;
-	const int  col_version = 28;
-	const int	 col_scan_result = args->nb_scan_types * 11;
-	const int  col_reason = 12;
+	const int col_port = compute_port_col_width(args);
+	const int col_state = 14;
+	const int col_svc = 20;
+	const int col_version = 28;
+	const int col_scan_result = args->nb_scan_types * 11;
+	const int col_reason = 12;
 
 	const bool multi_scan = args->nb_scan_types > 1;
 	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
@@ -565,19 +556,19 @@ static void print_port_states(t_target *target, t_args *args,
 
 		if (args->udp_scan
 			&& (is_ignored_state(
-				   ignored_udp,
-				   target->port_list.port_final_state[UDP_INDEX][idx]
-					   .port_state)
-				   == false || HAS(args->flags, F_VERBOSE)))
+					ignored_udp,
+					target->port_list.port_final_state[UDP_INDEX][idx]
+						.port_state)
+					== false
+				|| HAS(args->flags, F_VERBOSE)))
 		{
 			t_port_output final_port_state
 				= target->port_list.port_final_state[UDP_INDEX][idx];
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
-			
+
 			const char *svc = port_services_udp[port];
-		
-			// const char *color = port_state_color(final_port_state.port_state);
+
 			const char *state = port_state_to_str(final_port_state.port_state);
 
 			size_t recap_udp_len = strlen(recap_udp);
@@ -585,30 +576,29 @@ static void print_port_states(t_target *target, t_args *args,
 			char results_buf[256];
 			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
 
-
 			snprintf(recap_udp + recap_udp_len,
-         sizeof(recap_udp) - recap_udp_len,
-         "%-*s %-*s %-*s %-*s  ", col_port, port_str,
-         col_state, state, col_svc, svc, col_scan_result,
-         results_buf);
-recap_udp_len = strlen(recap_udp);
+					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s ",
+					 col_port, port_str, col_state, state, col_svc, svc,
+					 col_scan_result, results_buf);
+			recap_udp_len = strlen(recap_udp);
 
 			if (HAS(args->flags, F_REASON))
 			{
 				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len, " %-*s",
-						 col_reason, final_port_state.reasons[0]);
+						 sizeof(recap_udp) - recap_udp_len, " %-*s", col_reason,
+						 final_port_state.reasons[0]);
 				recap_udp_len = strlen(recap_udp);
 			}
-							snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len, "\n");
-		}	
+			snprintf(recap_udp + recap_udp_len,
+					 sizeof(recap_udp) - recap_udp_len, "\n");
+		}
 		if (args->tcp_scan
 			&& (is_ignored_state(
-				   ignored_tcp,
-				   target->port_list.port_final_state[TCP_INDEX][idx]
-					   .port_state)
-				   == false || HAS(args->flags, F_VERBOSE)))
+					ignored_tcp,
+					target->port_list.port_final_state[TCP_INDEX][idx]
+						.port_state)
+					== false
+				|| HAS(args->flags, F_VERBOSE)))
 		{
 			const char *svc = port_services_tcp[port];
 
@@ -616,14 +606,12 @@ recap_udp_len = strlen(recap_udp);
 				= target->port_list.port_final_state[TCP_INDEX][idx];
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/tcp", port);
-			// const char *svc = port_svc[TCP_INDEX][idx].name;
-			
 			const char *state = port_state_to_str(
 				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
 			const char *ver = (show_version && final_port_state.version[0])
 								  ? final_port_state.version
 								  : "";
-			size_t recap_tcp_len = strlen(recap_tcp);
+			size_t		recap_tcp_len = strlen(recap_tcp);
 			if (multi_scan)
 			{
 				char results_buf[256];
@@ -631,68 +619,70 @@ recap_udp_len = strlen(recap_udp);
 								  sizeof(results_buf), IPPROTO_TCP);
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s %-*s%s%s  ",
-						 col_port, port_str, col_state, state, col_svc, svc, col_scan_result,
-						 results_buf,
-						 (show_version && ver[0]) ? "  " : "",
+						 "%-*s %-*s %-*s %-*s%s%s ", col_port, port_str,
+						 col_state, state, col_svc, svc, col_scan_result,
+						 results_buf, (show_version && ver[0]) ? "  " : "",
 						 ver);
 
 				recap_tcp_len = strlen(recap_tcp);
-				
+
 				// Print reason for each type of scan ran
 				if (HAS(args->flags, F_REASON))
 				{
-						// const t_scan_type stype = args->scan_types[i];
-						const int		idx = target->port_list.port_map[port];
-						char *first_reason = target->port_list.port_final_state[TCP_INDEX][idx].reasons[0];
-						char *second_reason = target->port_list.port_final_state[TCP_INDEX][idx].reasons[1];
+					const int idx = target->port_list.port_map[port];
+					char	 *first_reason
+						= target->port_list.port_final_state[TCP_INDEX][idx]
+							  .reasons[0];
+					char *second_reason
+						= target->port_list.port_final_state[TCP_INDEX][idx]
+							  .reasons[1];
 
-						// printf("first reason: %s second reason %s\n", first_reason, second_reason);
-						char *reasons = NULL;
-						bool alloc = false;
-	
-						if (first_reason && second_reason)
-						{
-							size_t len_first_reason = strlen(first_reason);
-							size_t len_second_reason = strlen(second_reason);
+					char *reasons = NULL;
+					bool  alloc = false;
 
-							reasons = calloc(strlen(first_reason) + strlen(second_reason) + 3, sizeof(char));
-							if (reasons == NULL)
-							{
-								LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-								continue;
-							}
-							alloc = true;
-							strncpy(reasons, first_reason, len_first_reason);
-							const char *comma = ", ";
-							strncat(reasons + len_first_reason, comma, 2);
-							strncpy(reasons + len_first_reason + 2, second_reason, len_second_reason);
-						}
-						else if (second_reason == NULL)
+					if (first_reason && second_reason)
+					{
+						size_t len_first_reason = strlen(first_reason);
+						size_t len_second_reason = strlen(second_reason);
+
+						reasons = calloc(strlen(first_reason)
+											 + strlen(second_reason) + 3,
+										 sizeof(char));
+						if (reasons == NULL)
 						{
-							reasons = first_reason ? first_reason : "";
+							LOG("ft_nmap: calloc failed: %s\n",
+								strerror(errno));
+							continue;
 						}
-						else
-						{
-							reasons = second_reason ? second_reason : "";
-						}
-						snprintf(recap_tcp + recap_tcp_len,
+						alloc = true;
+						strncpy(reasons, first_reason, len_first_reason);
+						const char *comma = ", ";
+						strncat(reasons + len_first_reason, comma, 2);
+						strncpy(reasons + len_first_reason + 2, second_reason,
+								len_second_reason);
+					}
+					else if (second_reason == NULL)
+					{
+						reasons = first_reason ? first_reason : "";
+					}
+					else
+					{
+						reasons = second_reason ? second_reason : "";
+					}
+					snprintf(recap_tcp + recap_tcp_len,
 							 sizeof(recap_tcp) - recap_tcp_len, " %-*s\n",
-							 col_reason,
-							 reasons);
+							 col_reason, reasons);
 
-						recap_tcp_len = strlen(recap_tcp);
-						//TODO: probably a problem there
-						if (alloc)
-							better_free(reasons);
+					recap_tcp_len = strlen(recap_tcp);
+					if (alloc)
+						better_free(reasons);
 				}
 			}
 			else
 			{
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s", col_port, port_str,
-						 col_state, state, col_svc, svc);
+						 sizeof(recap_tcp) - recap_tcp_len, "%-*s %-*s %-*s",
+						 col_port, port_str, col_state, state, col_svc, svc);
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
@@ -707,8 +697,8 @@ recap_udp_len = strlen(recap_udp);
 				if (show_version && ver[0])
 				{
 					snprintf(recap_tcp + recap_tcp_len,
-							 sizeof(recap_tcp) - recap_tcp_len,
-							 " %-*s", col_version, ver);
+							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
+							 col_version, ver);
 					recap_tcp_len = strlen(recap_tcp);
 				}
 				snprintf(recap_tcp + recap_tcp_len,

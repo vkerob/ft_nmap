@@ -72,8 +72,7 @@ typedef struct s_port_list
 	t_port *port_map_rev[MAX_NB_SCAN_TYPE];
 
 	/* Store the final state and the reason we deduce it for each port for each
-	protocol (TCP and UDP) because the "Not shown output" is separated between
-	those two (even for the same state)*/
+	protocol (TCP and UDP) */
 	t_port_output *port_final_state[MAX_PROTO_COUNT];
 
 	/* For each protocol (TCP and UDP) number of port in each state with their
@@ -87,7 +86,7 @@ typedef struct s_iface_info
 {
 	char		   name[IFNAMSIZ];
 	struct in_addr ip_addr; // ip of the interface, used as source ip in packets
-	u8				  iface_index; // index of the interface
+	u8			   iface_index; // index of the interface
 } t_iface_info;
 
 typedef struct s_program_info
@@ -97,8 +96,8 @@ typedef struct s_program_info
 
 typedef struct s_target
 {
-	char		  *input;
-	char		  *hostname; // reverse DNS result (NULL if not found or same as input)
+	char *input;
+	char *hostname; // reverse DNS result (NULL if not found or same as input)
 	struct in_addr addr;
 	t_port_list	   port_list;
 	t_iface_info  *iface_info;
@@ -130,6 +129,7 @@ typedef struct s_ctx
 	size_t		   iface_count;
 	t_args		   args;
 	t_program_info program_info;
+	char		 **targets_input;
 } t_ctx;
 
 bool init_portlist(t_port_list *port_list, const u16 port_count,
