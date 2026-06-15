@@ -18,18 +18,13 @@
 
 static void free_port_state_and_reason(t_port_state_and_reason *head)
 {
-	if (head == NULL)
-	{
-		return;
-	}
-
 	t_port_state_and_reason *tmp = head;
-	t_port_state_and_reason *next = tmp->next;
+	t_port_state_and_reason *next = NULL;
 
 	while (tmp)
 	{
-		better_free(tmp->first_reason);
-		better_free(tmp->second_reason);
+		free(tmp->first_reason);
+		free(tmp->second_reason);
 		next = tmp->next;
 		free(tmp);
 		tmp = next;
@@ -49,18 +44,18 @@ void free_targets(t_target **targets, size_t count, u8 nb_scan_types,
 		for (u8 j = 0; j < nb_scan_types; j++)
 		{
 			const t_scan_type scan_type = scan_types[j];
-			better_free((*targets)[i].port_list.port_map_rev[scan_type]);
+			free((*targets)[i].port_list.port_map_rev[scan_type]);
 		}
 
 		free_port_state_and_reason(
 			(*targets)[i].port_list.state_and_reason[TCP_INDEX]);
 		free_port_state_and_reason(
 			(*targets)[i].port_list.state_and_reason[UDP_INDEX]);
-		better_free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
-		better_free((*targets)[i].port_list.port_final_state[UDP_INDEX]);
-		better_free((*targets)[i].hostname);
+		free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
+		free((*targets)[i].port_list.port_final_state[UDP_INDEX]);
+		free((*targets)[i].hostname);
 	}
-	better_free(*targets);
+	free(*targets);
 	*targets = NULL;
 }
 
@@ -113,6 +108,8 @@ bool resolve_targets(char **inputs, const size_t count, t_target **targets)
 		return true;
 	}
 	t_target *tmp = *targets;
+
+	*targets = tmp;
 
 	for (size_t i = 0; i < count; i++)
 	{

@@ -7,8 +7,6 @@
 
 bool substr(char *str, int start, int end, char **ptr);
 
-void better_free(void *ptr);
-
 u16 get_max_port_number(u16 ports[MAX_PORT_COUNT]);
 
 #endif
