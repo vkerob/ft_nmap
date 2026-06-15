@@ -89,7 +89,7 @@ bool run_command(char **args, char **output)
 					LOG("test_ft_nmap: calloc failed: %s\n", strerror(errno));
 					close(pipe_fds[0]);
 					wait(NULL);
-					better_free(*output);
+					free(*output);
 					return true;
 				}
 				strncpy(new_output, *output, old_len);
@@ -108,11 +108,11 @@ bool run_command(char **args, char **output)
 
 static void free_port(t_port *port)
 {
-	better_free(port->port_state);
-	better_free(port->service);
-	better_free(port->protocol);
-	better_free(port->port);
-	better_free(port);
+	free(port->port_state);
+	free(port->service);
+	free(port->protocol);
+	free(port->port);
+	free(port);
 }
 
 

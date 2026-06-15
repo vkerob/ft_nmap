@@ -85,12 +85,12 @@ static bool init_port_map(t_args *args)
 
 static void free_ressources(t_ctx *ctx)
 {
-	better_free(ctx->args.port_map);
+	free(ctx->args.port_map);
 
 	free_targets(&ctx->targets, ctx->target_count, ctx->args.nb_scan_types,
 				 ctx->args.scan_types);
 
-	better_free(ctx->ifaces);
+	free(ctx->ifaces);
 }
 
 bool nmap_main(t_ctx *ctx)
@@ -117,6 +117,8 @@ bool nmap_main(t_ctx *ctx)
 	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
 	{
 		LOG("failed to initialize probe request\n");
+		free(pcap_ctxs);
+		deinitialize_shared_data(&shared_data_probe, ctx);
 		return true;
 	}
 
@@ -125,7 +127,7 @@ bool nmap_main(t_ctx *ctx)
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
 									  &shared_data_probe, pcap_ctxs))
 	{
-		better_free(pcap_ctxs);
+		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
 		return true;
 	}
@@ -140,7 +142,7 @@ bool nmap_main(t_ctx *ctx)
 
 	print_scan_results(ctx);
 
-	better_free(pcap_ctxs);
+	free(pcap_ctxs);
 
 	deinitialize_shared_data(&shared_data_probe, ctx);
 

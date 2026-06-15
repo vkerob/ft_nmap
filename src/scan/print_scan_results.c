@@ -675,7 +675,7 @@ static void print_port_states(t_target *target, t_args *args,
 
 					recap_tcp_len = strlen(recap_tcp);
 					if (alloc)
-						better_free(reasons);
+						free(reasons);
 				}
 			}
 			else
