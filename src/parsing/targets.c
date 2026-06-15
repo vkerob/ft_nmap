@@ -54,19 +54,19 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 	return 0;
 }
 
-bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
+int get_targets_input(const char *arg, size_t *args_count, char ***targets,
 					   int mode, u8 flags)
 {
 	if (HAS(flags, F_IP_MODE) && HAS(flags, F_FILE_MODE))
 	{
 		LOG("ft_nmap: cannot use --ip and --file options together\n");
-		return true;
+		return FAILURE;
 	}
 
 	size_t count = 0, cap = 0;
 
 	if (!arg || !args_count || !targets)
-		return true;
+		return FAILURE;
 
 	*args_count = 0;
 
@@ -74,18 +74,18 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 	{
 		*targets = malloc(sizeof(char *));
 		if (!*targets)
-			return true;
+			return FAILURE;
 
 		(*targets)[0] = strdup(arg);
 		if (!(*targets)[0])
 		{
 			free(*targets);
 			*targets = NULL;
-			return true;
+			return FAILURE;
 		}
 
 		*args_count = 1;
-		return false;
+		return SUCCESS;
 	}
 	else if (mode == FILE_MODE)
 	{
@@ -94,7 +94,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		{
 			LOG("ft_nmap: Could not open file %s because %s\n", arg,
 				strerror(errno));
-			return true;
+			return FAILURE;
 		}
 
 		char line[1024];
@@ -108,7 +108,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 			if (push_target(targets, &count, &cap, target) != 0)
 			{
 				fclose(file);
-				return true;
+				return FAILURE;
 			}
 		}
 		fclose(file);
@@ -116,7 +116,7 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		if (count == 0)
 		{
 			LOG("ft_nmap: No targets found in file %s\n", arg);
-			return true;
+			return FAILURE;
 		}
 
 		// resize to fit exactly
@@ -124,13 +124,13 @@ bool get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		if (!tmp)
 		{
 			LOG("ft_nmap: memory allocation failed\n");
-			return true;
+			return FAILURE;
 		}
 
 		*targets = tmp;
 		*args_count = count;
-		return false;
+		return SUCCESS;
 	}
 
-	return true;
+	return FAILURE;
 }

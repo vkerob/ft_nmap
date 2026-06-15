@@ -7,6 +7,6 @@
 
 extern volatile sig_atomic_t g_stop;
 
-bool setup_signal_handlers(void);
+int setup_signal_handlers(void);
 
 #endif

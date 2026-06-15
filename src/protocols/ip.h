@@ -17,7 +17,7 @@ typedef struct s_ip_pseudo_hdr
 	u16			   length;
 } t_ip_pseudo_hdr;
 
-bool build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
+int build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
 							const char *dst_addr, const char *src_addr, u8 protocol);
 
 void build_ip_header(t_ip *ip_hdr, const t_probe *request,

@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-bool add_to_probe_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
+int add_to_probe_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
 					   t_probe *request, struct timeval sent_timestamp)
 {
 	request->timestamp = sent_timestamp;
@@ -19,5 +19,5 @@ bool add_to_probe_queue(t_probe **head_sent_list, t_probe **tail_sent_list,
 		request->prev = *tail_sent_list;
 	}
 	*tail_sent_list = request;
-	return false;
+	return SUCCESS;
 }

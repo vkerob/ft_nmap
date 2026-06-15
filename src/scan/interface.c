@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
+static int add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 						   size_t *iface_count, const char *ifname,
 						   u8 *iface_index)
 {
@@ -18,7 +18,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		{
 			/* Already known: report its existing index to the caller. */
 			*iface_index = (u8)i;
-			return false;
+			return SUCCESS;
 		}
 	}
 
@@ -28,7 +28,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		if (!*ifaces)
 		{
 			LOG("ft_nmap: realloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 	}
 	else
@@ -37,7 +37,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 		if (!*ifaces)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 	}
 
@@ -49,7 +49,7 @@ static bool add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
 	(*ifaces)[*iface_count].iface_index = (u8)*iface_count;
 	*iface_index = (u8)*iface_count;
 	(*iface_count)++;
-	return false;
+	return SUCCESS;
 }
 
 static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
@@ -80,7 +80,7 @@ static void ifname_from_ipv4(struct in_addr ip_addr, char *ifname_buf)
 	freeifaddrs(ifaddr);
 }
 
-bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
+int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 					t_target *targets, size_t target_count)
 {
 	u8 iface_index = 0;
@@ -93,7 +93,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 	if (target_count > 0 && target_iface_idx == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	for (size_t i = 0; i < target_count; i++)
@@ -105,7 +105,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		{
 			perror("socket");
 			free(target_iface_idx);
-			return true;
+			return FAILURE;
 		}
 
 		struct sockaddr_in dst_addr;
@@ -127,7 +127,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 			perror("connect");
 			close(fd);
 			free(target_iface_idx);
-			return true;
+			return FAILURE;
 		}
 
 		struct sockaddr_in local_addr;
@@ -142,7 +142,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 			perror("getsockname");
 			close(fd);
 			free(target_iface_idx);
-			return true;
+			return FAILURE;
 		}
 		close(fd);
 
@@ -155,7 +155,7 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		{
 			LOG("ft_nmap: Failed to add interface name\n");
 			free(target_iface_idx);
-			return true;
+			return FAILURE;
 		}
 		target_iface_idx[i] = iface_index;
 	}
@@ -165,5 +165,5 @@ bool get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		targets[i].iface_info = &(*ifaces)[target_iface_idx[i]];
 
 	free(target_iface_idx);
-	return false;
+	return SUCCESS;
 }

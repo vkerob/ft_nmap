@@ -332,7 +332,7 @@ int compute_port_col_width(t_args *args)
 	return max + 2; // extra padding like nmap
 }
 
-bool find_or_update_state_and_reason_combination(
+int find_or_update_state_and_reason_combination(
 	t_port_state_and_reason **state_and_reason_lst, t_port_state port_state,
 	char *reason)
 {
@@ -349,7 +349,7 @@ bool find_or_update_state_and_reason_combination(
 		if (*state_and_reason_lst == NULL)
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-			return true;
+			return FAILURE;
 		}
 		(*state_and_reason_lst)->reason = reason;
 		(*state_and_reason_lst)->count = 1;
@@ -357,7 +357,7 @@ bool find_or_update_state_and_reason_combination(
 		(*state_and_reason_lst)->next = NULL;
 		(*state_and_reason_lst)->first_reason = NULL;
 		(*state_and_reason_lst)->second_reason = NULL;
-		return false;
+		return SUCCESS;
 	}
 	while (tmp)
 	{
@@ -379,14 +379,14 @@ bool find_or_update_state_and_reason_combination(
 				{
 					tmp->second_reason->count++;
 				}
-				return false;
+				return SUCCESS;
 			}
 			else
 			{
 				if (strcmp(tmp->reason, reason) == 0)
 				{
 					tmp->count++;
-					return false;
+					return SUCCESS;
 				}
 				else
 				{
@@ -395,14 +395,14 @@ bool find_or_update_state_and_reason_combination(
 					if (tmp->first_reason == NULL)
 					{
 						LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-						return true;
+						return FAILURE;
 					}
 					tmp->second_reason
 						= calloc(1, sizeof(t_port_state_and_reason));
 					if (tmp->second_reason == NULL)
 					{
 						LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-						return true;
+						return FAILURE;
 					}
 
 					// Copy from parent node to first child node
@@ -416,7 +416,7 @@ bool find_or_update_state_and_reason_combination(
 					tmp->second_reason->count = 1;
 					tmp->second_reason->reason = reason;
 				}
-				return false;
+				return SUCCESS;
 			}
 		}
 		prev = tmp;
@@ -427,13 +427,13 @@ bool find_or_update_state_and_reason_combination(
 	if (prev->next == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-		return true;
+		return FAILURE;
 	}
 
 	prev->next->reason = reason;
 	prev->next->count = 1;
 	prev->next->port_state = port_state;
-	return false;
+	return SUCCESS;
 }
 
 static bool is_ignored_state(const bool	 *ignored_states_by_idx,

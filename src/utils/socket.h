@@ -11,6 +11,6 @@ typedef struct	s_socket
 	struct sockaddr_in	sin;
 }	t_socket;
 
-bool	init_socket(t_socket *sock, int proto);
+int	init_socket(t_socket *sock, int proto);
 
 #endif

@@ -66,10 +66,10 @@ typedef struct s_receiver_data
 
 } t_receiver_data;
 
-bool initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
+int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 								  t_ctx				   *ctx);
 
-bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
+int initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_shared_data_sender *shared_data_probe,
 							  t_iface_info		   *ifaces,
 							  t_program_info	   *program_info);
@@ -77,7 +77,7 @@ bool initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
 							  t_ctx				   *ctx);
 
-bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
+int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								   pthread_t		   **send_threads,
 								   t_shared_data_sender *shared_data_probe,
 								   t_receiver_data		*pcap_ctxs);
@@ -85,6 +85,6 @@ bool initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);
 
-bool initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send);
+int initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send);
 
 #endif
