@@ -14,16 +14,16 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason)
 	switch (reason)
 	{
 	case CONNECTION_RESET:
-		reason_str = strdup("reset");
+		reason_str = "reset";
 		break;
 	case UNREACHABLE:
-		reason_str = strdup("unreachable");
+		reason_str = "unreachable";
 		break;
 	case NO_RESPONSE:
-		reason_str = strdup("no-response");
+		reason_str = "no-response";
 		break;
 	case SYN_ACK:
-		reason_str = strdup("syn-ack");
+		reason_str = "syn-ack";
 		break;
 	default:
 		return;
@@ -47,7 +47,6 @@ static void delete_port_map_rev(t_port *port_map_rev[MAX_NB_SCAN_TYPE],
 	}
 }
 
-
 bool init_port_lists(t_ctx *ctx)
 {
 	for (u16 i = 0; i < ctx->target_count; i++)
@@ -55,7 +54,8 @@ bool init_port_lists(t_ctx *ctx)
 		if (init_portlist(&ctx->targets[i].port_list, ctx->args.port_count,
 						  ctx->args.ports, ctx->args.scan_types,
 						  ctx->args.nb_scan_types, ctx->args.tcp_scan,
-						  ctx->args.udp_scan, &ctx->args.max_port_nb, ctx->args.port_map))
+						  ctx->args.udp_scan, &ctx->args.max_port_nb,
+						  ctx->args.port_map))
 		{
 			return true;
 		}
@@ -118,25 +118,11 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		}
 		port_list->state_and_reason[UDP_INDEX] = NULL;
 	}
-	/* port_map is indexed by raw destination port number, so we need
-	 * (max_port_nb + 1) entries (port 0 unused, ports 1..max_port_nb usable).
-	 * The subject allows scanning ports < 1024 (default range is 1-1024). */
-	// const size_t port_map_count = (size_t)(*max_port_nb) + 1;
-	// port_list->port_map = calloc(port_map_count, sizeof(int));
-	// if (port_list->port_map == NULL)
-	// {
-	// 	LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
-	// 	free_port_final_state(port_list->port_final_state, tcp_scan, udp_scan);
-	// 	return true;
-	// }
-	// memset(port_list->port_map, -1, port_map_count * sizeof(int));
-
 
 	port_list->port_map = port_map;
 
 	for (u16 j = 0; j < port_count; j++)
 	{
-		// port_list->port_map[ports[j]] = j;
 		if (udp_scan)
 		{
 			port_list->port_final_state[UDP_INDEX][j].port_number = ports[j];
@@ -156,7 +142,6 @@ bool init_portlist(t_port_list *port_list, const u16 port_count,
 		{
 			LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 			delete_port_map_rev(port_list->port_map_rev, scan_types, i);
-			free(port_list->port_map);
 			free_port_final_state(port_list->port_final_state, tcp_scan,
 								  udp_scan);
 			return true;

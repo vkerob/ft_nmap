@@ -87,8 +87,8 @@ static void free_ressources(t_ctx *ctx)
 {
 	better_free(ctx->args.port_map);
 
-	free_targets(&ctx->targets, ctx->target_count, ctx->args.port_count,
-				 ctx->args.nb_scan_types, ctx->args.scan_types);
+	free_targets(&ctx->targets, ctx->target_count, ctx->args.nb_scan_types,
+				 ctx->args.scan_types);
 
 	better_free(ctx->ifaces);
 }
@@ -98,13 +98,13 @@ bool nmap_main(t_ctx *ctx)
 	t_shared_data_sender shared_data_probe;
 	pthread_t			*pcap_threads = NULL;
 	pthread_t			*send_threads = NULL;
+	t_receiver_data		*pcap_ctxs = NULL;
 
 	if (initialize_shared_data_probe(&shared_data_probe, ctx))
 	{
 		LOG("failed to initialize shared data\n");
 		return true;
 	}
-	t_receiver_data *pcap_ctxs = NULL;
 
 	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
 								 &shared_data_probe, ctx->ifaces,
@@ -120,17 +120,7 @@ bool nmap_main(t_ctx *ctx)
 		return true;
 	}
 
-	// if (resolve_services_name(ctx->args.port_count, ctx->args.port_map,
-	// 						  &ctx->port_svc, ctx->args.udp_scan,
-	// 						  ctx->args.tcp_scan))
-	// {
-	// 	better_free(pcap_ctxs);
-	// 	LOG("failed to resolve services\n");
-	// 	deinitialize_shared_data(&shared_data_probe, ctx);
-	// 	return true;
-	// }
-
-	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : 0x01;
+	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : (u8)0x01;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
 									  &shared_data_probe, pcap_ctxs))
@@ -157,43 +147,44 @@ bool nmap_main(t_ctx *ctx)
 	return false;
 }
 
+static display_program_header(t_ctx *ctx)
+{
+	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
+	char date_buf[32] = { 0 };
+
+	const time_t t = ctx->program_info.start.tv_sec;
+	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
+	sync_printf("Starting ft_nmap at %s\n", date_buf);
+}
+
 int main(const int argc, char **argv)
 {
-	char **targets_input = NULL;
-	t_ctx  ctx = { 0 };
+	t_ctx ctx = { 0 };
 
 	gettimeofday(&ctx.program_info.start, NULL);
 
-	if (parse_args(argc, argv, &ctx.args, &targets_input, &ctx.target_count))
+	if (parse_args(argc, argv, &ctx.args, &ctx.targets_input,
+				   &ctx.target_count))
 	{
-		free_tabp((void ***)&targets_input, ctx.target_count);
-		return EXIT_FAILURE;
+		goto error;
 	}
 
 	if (HAS(ctx.args.flags, F_HELP))
 	{
 		print_usage();
-		return EXIT_SUCCESS;
+		goto free_and_return_success;
 	}
 
-	/* Must run before link_port_list_to_each_target: init_portlist uses
-	 * tcp_scan / udp_scan to decide which port_final_state buffers to
-	 * allocate, and the "no --scan" default branch in parse_args doesn't
-	 * set those flags. */
 	set_scan_presence(&ctx.args);
 
-	if (resolve_targets(targets_input, ctx.target_count, &ctx.targets))
+	if (resolve_targets(ctx.targets_input, ctx.target_count, &ctx.targets))
 	{
 		goto error;
 	}
-	free_tabp((void ***)&targets_input, ctx.target_count);
 
 	if (init_port_map(&ctx.args))
 	{
-		// better_free(pcap_ctxs);
-		// LOG("ft_nmap: failed to initialize the port map\n");
 		goto error;
-		// return true;
 	}
 
 	if (init_port_lists(&ctx))
@@ -201,7 +192,6 @@ int main(const int argc, char **argv)
 		goto error;
 	}
 
-	free_tabp((void ***)&targets_input, ctx.target_count);
 	if (setup_signal_handlers())
 	{
 		goto error;
@@ -213,18 +203,17 @@ int main(const int argc, char **argv)
 		goto error;
 	}
 
-	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
-	char		 date_buf[64];
-	const time_t t = ctx.program_info.start.tv_sec;
-	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
-	printf("Starting ft_nmap at %s\n", date_buf);
+	display_program_header(&ctx);
 
 	nmap_main(&ctx);
 
+free_and_return_success:
+	free_tabp((void ***)&ctx.targets_input, ctx.target_count);
 	free_ressources(&ctx);
 	return EXIT_SUCCESS;
 
 error:
+	free_tabp((void ***)&ctx.targets_input, ctx.target_count);
 	free_ressources(&ctx);
 	return EXIT_FAILURE;
 }

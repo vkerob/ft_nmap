@@ -16,10 +16,14 @@
 #include <string.h>
 #include <sys/types.h>
 
-
 static void free_port_state_and_reason(t_port_state_and_reason *head)
 {
-	t_port_state_and_reason *tmp = head; 
+	if (head == NULL)
+	{
+		return;
+	}
+
+	t_port_state_and_reason *tmp = head;
 	t_port_state_and_reason *next = tmp->next;
 
 	while (tmp)
@@ -32,38 +36,28 @@ static void free_port_state_and_reason(t_port_state_and_reason *head)
 	}
 }
 
-
-void free_targets(t_target **targets, size_t count, u16 port_count, u8 nb_scan_types, u8 *scan_types)
+void free_targets(t_target **targets, size_t count, u8 nb_scan_types,
+				  u8 *scan_types)
 {
 	if (!targets || !*targets)
 	{
 		return;
 	}
 
-		for (size_t i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		for (u8 j = 0; j < nb_scan_types; j++)
 		{
 			const t_scan_type scan_type = scan_types[j];
-			for (u16 k = 0; k < port_count; k++)
-			{
-				better_free((*targets)[i].port_list.port_map_rev[scan_type][k].reasons[0]);
-				better_free((*targets)[i].port_list.port_map_rev[scan_type][k].reasons[1]);
-			}
 			better_free((*targets)[i].port_list.port_map_rev[scan_type]);
 		}
 
-		if ((*targets)[i].port_list.state_and_reason[TCP_INDEX])
-		{
-			free_port_state_and_reason((*targets)[i].port_list.state_and_reason[TCP_INDEX]);
-		}
-		if ((*targets)[i].port_list.state_and_reason[UDP_INDEX])
-		{
-			free_port_state_and_reason((*targets)[i].port_list.state_and_reason[UDP_INDEX]);
-		}
+		free_port_state_and_reason(
+			(*targets)[i].port_list.state_and_reason[TCP_INDEX]);
+		free_port_state_and_reason(
+			(*targets)[i].port_list.state_and_reason[UDP_INDEX]);
 		better_free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
 		better_free((*targets)[i].port_list.port_final_state[UDP_INDEX]);
-		better_free((*targets)[i].input);
 		better_free((*targets)[i].hostname);
 	}
 	better_free(*targets);
@@ -82,14 +76,15 @@ static bool resolve_target(const char *host, struct in_addr *dst)
 	if (rc != 0)
 	{
 		LOG("Error: Invalid/unknown host '%s': %s\n", host, gai_strerror(rc));
-		return false;
+		return true;
 	}
 
 	// Copy the first IPv4 result
-	memcpy(dst, &((struct sockaddr_in *)res->ai_addr)->sin_addr, sizeof(*dst));
+	memcpy(dst, &((struct sockaddr_in *)res->ai_addr)->sin_addr,
+		   sizeof(struct in_addr));
 
 	freeaddrinfo(res);
-	return true;
+	return false;
 }
 
 // Reverse DNS: IPv4 -> hostname (returns heap-allocated string or NULL)
@@ -103,39 +98,39 @@ static char *reverse_dns(struct in_addr addr)
 	sa.sin_addr = addr;
 
 	if (getnameinfo((struct sockaddr *)&sa, sizeof(sa), host, sizeof(host),
-					NULL, 0, NI_NAMEREQD) != 0)
+					NULL, 0, NI_NAMEREQD)
+		!= 0)
 		return NULL;
 	return strdup(host);
 }
 
 bool resolve_targets(char **inputs, const size_t count, t_target **targets)
 {
-	t_target *tmp = calloc(count, sizeof(*tmp));
-	if (!tmp)
+	*targets = calloc(count, sizeof(t_target));
+	if (*targets == NULL)
 	{
 		LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
 		return true;
 	}
+	t_target *tmp = *targets;
 
 	for (size_t i = 0; i < count; i++)
 	{
-		tmp[i].input = strdup(inputs[i]);
-		if (!tmp[i].input)
-		{
-			LOG("ft_nmap: strdup failed: %s\n", strerror(errno));
-			return true;
-		}
+		tmp[i].input = inputs[i];
 
-		if (!resolve_target(inputs[i], &tmp[i].addr))
+		if (resolve_target(inputs[i], &tmp[i].addr))
 		{
 			return true;
 		}
 
 		// Reverse DNS: only useful if input was an IP (hostname already known)
 		tmp[i].hostname = reverse_dns(tmp[i].addr);
+		if (tmp[i].hostname == NULL)
+		{
+			return true;
+		}
 	}
 
-	*targets = tmp;
 	return false;
 }
 
@@ -420,7 +415,7 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 		return true;
 	}
 
-	bool error = false;
+	bool  error = false;
 	char *tok = strtok(copy, ",");
 	while (tok != NULL)
 	{
@@ -437,7 +432,8 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 			error = true;
 			break;
 		}
-		// ME: sentinel (INADDR_ANY = 0.0.0.0) marks where our real IP goes in the sequence
+		// ME: sentinel (INADDR_ANY = 0.0.0.0) marks where our real IP goes in
+		// the sequence
 		if (strcasecmp(trimmed, "ME") == 0)
 		{
 			decoys[(*decoy_count)++] = (struct in_addr){ .s_addr = INADDR_ANY };
@@ -445,7 +441,7 @@ static bool parse_decoys(const char *decoy_str, struct in_addr *decoys,
 			continue;
 		}
 
-		struct addrinfo  hints;
+		struct addrinfo	 hints;
 		struct addrinfo *res = NULL;
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = AF_INET;
@@ -524,7 +520,7 @@ bool parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "speedup", required_argument, 0, SPEED },
 		{ "packet-trace", no_argument, 0, PACKET_TRACE },
 		{ "reason", no_argument, 0, REASON },
-		{ "verbose", no_argument, 0, VERBOSE},
+		{ "verbose", no_argument, 0, VERBOSE },
 		{ "version", no_argument, 0, VERSION_DETECT },
 		{ "os-detect", no_argument, 0, OS_DETECT },
 		{ "decoy", required_argument, 0, DECOY },
