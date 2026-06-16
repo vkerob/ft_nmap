@@ -134,10 +134,6 @@ The scan suite sends raw packets and therefore requires root at runtime.
 
 ## Documentation
 
-## Code source nmap
-
-[[Analyse du code source de nmap]]
-
 ## Types de scan
 
 ### Protocole TCP

@@ -529,7 +529,7 @@ static void print_port_states(t_target *target, t_args *args,
 	const int col_scan_result
 		= (args->nb_scan_types == 1 || nb_scan_type_tcp == 1)
 			  ? 18
-			  : args->nb_scan_types * 12;
+			  : args->nb_scan_types * 16;
 	const int col_reason = 12;
 
 	const bool multi_scan = args->nb_scan_types > 1;

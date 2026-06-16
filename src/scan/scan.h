@@ -108,13 +108,8 @@ typedef struct s_target
 	 amount of time (icmp_kernel_throttle[1]) */
 	double icmp_kernel_throttle[2];
 
-	bool			first_burst_sent;
-	struct timeval	first_burst_time;
+	struct timeval	last_udp_sent; // zero = no UDP probe sent yet for this target
 	pthread_mutex_t mutex;
-
-	/* For each retries we need to keep track of how much probe we sent in each
-	 * burst*/
-	u32 nb_probe_sent;
 } t_target;
 
 typedef enum e_scan_type

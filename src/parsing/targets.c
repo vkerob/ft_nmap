@@ -39,7 +39,9 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 
 		new_array = realloc(*targets, new_capacity * sizeof(char *));
 		if (new_array == NULL)
-			return -1;
+		{
+			return FAILURE;
+		}
 
 		*targets = new_array;
 		*capacity = new_capacity;
@@ -47,15 +49,17 @@ static int push_target(char ***targets, size_t *count, size_t *capacity,
 
 	(*targets)[*count] = strdup(target);
 	if ((*targets)[*count] == NULL)
-		return -1;
+	{
+		return FAILURE;
+	}
 
 	(*count)++;
 
-	return 0;
+	return SUCCESS;
 }
 
-int get_targets_input(const char *arg, size_t *args_count, char ***targets,
-					   int mode, u8 flags)
+int get_targets_input(const char *arg, size_t *target_count, char ***targets,
+					  int mode, u8 flags)
 {
 	if (HAS(flags, F_IP_MODE) && HAS(flags, F_FILE_MODE))
 	{
@@ -65,26 +69,37 @@ int get_targets_input(const char *arg, size_t *args_count, char ***targets,
 
 	size_t count = 0, cap = 0;
 
-	if (!arg || !args_count || !targets)
+	if (!arg || !target_count || !targets)
 		return FAILURE;
-
-	*args_count = 0;
 
 	if (mode == IP_MODE)
 	{
+		// In case the user call --ip twice or --file followed by --ip
+		if (*targets)
+		{
+			size_t i = 0;
+
+			while (i < *target_count)
+			{
+				free((*targets)[i]);
+				i++;
+			}
+			free(*targets);
+		}
 		*targets = malloc(sizeof(char *));
 		if (!*targets)
+		{
 			return FAILURE;
-
+		}
 		(*targets)[0] = strdup(arg);
-		if (!(*targets)[0])
+		if ((*targets)[0] == NULL)
 		{
 			free(*targets);
 			*targets = NULL;
 			return FAILURE;
 		}
 
-		*args_count = 1;
+		*target_count = 1;
 		return SUCCESS;
 	}
 	else if (mode == FILE_MODE)
@@ -103,7 +118,9 @@ int get_targets_input(const char *arg, size_t *args_count, char ***targets,
 			char *target = trim_inplace(line);
 
 			if (*target == '\0' || *target == '#')
+			{
 				continue;
+			}
 
 			if (push_target(targets, &count, &cap, target) != 0)
 			{
@@ -128,7 +145,7 @@ int get_targets_input(const char *arg, size_t *args_count, char ***targets,
 		}
 
 		*targets = tmp;
-		*args_count = count;
+		*target_count = count;
 		return SUCCESS;
 	}
 

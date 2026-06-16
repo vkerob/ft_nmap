@@ -148,31 +148,28 @@ void *send_routine(void *arg)
 			struct timeval now;
 			gettimeofday(&now, NULL);
 			pthread_mutex_lock(&request->target->mutex);
-			if (request->target->first_burst_sent == false)
-			{
-				request->target->first_burst_time.tv_sec = now.tv_sec;
-				request->target->first_burst_time.tv_usec = now.tv_usec;
-				request->target->first_burst_sent = true;
-			}
-			u32 nb_probes_sent = request->target->nb_probe_sent++;
+			struct timeval last = request->target->last_udp_sent;
 			pthread_mutex_unlock(&request->target->mutex);
 
-			double elapsed
-				= (now.tv_sec - request->target->first_burst_time.tv_sec)
-				  + (now.tv_usec - request->target->first_burst_time.tv_usec)
-						/ 1e6;
-
-			// TODO: we need to calculate our current sent rate per sec and
-			// compare it to a reference point
-			double udp_sent_rate_limit = nb_probes_sent / elapsed;
-			if (udp_sent_rate_limit > MAX_SENT_RATE_UDP_PER_SEC)
+			if (last.tv_sec != 0 || last.tv_usec != 0)
 			{
-				double sleep_time
-					= (nb_probes_sent / (double)MAX_SENT_RATE_UDP_PER_SEC)
-					  - elapsed;
-				sleep(sleep_time);
+				double elapsed_time_sec = (now.tv_sec - last.tv_sec)
+										  + (now.tv_usec - last.tv_usec) / 1e6;
+
+				/* Elapsed time between two consecutive udp probe to say below
+				   th max sending rate per second */
+				double gap = 1.0 / MAX_SENT_RATE_UDP_PER_SEC;
+				double sleep_time = gap - elapsed_time_sec;
+				if (sleep_time > 0)
+				{
+					struct timespec ts = {
+						.tv_sec = (time_t)sleep_time,
+						.tv_nsec
+						= (long)((sleep_time - (time_t)sleep_time) * 1e9),
+					};
+					nanosleep(&ts, NULL);
+				}
 			}
-			// printf("rate limit: %lff\n", udp_sent_rate_limit);
 		}
 
 		/* The probe is removed from to_send here: decrement its counter
@@ -276,6 +273,13 @@ void *send_routine(void *arg)
 			{
 				LOG("ft_nmap: failed to send packet to %s\n",
 					inet_ntoa(request->target->addr));
+			}
+
+			if (is_me && request->type == SCAN_UDP)
+			{
+				pthread_mutex_lock(&request->target->mutex);
+				gettimeofday(&request->target->last_udp_sent, NULL);
+				pthread_mutex_unlock(&request->target->mutex);
 			}
 
 			if (is_me)
