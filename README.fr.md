@@ -1,6 +1,6 @@
 # ft_nmap
 
-🌐 **Français** · [English](README.en.md)
+🌐 **Français** · [English](README.md)
 
 Réimplémentation d'un scanner de ports inspiré de `nmap`, écrite en C.
 Le programme envoie des paquets bruts (raw sockets) et capture les réponses
