@@ -8,15 +8,15 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
-#define ICMP_ERROR_HIGHEST_IDX 6
+#define ICMP_ERROR_HIGHEST_IDX 7
 
 /* Can either be from a UDP or TCP probe so we pass the scan type as argument */
 void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 						  const struct in_addr ip_src, t_icmp_hdr icmp_hdr,
 						  const t_scan_type scan_type, const u8 protocol)
 {
-	// ICMP unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-	static u8 icmp_error_codes[6] = { 1, 2, 3, 9, 10, 13 };
+	// ICMP unreachable error (type 3, code 0, 1, 2, 3, 9, 10, or 13)
+	static u8 icmp_error_codes[7] = { 0, 1, 2, 3, 9, 10, 13 };
 
 	if (ICMP_TYPE(icmp_hdr) != 3)
 	{

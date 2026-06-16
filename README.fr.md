@@ -429,12 +429,11 @@ propres au projet :
 Half-open scan : on envoie un `SYN` et on attend la réponse, sans compléter la
 connexion (on envoie un `RST` si le serveur répond `SYN/ACK`).
 
-| Réponse reçue | État attribué |
+| État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| `SYN/ACK` | `open` |
-| `RST` | `closed` |
-| Aucune réponse (même après retransmission) | `filtered` |
-| Erreur ICMP unreachable (type 3, code 1, 2, 3, 9, 10 ou 13) | `filtered` |
+| `open` | un paquet TCP avec les flags **`SYN` + `ACK`** positionnés |
+| `closed` | un paquet TCP avec le flag **`RST`** (avec ou sans `ACK`) |
+| `filtered` | **aucune réponse** (même après retransmission), **ou** une erreur ICMP *unreachable* (type 3, code 0, 1, 2, 3, 9, 10 ou 13) |
 
 > **Pourquoi SYN ?** C'est le scan de référence : le plus précis pour savoir ce
 > qui est *ouvert*, car il distingue clairement `open` / `closed` / `filtered`.
@@ -449,11 +448,10 @@ connexion (on envoie un `RST` si le serveur répond `SYN/ACK`).
 Envoie un paquet avec uniquement le flag `ACK`. Sert à déterminer si un port
 est filtré (et donc à cartographier les règles de pare-feu).
 
-| Réponse reçue | État attribué |
+| État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| `RST` | `unfiltered` |
-| Aucune réponse (même après retransmission) | `filtered` |
-| Erreur ICMP unreachable (type 3, code 1, 2, 3, 9, 10 ou 13) | `filtered` |
+| `unfiltered` | un paquet TCP avec le flag **`RST`** |
+| `filtered` | **aucune réponse** (même après retransmission), **ou** une erreur ICMP *unreachable* (type 3, code 0, 1, 2, 3, 9, 10 ou 13) |
 
 > **Pourquoi ACK en plus de SYN ?** Le SYN dit ce qui est *ouvert* ; l'ACK ne
 > le dit jamais (un port `open` comme `closed` renvoient un `RST` →
@@ -469,11 +467,11 @@ est filtré (et donc à cartographier les règles de pare-feu).
 - **FIN** : seul le flag `FIN` positionné (`-sF` sur nmap).
 - **XMAS** : flags `FIN`, `PSH` et `URG` positionnés (`-sX` sur nmap).
 
-| Réponse reçue | État attribué |
+| État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| Aucune réponse (même après retransmission) | `open\|filtered` |
-| `RST` | `closed` |
-| Erreur ICMP unreachable (type 3, code 1, 2, 3, 9, 10 ou 13) | `filtered` |
+| `open\|filtered` | **aucune réponse** (même après retransmission) — un port ouvert ignore la sonde |
+| `closed` | un paquet TCP avec le flag **`RST`** |
+| `filtered` | une erreur ICMP *unreachable* (type 3, code 0, 1, 2, 3, 9, 10 ou 13) |
 
 > **Pourquoi NULL / FIN / XMAS ?** Ces scans exploitent la RFC 793 : un port
 > *fermé* doit répondre `RST` à tout paquet sans `SYN`/`RST`/`ACK`, alors qu'un
@@ -493,12 +491,12 @@ est filtré (et donc à cartographier les règles de pare-feu).
 
 Envoie un datagramme UDP (vide) sur le port ciblé.
 
-| Réponse reçue | État attribué |
+| État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| Toute réponse UDP depuis le port cible | `open` |
-| Aucune réponse (même après retransmission) | `open\|filtered` |
-| Erreur ICMP port unreachable (type 3, code 3) | `closed` |
-| Autre erreur ICMP unreachable (type 3, code 1, 2, 9, 10 ou 13) | `filtered` |
+| `open` | n'importe quel **datagramme UDP** renvoyé par le port cible |
+| `open\|filtered` | **aucune réponse** (même après retransmission) |
+| `closed` | une erreur ICMP **port unreachable** (type 3, code 3) |
+| `filtered` | une autre erreur ICMP *unreachable* (type 3, code 0, 1, 2, 9, 10 ou 13) |
 
 > **Pourquoi UDP ?** Les scans précédents ne voient que le TCP, or beaucoup de
 > services critiques tournent en **UDP** : DNS (53), SNMP (161), DHCP (67/68),

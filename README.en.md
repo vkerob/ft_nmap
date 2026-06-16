@@ -423,12 +423,11 @@ ft_nmap reproduces nmap's behavior, with a few project-specific quirks:
 Half-open scan: we send a `SYN` and wait for the reply without completing the
 connection (we send a `RST` if the server answers `SYN/ACK`).
 
-| Response received | Assigned state |
+| Resulting state | …because we received |
 | --- | --- |
-| `SYN/ACK` | `open` |
-| `RST` | `closed` |
-| No response (even after retransmission) | `filtered` |
-| ICMP unreachable error (type 3, code 1, 2, 3, 9, 10 or 13) | `filtered` |
+| `open` | a TCP packet with the **`SYN` + `ACK`** flags set |
+| `closed` | a TCP packet with the **`RST`** flag (with or without `ACK`) |
+| `filtered` | **no response** (even after retransmission), **or** an ICMP *unreachable* error (type 3, code 0, 1, 2, 3, 9, 10 or 13) |
 
 > **Why SYN?** It is the reference scan: the most accurate for finding what is
 > *open*, because it cleanly distinguishes `open` / `closed` / `filtered`. Since
@@ -442,11 +441,10 @@ connection (we send a `RST` if the server answers `SYN/ACK`).
 Sends a packet with only the `ACK` flag set. Used to determine whether a port is
 filtered (and thus to map firewall rules).
 
-| Response received | Assigned state |
+| Resulting state | …because we received |
 | --- | --- |
-| `RST` | `unfiltered` |
-| No response (even after retransmission) | `filtered` |
-| ICMP unreachable error (type 3, code 1, 2, 3, 9, 10 or 13) | `filtered` |
+| `unfiltered` | a TCP packet with the **`RST`** flag |
+| `filtered` | **no response** (even after retransmission), **or** an ICMP *unreachable* error (type 3, code 0, 1, 2, 3, 9, 10 or 13) |
 
 > **Why ACK on top of SYN?** SYN tells you what is *open*; ACK never does (an
 > `open` port and a `closed` port both answer `RST` → `unfiltered`). ACK is used
@@ -462,11 +460,11 @@ filtered (and thus to map firewall rules).
 - **FIN**: only the `FIN` flag set (`-sF` in nmap).
 - **XMAS**: `FIN`, `PSH` and `URG` flags set (`-sX` in nmap).
 
-| Response received | Assigned state |
+| Resulting state | …because we received |
 | --- | --- |
-| No response (even after retransmission) | `open\|filtered` |
-| `RST` | `closed` |
-| ICMP unreachable error (type 3, code 1, 2, 3, 9, 10 or 13) | `filtered` |
+| `open\|filtered` | **no response** (even after retransmission) — an open port ignores the probe |
+| `closed` | a TCP packet with the **`RST`** flag |
+| `filtered` | an ICMP *unreachable* error (type 3, code 0, 1, 2, 3, 9, 10 or 13) |
 
 > **Why NULL / FIN / XMAS?** These scans exploit RFC 793: a *closed* port must
 > answer `RST` to any packet lacking `SYN`/`RST`/`ACK`, whereas an *open* port
@@ -484,12 +482,12 @@ filtered (and thus to map firewall rules).
 
 Sends an (empty) UDP datagram to the target port.
 
-| Response received | Assigned state |
+| Resulting state | …because we received |
 | --- | --- |
-| Any UDP response from the target port | `open` |
-| No response (even after retransmission) | `open\|filtered` |
-| ICMP port unreachable error (type 3, code 3) | `closed` |
-| Other ICMP unreachable error (type 3, code 1, 2, 9, 10 or 13) | `filtered` |
+| `open` | any **UDP datagram** sent back from the target port |
+| `open\|filtered` | **no response** (even after retransmission) |
+| `closed` | an ICMP **port unreachable** error (type 3, code 3) |
+| `filtered` | another ICMP *unreachable* error (type 3, code 0, 1, 2, 9, 10 or 13) |
 
 > **Why UDP?** The previous scans only see TCP, yet many critical services run
 > over **UDP**: DNS (53), SNMP (161), DHCP (67/68), NTP (123)... Without a UDP
