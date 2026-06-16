@@ -16,7 +16,7 @@
 #define DECOY 1011
 /* Maximum number of decoy IPs the user can specify */
 #define MAX_DECOYS 3
-#define MIN_PORT_NUMBER 1
+#define MIN_PORT_NUMBER 0
 #define SCAN_INVALID 255
 /* Maximum number of threads our program can run (option set with --speed)*/
 #define SPEED_MAX 250
