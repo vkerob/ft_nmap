@@ -1,35 +1,31 @@
 #include "greatest.h"
 #include "tests.h"
-#include "utils.h"
 #include "typesdef.h"
+#include "utils.h"
 
 #include <errno.h>
 #include <regex.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <stdbool.h>
 
 // Size of data type use to represent one unit of text
 #define PCRE2_CODE_UNIT_WIDTH 8
 
 #include <pcre2.h>
 
-extern char **environ;
-
-#define NITEMS(arr) (sizeof((arr)) / sizeof((arr)[0]))
-
 SUITE(scan_suite);
 
-extern t_server *g_server_data; 
+extern t_server *g_server_data;
 
 bool run_command(char **args, char **output)
 {
-	int pipe_fds[2];
-	pid_t	pid;
+	int	  pipe_fds[2];
+	pid_t pid;
 
 	if (pipe(pipe_fds) == -1)
 	{
@@ -60,14 +56,14 @@ bool run_command(char **args, char **output)
 		{
 			if (nbytes < 0)
 			{
-					if (errno == EINTR)
-					{
-						continue;
-					}
-					close(pipe_fds[0]);
-					wait(NULL);
-					perror("read");
-					return true;
+				if (errno == EINTR)
+				{
+					continue;
+				}
+				close(pipe_fds[0]);
+				wait(NULL);
+				perror("read");
+				return true;
 			}
 			if (*output == NULL)
 			{
@@ -105,7 +101,6 @@ bool run_command(char **args, char **output)
 	return false;
 }
 
-
 static void free_port(t_port *port)
 {
 	free(port->port_state);
@@ -115,35 +110,27 @@ static void free_port(t_port *port)
 	free(port);
 }
 
-
 static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 {
-	t_port	  *tmp = NULL;
-	char *ptr = subject;
-	int rc;
+	t_port *tmp = NULL;
+	char   *ptr = subject;
+	int		rc;
 
-	// printf("[OUTPUT] %s\n", subject);
 	/* Match the pattern against the subject text. */
-	while(1)
+	while (1)
 	{
-		pcre2_match_data *match_data =
-		pcre2_match_data_create_from_pattern(regex, NULL);
-		rc = pcre2_match(
-			regex,
-			(unsigned char *)ptr,
-			strlen(ptr),
-			0,
-			0,
-			match_data,
-			NULL);
+		pcre2_match_data *match_data
+			= pcre2_match_data_create_from_pattern(regex, NULL);
+		rc = pcre2_match(regex, (unsigned char *)ptr, strlen(ptr), 0, 0,
+						 match_data, NULL);
 		if (rc == PCRE2_ERROR_NOMATCH)
 		{
-			break ;
+			break;
 		}
 		else if (rc < 0)
 		{
 			fprintf(stderr, "Matching error\n");
-			break ;
+			break;
 		}
 		else
 		{
@@ -173,10 +160,10 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 				tmp = *head;
 			}
 
-			if (substr(ptr, ovector[2], ovector[3], &new->port) ||
-				substr(ptr, ovector[4], ovector[5], &new->protocol) ||
-				substr(ptr, ovector[6], ovector[7], &new->port_state) || 
-				substr(ptr, ovector[8], ovector[9], &new->service))
+			if (substr(ptr, ovector[2], ovector[3], &new->port)
+				|| substr(ptr, ovector[4], ovector[5], &new->protocol)
+				|| substr(ptr, ovector[6], ovector[7], &new->port_state)
+				|| substr(ptr, ovector[8], ovector[9], &new->service))
 			{
 				pcre2_match_data_free(match_data);
 				return true;
@@ -214,23 +201,22 @@ static void free_port_list(t_port *head)
 	}
 }
 
-
 TEST compare(char **args_nmap, char **args_ft_nmap)
 {
-	char pattern[512] = { 0 };
-	t_port *port_list_nmap = NULL;
-	t_port *port_list_ft_nmap = NULL;
-	char *ft_nmap_output = NULL;
-	char *nmap_output = NULL;
-	int error_number;
-	PCRE2_SIZE error_offset;
+	char		pattern[512] = { 0 };
+	t_port	   *port_list_nmap = NULL;
+	t_port	   *port_list_ft_nmap = NULL;
+	char	   *ft_nmap_output = NULL;
+	char	   *nmap_output = NULL;
+	int			error_number;
+	PCRE2_SIZE	error_offset;
 	pcre2_code *re = NULL;
 
-	if (run_command(args_ft_nmap, &ft_nmap_output) || 	run_command(args_nmap, &nmap_output))
+	if (run_command(args_ft_nmap, &ft_nmap_output)
+		|| run_command(args_nmap, &nmap_output))
 	{
 		goto fail;
 	}
-
 
 	if (ft_nmap_output == NULL || nmap_output == NULL)
 	{
@@ -241,22 +227,25 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 		1234/tcp closed hotline
 	*/
 	snprintf(pattern, sizeof(pattern),
-		"([0-9]+)\\/(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");
+			 "([0-9]+)\\/"
+			 "(tcp|udp)\\s*(closed|open\\|filtered|open|filtered|unfiltered)"
+			 "\\s*(unknown|[a-zA-Z0-9-_]*)\\s*\\n");
 
 	re = pcre2_compile(
-		(unsigned char *)pattern,               /* the pattern */
-		PCRE2_ZERO_TERMINATED, /* indicates pattern is zero-terminated */
-		0,                     /* default options */
-		&error_number,         /* for error number */
-		&error_offset,         /* for error offset */
-		NULL);   
+		(unsigned char *)pattern, /* the pattern */
+		PCRE2_ZERO_TERMINATED,	  /* indicates pattern is zero-terminated */
+		0,						  /* default options */
+		&error_number,			  /* for error number */
+		&error_offset,			  /* for error offset */
+		NULL);
 
 	if (re == NULL)
 	{
 		fprintf(stderr, "Invalid pattern: %s\n", pattern);
 		goto fail;
 	}
-	if (get_port_list(ft_nmap_output, re, &port_list_ft_nmap) || get_port_list(nmap_output, re, &port_list_nmap))
+	if (get_port_list(ft_nmap_output, re, &port_list_ft_nmap)
+		|| get_port_list(nmap_output, re, &port_list_nmap))
 	{
 		pcre2_code_free(re);
 		goto fail;
@@ -294,12 +283,12 @@ fail:
 	FAIL();
 }
 
-
 SUITE(scan_suite)
 {
-	 /* UDP SCAN */
-	char *args[] = { "/usr/bin/nmap",		   "127.0.0.1", "-p",
-					 g_server_data->udp_ports, "-sU",		"-v", NULL };
+	/* UDP SCAN */
+	char *args[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->udp_ports,
+			"-sU",			 "-v",		  NULL };
 	char *ft_nmap_args[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->udp_ports,
 		"--scan",	 "UDP",	 "--verbose", NULL
@@ -307,8 +296,9 @@ SUITE(scan_suite)
 	RUN_TESTp(compare, args, ft_nmap_args);
 
 	/* SYN SCAN */
-	char *args2[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sS",	"-v",	 NULL };
+	char *args2[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
+			"-sS",			 "-v",		  NULL };
 	char *ft_nmap_args2[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "SYN",	 NULL
@@ -316,8 +306,9 @@ SUITE(scan_suite)
 	RUN_TESTp(compare, args2, ft_nmap_args2);
 
 	/* ACK SCAN */
-	char *args3[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sA",	"-v",	 NULL };
+	char *args3[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
+			"-sA",			 "-v",		  NULL };
 	char *ft_nmap_args3[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "ACK",	 NULL
@@ -325,8 +316,9 @@ SUITE(scan_suite)
 	RUN_TESTp(compare, args3, ft_nmap_args3);
 
 	/* FIN SCAN */
-	char *args4[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sF", "-v",	 NULL };
+	char *args4[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
+			"-sF",			 "-v",		  NULL };
 	char *ft_nmap_args4[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "FIN",	 NULL
@@ -334,8 +326,9 @@ SUITE(scan_suite)
 	RUN_TESTp(compare, args4, ft_nmap_args4);
 
 	/* XMAS SCAN */
-	char *args5[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sX",	"-v",	 NULL };
+	char *args5[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
+			"-sX",			 "-v",		  NULL };
 	char *ft_nmap_args5[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "FIN",	 NULL
@@ -343,11 +336,12 @@ SUITE(scan_suite)
 	RUN_TESTp(compare, args5, ft_nmap_args5);
 
 	/* NULL SCAN */
-	char *args6[] = { "/usr/bin/nmap",			"127.0.0.1", "-p",
-					  g_server_data->tcp_ports, "-sN",	"-v",	 NULL };
+	char *args6[]
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
+			"-sN",			 "-v",		  NULL };
 	char *ft_nmap_args6[] = {
 		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "NULL",	 NULL
+		"--scan",	 "NULL", NULL
 	};
 	RUN_TESTp(compare, args6, ft_nmap_args6);
 }
