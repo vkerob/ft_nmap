@@ -125,7 +125,6 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 
 		tmp[i].hostname = reverse_dns(tmp[i].addr);
 		tmp[i].last_udp_sent = (struct timeval){ 0, 0 };
-
 	}
 
 	return SUCCESS;
@@ -178,7 +177,7 @@ static bool contains_port(const u16 *ports, const size_t count, const u16 port)
 }
 
 static int push_port(u16 *ports, u16 *count, const u16 port,
-					  int *duplicate_port_number)
+					 int *duplicate_port_number)
 {
 	*duplicate_port_number |= contains_port(ports, *count, port);
 
@@ -191,7 +190,7 @@ static int push_port(u16 *ports, u16 *count, const u16 port,
 }
 
 static int parse_token_and_push(char *token, u16 *ports, u16 *count,
-								 int *duplicate_port_number)
+								int *duplicate_port_number)
 {
 	char *dash = strchr(token, '-');
 
@@ -346,7 +345,7 @@ static int parse_scan_type(char *scan_str, u8 *out)
 }
 
 int parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
-					  u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
+					 u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan)
 {
 	char *saveptr = NULL;
 	char *token = NULL;
@@ -403,7 +402,7 @@ int parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 }
 
 static int parse_decoys(const char *decoy_str, struct in_addr *decoys,
-						 u8 *decoy_count)
+						u8 *decoy_count)
 {
 	char *copy = strdup(decoy_str);
 	if (!copy)
@@ -412,7 +411,7 @@ static int parse_decoys(const char *decoy_str, struct in_addr *decoys,
 		return FAILURE;
 	}
 
-	int  error = SUCCESS;
+	int	  error = SUCCESS;
 	char *tok = strtok(copy, ",");
 	while (tok != NULL)
 	{
@@ -503,7 +502,7 @@ static int parse_speed_strict(const char *str, u8 *out)
 }
 
 int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
-				size_t *target_count)
+			   size_t *target_count)
 {
 	// short options (: argument required)
 	const char *optstr = "";
