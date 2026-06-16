@@ -26,7 +26,22 @@ typedef enum e_port_state_reason
 	CONNECTION_RESET,
 	UNREACHABLE,
 	NO_RESPONSE,
-	SYN_ACK
+	SYN_ACK,
+	UDP_RESPONSE,
+	NET_UNREACH,
+	HOST_UNREACH,
+	PROTO_UNREACH,
+	PORT_UNREACH,
+	FRAG_NEEDED,
+	SRC_ROUTE_FAILED,
+	NET_UNKNOWN,
+	HOST_UNKNOWN,
+	HOST_ISOLATED,
+	NET_PROHIB,
+	HOST_PROHIB,
+	NET_UNREACH_TOS,
+	HOST_UNREACH_TOS,
+	ADMIN_PROHIB
 } t_port_state_reason;
 
 typedef struct s_port
@@ -106,7 +121,8 @@ typedef struct s_target
 	 amount of time (icmp_kernel_throttle[1]) */
 	double icmp_kernel_throttle[2];
 
-	struct timeval	last_udp_sent; // zero = no UDP probe sent yet for this target
+	struct timeval
+		last_udp_sent; // zero = no UDP probe sent yet for this target
 	pthread_mutex_t mutex;
 } t_target;
 
