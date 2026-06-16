@@ -250,6 +250,36 @@ The UDP scan over the bench's UDP ports:
 `--verbose` forces every port to be displayed (nothing is grouped into "Not
 shown"), and `--reason` shows the cause of each state.
 
+#### Types of filtering
+
+`filtered` is not a single thing. What the firewall actually *does* to the probe
+determines **how** (and how fast) ft_nmap detects it, and what reason it reports.
+There are two independent axes.
+
+**1. What the firewall does with the packet**
+
+| Firewall rule | What comes back | ft_nmap result | Reason shown |
+| --- | --- | --- | --- |
+| `-j DROP` (silent blackhole) | nothing at all | `filtered`, but only once retries + timeout are exhausted | `no-response` |
+| `-j REJECT --reject-with icmp-*` | an **ICMP** *destination unreachable* error | `filtered`, immediately | the exact ICMP code: `admin-prohib`, `host-prohib`, `net-unreach`, `port-unreach`, … |
+| `-j REJECT --reject-with tcp-reset` | a TCP **`RST`** (identical to a real closed port) | `closed` — **not** `filtered` | `reset` |
+
+Takeaways:
+
+- A silent **`DROP`** is the slowest to detect: there is no reply, so we can
+  only conclude `filtered` after waiting out every retry (port `4302`/`4303`
+  for `SYN`, `4312` for UDP).
+- An ICMP **`REJECT`** is the fastest and most informative: the ICMP *code*
+  tells us *why* the probe was blocked. This is exactly what
+  `icmp_code_to_reason()` decodes into the reason column (ports `4304`, `4313`).
+- A **`tcp-reset` REJECT** lets the firewall **disguise** a filtered port as a
+  closed one: a forged `RST` is indistinguishable from a closed port's `RST`.
+
+**2. Stateless vs stateful**
+
+This second axis is orthogonal to the first: it decides whether a *lone* `ACK`
+slips through the filter, and is detailed in the next section.
+
 #### The SYN vs ACK case (stateless / stateful)
 
 Ports `4302` and `4303` illustrate the SYN/ACK complementarity (see the
