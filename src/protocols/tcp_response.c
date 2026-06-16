@@ -17,21 +17,30 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	t_probe *probe
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
 								ip_src, scan_type, &sent_list->nb_probe);
-	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 
 	if (!probe)
 	{
+		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		return;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
 	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];
+
+	/* Did the response match a state this scan can actually conclude? If not
+	 * (unexpected/unsolicited packet), we must NOT resolve the port — otherwise
+	 * it would stay stuck in DEFAULT. We re-queue the probe (keeping its
+	 * original timestamp) so purge_timedout_probe_request classifies it later. */
+	int matched = 0;
 	switch (scan_type)
 	{
 	case SCAN_SYN:
-		if ((flags & TH_RST) && (flags & TH_ACK))
+		// Any RST means the port is closed (with or without ACK): nmap treats
+		// a lone RST the same way, and some stacks reply RST without ACK.
+		if (flags & TH_RST)
 		{
 			port->port_state = CLOSE;
 			set_port_state_reason(port, CONNECTION_RESET);
+			matched = 1;
 		}
 		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
@@ -43,6 +52,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 				probe->target->os_ttl = ttl;
 				probe->target->os_tcp_window = tcp_window;
 			}
+			matched = 1;
 		}
 		break;
 	case SCAN_ACK:
@@ -50,10 +60,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = UNFILTERED;
 			set_port_state_reason(port, CONNECTION_RESET);
-		}
-		else
-		{
-			port->port_state = UNKNOWN;
+			matched = 1;
 		}
 		break;
 	case SCAN_FIN:
@@ -63,16 +70,25 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = CLOSE;
 			set_port_state_reason(port, CONNECTION_RESET);
-		}
-		else
-		{
-			port->port_state = UNKNOWN;
+			matched = 1;
 		}
 		break;
 	// SCAN UDP (nothing to do but compiler complain if not handle)
 	default:
 		break;
 	}
-	atomic_fetch_sub(sent_list->outstanding, 1);
-	free(probe);
+
+	if (matched)
+	{
+		atomic_fetch_sub(sent_list->outstanding, 1);
+		free(probe);
+	}
+	else
+	{
+		// Unexpected response: leave the probe to the timeout path.
+		add_to_probe_queue(&sent_list->head, &sent_list->tail, probe,
+						   probe->timestamp);
+		sent_list->nb_probe++;
+	}
+	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 }
