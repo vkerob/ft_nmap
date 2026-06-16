@@ -25,6 +25,51 @@ void set_port_state_reason(t_port *port, t_port_state_reason reason)
 	case SYN_ACK:
 		reason_str = "syn-ack";
 		break;
+	case UDP_RESPONSE:
+		reason_str = "udp-response";
+		break;
+	case NET_UNREACH:
+		reason_str = "net-unreach";
+		break;
+	case HOST_UNREACH:
+		reason_str = "host-unreach";
+		break;
+	case PROTO_UNREACH:
+		reason_str = "proto-unreach";
+		break;
+	case PORT_UNREACH:
+		reason_str = "port-unreach";
+		break;
+	case FRAG_NEEDED:
+		reason_str = "frag-needed";
+		break;
+	case SRC_ROUTE_FAILED:
+		reason_str = "src-route-failed";
+		break;
+	case NET_UNKNOWN:
+		reason_str = "net-unknown";
+		break;
+	case HOST_UNKNOWN:
+		reason_str = "host-unknown";
+		break;
+	case HOST_ISOLATED:
+		reason_str = "host-isolated";
+		break;
+	case NET_PROHIB:
+		reason_str = "net-prohib";
+		break;
+	case HOST_PROHIB:
+		reason_str = "host-prohib";
+		break;
+	case NET_UNREACH_TOS:
+		reason_str = "net-unreach-tos";
+		break;
+	case HOST_UNREACH_TOS:
+		reason_str = "host-unreach-tos";
+		break;
+	case ADMIN_PROHIB:
+		reason_str = "admin-prohib";
+		break;
 	default:
 		return;
 	}
@@ -55,9 +100,9 @@ int init_port_lists(t_ctx *ctx)
 }
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				   u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
-				   const u8 nb_scan_type, const bool tcp_scan,
-				   const bool udp_scan, u16 *max_port_nb, int *port_map)
+				  u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
+				  const u8 nb_scan_type, const bool tcp_scan,
+				  const bool udp_scan, u16 *max_port_nb, int *port_map)
 {
 	*max_port_nb = get_max_port_number(ports);
 

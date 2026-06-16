@@ -583,8 +583,8 @@ static void print_port_states(t_target *target, t_args *args,
 
 			snprintf(recap_udp + recap_udp_len,
 					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s",
-					 col_port, port_str, col_state, state, col_svc, svc,
-					 col_scan_result, results_buf);
+					 col_port, port_str, col_state, state, col_svc,
+					 svc ? svc : "unknown", col_scan_result, results_buf);
 			recap_udp_len = strlen(recap_udp);
 
 			if (HAS(args->flags, F_REASON))
