@@ -42,10 +42,6 @@ static void print_usage()
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf(" --verbose: No port states are ignored\n");
 	printf(" --reason: Show the reason why the port is in that state\n");
-	printf("SERVICE/VERSION DETECTION:\n");
-	printf(" --version: Probe open ports to determine version info\n");
-	printf("OS DETECTION\n");
-	printf(" --os-detect: Enable OS detection\n");
 	printf("\nDECOY SCAN:\n");
 	printf(" --decoy <decoy1,decoy2[,ME],...>: Cloak scan with decoy source "
 		   "IPs\n");

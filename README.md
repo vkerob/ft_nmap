@@ -24,8 +24,6 @@ Other Makefile targets: `tests` (build the unit-test binary), `clean`, `fclean`,
 | `--packet-trace` | — | Show all packets sent and received |
 | `--reason` | — | Show the reason a port is in a given state |
 | `--verbose` | — | Display all port states (no ignored states) |
-| `--version` | — | Probe open ports to determine service/version info (bonus) |
-| `--os-detect` | — | Enable OS detection (bonus) |
 | `--decoy` | `ip1,ip2[,ME]` | Cloak the scan with decoy source IPs, max 3; `ME` marks where the real IP goes (bonus) |
 | `--help` | — | Display usage |
 
