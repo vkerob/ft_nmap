@@ -126,7 +126,7 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 		{
 			return FAILURE;
 		}
-		tmp[i].nb_probe_sent = 0;
+		tmp[i].last_udp_sent = (struct timeval){ 0, 0 };
 
 	}
 

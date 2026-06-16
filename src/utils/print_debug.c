@@ -29,6 +29,17 @@ void sync_printf(const char *format, ...)
 	va_end(args);
 }
 
+/* ── packet-trace helpers (active under -PT flag, always compiled) ────────── */
+
+#define PT_SENT  ANSI_COLOR_GREEN  "SENT" ANSI_COLOR_RESET
+#define PT_RCVD  ANSI_COLOR_CYAN   "RCVD" ANSI_COLOR_RESET
+#define PT_DECOY ANSI_COLOR_MAGENTA "[DECOY] " ANSI_COLOR_RESET
+#define PT_UDP   ANSI_COLOR_YELLOW  "UDP" ANSI_COLOR_RESET
+#define PT_TCP   ANSI_COLOR_YELLOW  "TCP" ANSI_COLOR_RESET
+#define PT_ICMP  ANSI_COLOR_YELLOW  "ICMP" ANSI_COLOR_RESET
+#define PT_FLAG  ANSI_BOLD
+#define PT_KV    ANSI_COLOR_RESET
+
 int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
 							 bool is_decoy)
@@ -44,8 +55,6 @@ int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
 		return FAILURE;
 	}
-	// Read actual source IP from the packet header (handles both real and
-	// decoy)
 	if (inet_ntop(domain, (const void *)&ip_hdr->ip_src, src, sizeof(src))
 		== NULL)
 	{
@@ -55,36 +64,36 @@ int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
 
 	pthread_mutex_lock(&printf_mutex);
 	if (is_decoy)
-		printf("[DECOY] ");
-	printf("SENT (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
+		printf(PT_DECOY);
+	printf(PT_SENT " (%ld.%06lu) %s %s:%d > %s:%d ",
+		   relative_sent_time->tv_sec,
 		   (unsigned long)relative_sent_time->tv_usec,
-		   probe->type == SCAN_UDP ? "UDP" : "TCP", src,
+		   probe->type == SCAN_UDP ? PT_UDP : PT_TCP, src,
 		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
 		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 
-	printf("ttl: %d ", ip_hdr->ip_ttl);
-	printf("id: %d ", ntohs(ip_hdr->ip_id));
-	printf("iplen: %d ", ntohs(ip_hdr->ip_len));
+	printf("ttl:%d id:%d iplen:%d ",
+		   ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	if (probe->type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
-			printf("URG ");
+			printf(PT_FLAG "URG " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
-			printf("ACK ");
+			printf(PT_FLAG "ACK " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_PUSH)
-			printf("PUSH ");
+			printf(PT_FLAG "PUSH " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_RST)
-			printf("RST ");
+			printf(PT_FLAG "RST " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_SYN)
-			printf("SYN ");
+			printf(PT_FLAG "SYN " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
-			printf("FIN ");
-		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
-		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-		printf("cksum: 0x%04x" ANSI_COLOR_RESET,
+			printf(PT_FLAG "FIN " PT_KV);
+		printf("seq:%u win:%d cksum:0x%04x",
+			   ntohl(datalink_hdr->tcp_hdr.th_seq),
+			   ntohs(datalink_hdr->tcp_hdr.th_win),
 			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
-	printf("\n");
+	printf(ANSI_COLOR_RESET "\n");
 	pthread_mutex_unlock(&printf_mutex);
 	return SUCCESS;
 }
@@ -113,42 +122,40 @@ int print_debug_packet_recv(const struct ip	  *ip_hdr,
 	}
 
 	pthread_mutex_lock(&printf_mutex);
-	printf("RCVD (%ld.%06lu) ", relative_recv_time->tv_sec,
+	printf(PT_RCVD " (%ld.%06lu) ", relative_recv_time->tv_sec,
 		   (unsigned long)relative_recv_time->tv_usec);
 
 	if (ip_hdr->ip_p == IPPROTO_TCP)
 	{
-		printf("TCP %s:%d > %s:%d ", src, ntohs(datalink_hdr->tcp_hdr.th_sport),
-			   dst, ntohs(datalink_hdr->tcp_hdr.th_dport));
+		printf(PT_TCP " %s:%d > %s:%d ", src,
+			   ntohs(datalink_hdr->tcp_hdr.th_sport), dst,
+			   ntohs(datalink_hdr->tcp_hdr.th_dport));
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
-			printf("URG ");
+			printf(PT_FLAG "URG " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_ACK)
-			printf("ACK ");
+			printf(PT_FLAG "ACK " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_PUSH)
-			printf("PUSH ");
+			printf(PT_FLAG "PUSH " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_RST)
-			printf("RST ");
+			printf(PT_FLAG "RST " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_SYN)
-			printf("SYN ");
+			printf(PT_FLAG "SYN " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags & TH_FIN)
-			printf("FIN ");
+			printf(PT_FLAG "FIN " PT_KV);
 		if (datalink_hdr->tcp_hdr.th_flags == 0)
 			printf(". ");
-		printf("ttl: %d ", ip_hdr->ip_ttl);
-		printf("id: %d ", ntohs(ip_hdr->ip_id));
-		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
-		printf("seq: %u ", ntohl(datalink_hdr->tcp_hdr.th_seq));
-		printf("win: %d ", ntohs(datalink_hdr->tcp_hdr.th_win));
-		printf("cksum: 0x%04x " ANSI_COLOR_RESET,
+		printf("ttl:%d id:%d iplen:%d seq:%u win:%d cksum:0x%04x",
+			   ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len),
+			   ntohl(datalink_hdr->tcp_hdr.th_seq),
+			   ntohs(datalink_hdr->tcp_hdr.th_win),
 			   ntohs(datalink_hdr->tcp_hdr.th_sum));
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP)
 	{
-		printf("UDP %s:%d > %s:%d ", src, ntohs(datalink_hdr->udp_hdr.uh_sport),
-			   dst, ntohs(datalink_hdr->udp_hdr.uh_dport));
-		printf("ttl: %d ", ip_hdr->ip_ttl);
-		printf("id: %d ", ntohs(ip_hdr->ip_id));
-		printf("iplen: %d ", ntohs(ip_hdr->ip_len));
+		printf(PT_UDP " %s:%d > %s:%d ttl:%d id:%d iplen:%d", src,
+			   ntohs(datalink_hdr->udp_hdr.uh_sport), dst,
+			   ntohs(datalink_hdr->udp_hdr.uh_dport), ip_hdr->ip_ttl,
+			   ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
 	if (ip_hdr->ip_p == IPPROTO_ICMP)
 	{
@@ -166,17 +173,19 @@ int print_debug_packet_recv(const struct ip	  *ip_hdr,
 			dest_port = ntohs(nested_datalink_hdr->tcp_hdr.th_dport);
 		}
 
-		printf("ICMP [%s:%d > %s:%d (type=%d/code=%d) ] IP [ ttl=%d id=%d "
-			   "iplen=%d ]",
+		printf(PT_ICMP " [%s:%d > %s:%d (type=%d/code=%d)] "
+			   "IP [ttl=%d id=%d iplen=%d]",
 			   src, dest_port, dst, source_port,
 			   ICMP_TYPE(datalink_hdr->icmp_hdr),
 			   ICMP_CODE(datalink_hdr->icmp_hdr), ip_hdr->ip_ttl,
 			   ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
 	}
-	printf("\n");
+	printf(ANSI_COLOR_RESET "\n");
 	pthread_mutex_unlock(&printf_mutex);
 	return SUCCESS;
 }
+
+/* ── debug-only functions (always compiled, call sites guarded by #ifdef DEBUG) */
 
 void print_debug_max_retries_exceeded(const t_probe *probe)
 {
@@ -603,7 +612,6 @@ void print_debug_parsing_args(const t_ctx ctx)
 	printf("Speed:     " ANSI_COLOR_YELLOW "%u\n" ANSI_COLOR_RESET,
 		   ctx.args.speed);
 
-	// Ligne de fin
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
