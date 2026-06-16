@@ -79,11 +79,8 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 	{
 		port->port_state = CLOSE;
 	}
-	else
-	{
-		port->port_state = FILTERED;
-	}
-	set_port_state_reason(port, icmp_code_to_reason(code));
+	port->port_state = FILTERED;
+	set_port_state_reason(port, UNREACHABLE);
 	atomic_fetch_sub(sent_list->outstanding, 1);
 	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 	free(probe);

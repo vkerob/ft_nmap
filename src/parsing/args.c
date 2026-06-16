@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <limits.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,6 +55,7 @@ void free_targets(t_target **targets, size_t count, u8 nb_scan_types,
 		free((*targets)[i].port_list.port_final_state[TCP_INDEX]);
 		free((*targets)[i].port_list.port_final_state[UDP_INDEX]);
 		free((*targets)[i].hostname);
+		pthread_mutex_destroy(&(*targets)[i].mutex);
 	}
 	free(*targets);
 	*targets = NULL;
@@ -109,7 +111,8 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 	}
 	t_target *tmp = *targets;
 
-	*targets = tmp;
+	for (size_t i = 0; i < count; i++)
+		pthread_mutex_init(&tmp[i].mutex, NULL);
 
 	for (size_t i = 0; i < count; i++)
 	{
@@ -120,12 +123,7 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 			return FAILURE;
 		}
 
-		// Reverse DNS: only useful if input was an IP (hostname already known)
 		tmp[i].hostname = reverse_dns(tmp[i].addr);
-		if (tmp[i].hostname == NULL)
-		{
-			return FAILURE;
-		}
 		tmp[i].last_udp_sent = (struct timeval){ 0, 0 };
 
 	}

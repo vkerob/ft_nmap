@@ -104,6 +104,15 @@ int get_targets_input(const char *arg, size_t *target_count, char ***targets,
 	}
 	else if (mode == FILE_MODE)
 	{
+		if (*targets)
+		{
+			for (size_t i = 0; i < *target_count; i++)
+				free((*targets)[i]);
+			free(*targets);
+			*targets = NULL;
+			*target_count = 0;
+		}
+
 		FILE *file = fopen(arg, FOPEN_READTEXT);
 		if (!file)
 		{
