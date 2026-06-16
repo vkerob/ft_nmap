@@ -524,16 +524,17 @@ static void print_port_states(t_target *target, t_args *args,
 	const int col_scan_result
 		= (args->nb_scan_types == 1 || nb_scan_type_tcp == 1)
 			  ? 18
-			  : args->nb_scan_types * 16;
+			  : nb_scan_type_tcp * 14;
 	const int col_reason = 12;
 
-	const bool multi_scan = args->nb_scan_types > 1;
+	const bool multi_scan_tcp = nb_scan_type_tcp > 1;
 	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
 
 	// Multi scan is only usefull for tcp, but we put it also for UDP because
 	// otherwise we have an empty column when mixing UDP,TCP scan
 	printf("%-*s %-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
-		   "SERVICE", col_scan_result, "SCAN RESULTS");
+		   "SERVICE", multi_scan_tcp ? col_scan_result : 0,
+		   multi_scan_tcp ? "SCAN RESULTS" : "");
 	if (HAS(args->flags, F_REASON))
 		printf(" %-*s", col_reason, "REASON");
 	if (show_version)
@@ -581,7 +582,8 @@ static void print_port_states(t_target *target, t_args *args,
 			snprintf(recap_udp + recap_udp_len,
 					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s",
 					 col_port, port_str, col_state, state, col_svc,
-					 svc ? svc : "unknown", col_scan_result, results_buf);
+					 svc ? svc : "unknown",
+					 multi_scan_tcp ? col_scan_result : 0, "");
 			recap_udp_len = strlen(recap_udp);
 
 			if (HAS(args->flags, F_REASON))
@@ -616,7 +618,7 @@ static void print_port_states(t_target *target, t_args *args,
 								  ? final_port_state.version
 								  : "";
 			size_t		recap_tcp_len = strlen(recap_tcp);
-			if (multi_scan)
+			if (multi_scan_tcp)
 			{
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
@@ -624,9 +626,9 @@ static void print_port_states(t_target *target, t_args *args,
 				snprintf(recap_tcp + recap_tcp_len,
 						 sizeof(recap_tcp) - recap_tcp_len,
 						 "%-*s %-*s %-*s %-*s%s%s", col_port, port_str,
-						 col_state, state, col_svc, svc, col_scan_result,
-						 results_buf, (show_version && ver[0]) ? "  " : "",
-						 ver);
+						 col_state, state, col_svc, svc ? svc : "unknown",
+						 col_scan_result, results_buf,
+						 (show_version && ver[0]) ? "  " : "", ver);
 
 				recap_tcp_len = strlen(recap_tcp);
 
@@ -674,30 +676,25 @@ static void print_port_states(t_target *target, t_args *args,
 						reasons = second_reason ? second_reason : "";
 					}
 					snprintf(recap_tcp + recap_tcp_len,
-							 sizeof(recap_tcp) - recap_tcp_len, " %-*s\n",
+							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
 							 col_reason, reasons);
 
 					recap_tcp_len = strlen(recap_tcp);
 					if (alloc)
+					{
 						free(reasons);
+					}
 				}
+				recap_tcp_len = strlen(recap_tcp);
+				snprintf(recap_tcp + recap_tcp_len,
+						 sizeof(recap_tcp) - recap_tcp_len, "\n");
 			}
 			else
 			{
-				char results_buf[256];
-				build_results_str(target, args, port, results_buf,
-								  sizeof(results_buf), IPPROTO_TCP);
-				// snprintf(recap_tcp + recap_tcp_len,
-				// 		 sizeof(recap_tcp) - recap_tcp_len,
-				// 		 "%-*s %-*s %-*s %-*s%s%s ", col_port, port_str,
-				// 		 col_state, state, col_svc, svc, col_scan_result,
-				// 		 results_buf, (show_version && ver[0]) ? "  " : "",
-				// 		 ver);
-
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len,
-						 "%-*s %-*s %-*s %-*s", col_port, port_str, col_state,
-						 state, col_svc, svc, col_scan_result, results_buf);
+						 sizeof(recap_tcp) - recap_tcp_len, "%-*s %-*s %-*s",
+						 col_port, port_str, col_state, state, col_svc,
+						 svc ? svc : "unknown");
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
@@ -753,7 +750,8 @@ static void print_target_results(t_target *target, t_args *args)
 	}
 	printf("Host is up.\n");
 
-	/* OS detection: display below "Host is up" if --os-detect and we have data
+	/* OS detection: display below "Host is up" if --os-detect and we have
+	 * data
 	 */
 	if (HAS(args->flags, F_OS_DETECT))
 	{
