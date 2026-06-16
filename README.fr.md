@@ -252,6 +252,36 @@ Le scan UDP sur les ports UDP du banc :
 `--verbose` force l'affichage de tous les ports (rien n'est regroupé dans
 « Not shown »), et `--reason` montre la cause de chaque état.
 
+#### Les types de filtrage
+
+`filtered` ne recouvre pas une seule réalité. Ce que le pare-feu *fait*
+réellement de la sonde détermine **comment** (et à quelle vitesse) ft_nmap le
+détecte, ainsi que la raison rapportée. Deux axes indépendants.
+
+**1. Ce que le pare-feu fait du paquet**
+
+| Règle du pare-feu | Ce qui revient | Résultat ft_nmap | Raison affichée |
+| --- | --- | --- | --- |
+| `-j DROP` (trou noir silencieux) | rien du tout | `filtered`, mais seulement une fois les retries + le timeout épuisés | `no-response` |
+| `-j REJECT --reject-with icmp-*` | une erreur **ICMP** *destination unreachable* | `filtered`, immédiatement | le code ICMP exact : `admin-prohib`, `host-prohib`, `net-unreach`, `port-unreach`, … |
+| `-j REJECT --reject-with tcp-reset` | un **`RST`** TCP (identique à un vrai port fermé) | `closed` — et **non** `filtered` | `reset` |
+
+À retenir :
+
+- Un **`DROP`** silencieux est le plus lent à détecter : aucune réponse, on ne
+  peut conclure `filtered` qu'après avoir attendu chaque retry (ports
+  `4302`/`4303` en `SYN`, `4312` en UDP).
+- Un **`REJECT`** ICMP est le plus rapide et le plus informatif : le *code* ICMP
+  nous dit *pourquoi* la sonde a été bloquée. C'est exactement ce que
+  `icmp_code_to_reason()` décode dans la colonne raison (ports `4304`, `4313`).
+- Un **`REJECT` tcp-reset** permet au pare-feu de **déguiser** un port filtré en
+  port fermé : un `RST` forgé est indiscernable du `RST` d'un port fermé.
+
+**2. Sans état vs à état**
+
+Ce second axe est orthogonal au premier : il détermine si un `ACK` *isolé*
+franchit le filtre, et il est détaillé dans la section suivante.
+
 #### Le cas SYN vs ACK (sans état / à état)
 
 Les ports `4302` et `4303` illustrent la complémentarité SYN/ACK (cf. la
