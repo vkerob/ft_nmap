@@ -80,6 +80,8 @@ TEST parse_args_parses_scan_types(void)
 	PASS();
 }
 
+
+
 TEST parse_args_invalid_scan_returns_error(void)
 {
 	t_args args;
