@@ -147,8 +147,7 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 // Ignored states are print from the most common to the least common and with a
 // reason associated (no-response, reset, ...)
 /* Count the number of ports in each state for a given protocol slot
- * (TCP_INDEX or UDP_INDEX). Avoids relying on the shared state_count which
- * mixes TCP and UDP totals together. */
+ * (TCP_INDEX or UDP_INDEX), keeping TCP and UDP totals separate. */
 static void count_states_for_proto(const t_target *target, u8 proto_index,
 								   u16 port_count,
 								   int counts[HIGHEST_PORT_STATE])
@@ -483,8 +482,6 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 					&target->port_list.state_and_reason[TCP_INDEX],
 					target_port_state, target_port_output.reasons[1]);
 			}
-			// The port count in each port state is global between UDP and TCP
-			target->port_list.state_count[target_port_state]++;
 		}
 
 		if (args->udp_scan)
@@ -498,8 +495,6 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 			find_or_update_state_and_reason_combination(
 				&target->port_list.state_and_reason[UDP_INDEX],
 				target_port_state, target_port_output.reasons[0]);
-
-			target->port_list.state_count[target_port_state]++;
 		}
 	}
 }
@@ -572,7 +567,9 @@ static void print_port_states(t_target *target, t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 
-			const char *svc = port_services_udp[port];
+			const char *svc = port_services_udp[port]
+								  ? port_services_udp[port]
+								  : "unknown";
 
 			const char *state = port_state_to_str(final_port_state.port_state);
 
@@ -605,7 +602,9 @@ static void print_port_states(t_target *target, t_args *args,
 					== false
 				|| HAS(args->flags, F_VERBOSE)))
 		{
-			const char *svc = port_services_tcp[port];
+			const char *svc = port_services_tcp[port]
+								  ? port_services_tcp[port]
+								  : "unknown";
 
 			t_port_output final_port_state
 				= target->port_list.port_final_state[TCP_INDEX][idx];

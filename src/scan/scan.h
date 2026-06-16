@@ -93,8 +93,6 @@ typedef struct s_port_list
 	/* For each protocol (TCP and UDP) number of port in each state with their
 	respective reason and occurences, this list is not sorted in any way */
 	t_port_state_and_reason *state_and_reason[MAX_PROTO_COUNT];
-
-	int state_count[HIGHEST_PORT_STATE];
 } t_port_list;
 
 typedef struct s_iface_info

@@ -108,9 +108,11 @@ void *send_routine(void *arg)
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
 
-	if (init_socket(&tcp_socket, IPPROTO_TCP)
-		|| init_socket(&udp_socket, IPPROTO_UDP))
+	if (init_socket(&tcp_socket, IPPROTO_TCP))
+		return NULL;
+	if (init_socket(&udp_socket, IPPROTO_UDP))
 	{
+		close(tcp_socket.sfd);
 		return NULL;
 	}
 	memset(packet, 0, sizeof(packet));
@@ -142,6 +144,8 @@ void *send_routine(void *arg)
 		}
 		pop_probe_request(&shared_data->to_send.head,
 						  &shared_data->to_send.tail, &request);
+		shared_data->to_send.nb_probe--;
+		pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 		if (request->type == SCAN_UDP)
 		{
 
@@ -172,10 +176,6 @@ void *send_routine(void *arg)
 			}
 		}
 
-		/* The probe is removed from to_send here: decrement its counter
-		 * while we still hold to_send's mutex to avoid a data race. */
-		shared_data->to_send.nb_probe--;
-		pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 		// Compute relative timestamp once for the whole probe (decoys + real)
 		gettimeofday(&sent_timestamp, NULL);
 		long seconds_elapsed
@@ -264,6 +264,7 @@ void *send_routine(void *arg)
 					if (is_me)
 						pthread_mutex_unlock(
 							&shared_data->sent[iface_idx].safe_mut.mutex);
+					close_sockets(&udp_socket, &tcp_socket);
 					return NULL;
 				}
 			}

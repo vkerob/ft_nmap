@@ -195,7 +195,7 @@ static void grab_banner(struct in_addr target_addr, u16 port, char *out,
         {
             sanitise_banner(buf, sizeof(buf));
             if (buf[0] != '\0')
-                strncpy(out, buf, out_size - 1);
+                snprintf(out, out_size, "%s", buf);
         }
     }
 
