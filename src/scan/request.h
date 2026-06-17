@@ -5,6 +5,7 @@
 #include "typesdef.h"
 
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 typedef struct s_probe
 {
@@ -34,4 +35,7 @@ void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
 
 t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
 								 struct in_addr ip_src, t_scan_type scan_type, u16 *nb_probes);
+
+bool probe_in_queue(const t_probe *head, u16 port, t_scan_type type,
+					 struct in_addr ip);
 #endif

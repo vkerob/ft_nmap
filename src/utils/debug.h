@@ -21,10 +21,10 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 									  const struct timeval *current_time,
 									  const unsigned long	seconds_elapsed);
 
-int print_debug_packet_send(const t_probe *probe,
-							 const struct timeval *relative_sent_time,
-							 const t_datalink_hdr *datalink_hdr,
-							 const t_ip *ip_hdr, bool is_decoy);
+int print_debug_packet_send(struct in_addr target_addr, t_scan_type type,
+							 struct timeval *relative_sent_time,
+							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
+							 bool is_decoy);
 
 int print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,

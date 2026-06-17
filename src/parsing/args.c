@@ -161,7 +161,9 @@ static int parse_port_strict(const char *s, u16 *out)
 	if (*end != '\0')
 		return FAILURE; // extra characters after number
 
-	if (value < MIN_PORT_NUMBER || value > MAX_PORT_NUMBER)
+	/* value is unsigned and MIN_PORT_NUMBER is 0, so only the upper bound can
+	 * be exceeded (a `value < 0` check would be dead code, -Wtype-limits). */
+	if (value > MAX_PORT_NUMBER)
 		return FAILURE;
 
 	*out = (u16)value;

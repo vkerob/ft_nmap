@@ -20,7 +20,7 @@ typedef struct s_ip_pseudo_hdr
 int build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
 							const char *dst_addr, const char *src_addr, u8 protocol);
 
-void build_ip_header(t_ip *ip_hdr, const t_probe *request,
+void build_ip_header(t_ip *ip_hdr, t_scan_type type, struct in_addr dst_addr,
 					 struct in_addr src_ip, _Atomic uint16_t *id_counter);
 
 u16	calculate_checksum(const void *buffer, int len);

@@ -40,17 +40,16 @@ void sync_printf(const char *format, ...)
 #define PT_FLAG  ANSI_BOLD
 #define PT_KV    ANSI_COLOR_RESET
 
-int print_debug_packet_send(const t_probe *probe,
-							 const struct timeval *relative_sent_time,
-							 const t_datalink_hdr *datalink_hdr,
-							 const t_ip *ip_hdr, bool is_decoy)
+int print_debug_packet_send(struct in_addr target_addr, t_scan_type type,
+							 struct timeval *relative_sent_time,
+							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
+							 bool is_decoy)
 {
 	char src[32];
 	char target[32];
 
 	static int domain = AF_INET;
-	if (inet_ntop(domain, (const void *)&probe->target->addr, target,
-				  sizeof(target))
+	if (inet_ntop(domain, (const void *)&target_addr, target, sizeof(target))
 		== NULL)
 	{
 		LOG("ft_nmap: inet_pton: %s\n", strerror(errno));
@@ -69,13 +68,13 @@ int print_debug_packet_send(const t_probe *probe,
 	printf(PT_SENT " (%ld.%06lu) %s %s:%d > %s:%d ",
 		   relative_sent_time->tv_sec,
 		   (unsigned long)relative_sent_time->tv_usec,
-		   probe->type == SCAN_UDP ? PT_UDP : PT_TCP, src,
+		   type == SCAN_UDP ? PT_UDP : PT_TCP, src,
 		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
 		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 
 	printf("ttl:%d id:%d iplen:%d ",
 		   ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
-	if (probe->type != SCAN_UDP)
+	if (type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
 			printf(PT_FLAG "URG " PT_KV);
