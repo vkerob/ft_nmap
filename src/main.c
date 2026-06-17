@@ -14,6 +14,7 @@
 #include <string.h>
 
 sig_atomic_t volatile g_stop = 0;
+sig_atomic_t volatile g_display_output = 0;
 
 static void print_usage()
 {
@@ -138,7 +139,10 @@ int nmap_main(t_ctx *ctx)
 		pcap_close(pcap_ctxs[i].handle);
 	}
 
-	print_scan_results(ctx);
+	if (g_display_output != 1)
+	{
+		print_scan_results(ctx);
+	}
 
 	free(pcap_ctxs);
 
