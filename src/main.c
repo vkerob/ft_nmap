@@ -17,42 +17,43 @@ sig_atomic_t volatile g_stop = 0;
 
 static void print_usage()
 {
-	printf("Usage:\n");
-	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS "
-		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
-	printf("or\n");
-	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
-		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
-	printf("\nSCAN TECHNIQUES: \n");
-	printf(" If no scan types are specified all will be run\n");
-	printf(" --scan <SYN, ACK, XMAS, NULL, FIN, UDP>\n");
-	printf(" Ex: --scan SYN --scan SYN,XMAS \n");
-	printf("\nPORT SPECIFICATION: \n");
-	printf(" The number of port specified cannot exceed 1024\n");
-	printf(" --ports <port ranges | port number>\n");
-	printf("  Ex: --ports 22-32 --ports 22\n");
-	printf("\nIP SPECIFICATION: \n");
-	printf(" All ip must be provided in their IPV4 format: \n");
-	printf(" --ip <ip address or hostname>\n");
-	printf("  Ex: --ip 192.168.100.20 --ip google.com\n");
-	printf(" --file <source file containing list of ip>\n");
-	printf("\nSCAN SPECIFICATION: \n");
-	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
-	printf("\nOUTPUT: \n");
-	printf(" --packet-trace: Show all packets sent and received\n");
-	printf(" --verbose: No port states are ignored\n");
-	printf(" --reason: Show the reason why the port is in that state\n");
-	printf("SERVICE/VERSION DETECTION:\n");
-	printf(" --version: Probe open ports to determine version info\n");
-	printf("OS DETECTION\n");
-	printf(" --os-detect: Enable OS detection\n");
-	printf("\nDECOY SCAN:\n");
-	printf(" --decoy <decoy1,decoy2[,ME],...>: Cloak scan with decoy source "
-		   "IPs\n");
-	printf("  Ex: --decoy 192.168.1.100,10.0.0.5,ME\n");
-	printf("  Max %d decoys\n", MAX_DECOYS);
-	printf("\nHELP: \n");
-	printf(" --help: Display this menu\n");
+	printf(
+		"Usage:\n"
+		"./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS "
+		"[--speedup [NUMBER]] [--scan [TYPE]]\n"
+		"or\n"
+		"./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
+		"[--speedup [NUMBER]] [--scan [TYPE]]\n"
+		"\nSCAN TECHNIQUES: \n"
+		" If no scan types are specified all will be run\n"
+		" --scan <SYN, ACK, XMAS, NULL, FIN, UDP>\n"
+		" Ex: --scan SYN --scan SYN,XMAS \n"
+		"\nPORT SPECIFICATION: \n"
+		" The number of port specified cannot exceed 1024\n"
+		" --ports <port ranges | port number>\n"
+		"  Ex: --ports 22-32 --ports 22\n"
+		"\nIP SPECIFICATION: \n"
+		" All ip must be provided in their IPV4 format: \n"
+		" --ip <ip address or hostname>\n"
+		"  Ex: --ip 192.168.100.20 --ip google.com\n"
+		" --file <source file containing list of ip>\n"
+		"\nSCAN SPECIFICATION: \n"
+		" --speed <0-250>: Number of threads to make the scan faster\n"
+		"\nOUTPUT: \n"
+		" --packet-trace: Show all packets sent and received\n"
+		" --verbose: No port states are ignored\n"
+		" --reason: Show the reason why the port is in that state\n"
+		"SERVICE/VERSION DETECTION:\n"
+		" --version: Probe open ports to determine version info\n"
+		"OS DETECTION\n"
+		" --os-detect: Enable OS detection\n"
+		"\nDECOY SCAN:\n"
+		" --decoy <decoy1,decoy2[,ME],...>: Cloak scan with decoy source IPs\n"
+		"  Ex: --decoy 192.168.1.100,10.0.0.5,ME\n"
+		"  Max %d decoys\n"
+		"\nHELP: \n"
+		" --help: Display this menu\n",
+		MAX_DECOYS);
 }
 
 static void set_scan_presence(t_args *args)
@@ -100,7 +101,7 @@ int nmap_main(t_ctx *ctx)
 	pthread_t			*send_threads = NULL;
 	t_receiver_data		*pcap_ctxs = NULL;
 
-	if (initialize_shared_data_probe(&shared_data_probe, ctx))
+	if (initialize_shared_data_probe(&shared_data_probe, ctx) == FAILURE)
 	{
 		LOG("failed to initialize shared data\n");
 		return FAILURE;
@@ -108,13 +109,13 @@ int nmap_main(t_ctx *ctx)
 
 	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
 								 &shared_data_probe, ctx->ifaces,
-								 &ctx->program_info))
+								 &ctx->program_info) == FAILURE)
 	{
 		deinitialize_shared_data(&shared_data_probe, ctx);
 		return FAILURE;
 	}
 
-	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
+	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send) == FAILURE)
 	{
 		LOG("failed to initialize probe request\n");
 		free(pcap_ctxs);
@@ -125,7 +126,7 @@ int nmap_main(t_ctx *ctx)
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : (u8)0x01;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
-									  &shared_data_probe, pcap_ctxs))
+									  &shared_data_probe, pcap_ctxs) == FAILURE)
 	{
 		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
@@ -163,10 +164,14 @@ int main(const int argc, char **argv)
 {
 	t_ctx ctx = { 0 };
 
-	gettimeofday(&ctx.program_info.start, NULL);
+	if (gettimeofday(&ctx.program_info.start, NULL) == -1)
+	{
+		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 
 	if (parse_args(argc, argv, &ctx.args, &ctx.targets_input,
-				   &ctx.target_count))
+				   &ctx.target_count) == FAILURE)
 	{
 		goto error;
 	}
@@ -179,28 +184,29 @@ int main(const int argc, char **argv)
 
 	set_scan_presence(&ctx.args);
 
-	if (resolve_targets(ctx.targets_input, ctx.target_count, &ctx.targets))
+	if (resolve_targets(ctx.targets_input, ctx.target_count, &ctx.targets)
+		== FAILURE)
 	{
 		goto error;
 	}
 
-	if (init_port_map(&ctx.args))
+	if (init_port_map(&ctx.args) == FAILURE)
 	{
 		goto error;
 	}
 
-	if (init_port_lists(&ctx))
+	if (init_port_lists(&ctx) == FAILURE)
 	{
 		goto error;
 	}
 
-	if (setup_signal_handlers())
+	if (setup_signal_handlers() == FAILURE)
 	{
 		goto error;
 	}
 
 	if (get_iface_info(&ctx.ifaces, &ctx.iface_count, ctx.targets,
-					   ctx.target_count))
+					   ctx.target_count) == FAILURE)
 	{
 		goto error;
 	}

@@ -91,7 +91,7 @@ int init_port_lists(t_ctx *ctx)
 						  ctx->args.ports, ctx->args.scan_types,
 						  ctx->args.nb_scan_types, ctx->args.tcp_scan,
 						  ctx->args.udp_scan, &ctx->args.max_port_nb,
-						  ctx->args.port_map))
+						  ctx->args.port_map) == FAILURE)
 		{
 			return FAILURE;
 		}

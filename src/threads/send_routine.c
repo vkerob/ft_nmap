@@ -42,7 +42,7 @@ static int build_scan_packets(const t_probe *request, u_char *packet,
 	build_ip_header(&ip_hdr, request, src_ip, id);
 
 	if (build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf,
-							   ip_hdr.ip_p))
+							   ip_hdr.ip_p) == FAILURE)
 		return FAILURE;
 	if (request->type == SCAN_SYN || request->type == SCAN_ACK
 		|| request->type == SCAN_FIN || request->type == SCAN_XMAS
@@ -87,7 +87,11 @@ static int send_packet(t_socket *socket, const u8 *packet,
 		return FAILURE;
 	}
 
-	gettimeofday(sent_timestamp, NULL);
+	if (gettimeofday(sent_timestamp, NULL) == -1)
+	{
+		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+		return FAILURE;
+	}
 	return SUCCESS;
 }
 
@@ -108,9 +112,9 @@ void *send_routine(void *arg)
 	t_probe				 *request = NULL;
 	struct timeval		  sent_timestamp;
 
-	if (init_socket(&tcp_socket, IPPROTO_TCP))
+	if (init_socket(&tcp_socket, IPPROTO_TCP) == FAILURE)
 		return NULL;
-	if (init_socket(&udp_socket, IPPROTO_UDP))
+	if (init_socket(&udp_socket, IPPROTO_UDP) == FAILURE)
 	{
 		close(tcp_socket.sfd);
 		return NULL;
@@ -150,34 +154,39 @@ void *send_routine(void *arg)
 		{
 
 			struct timeval now;
-			gettimeofday(&now, NULL);
-			pthread_mutex_lock(&request->target->mutex);
-			struct timeval last = request->target->last_udp_sent;
-			pthread_mutex_unlock(&request->target->mutex);
-
-			if (last.tv_sec != 0 || last.tv_usec != 0)
+			if (gettimeofday(&now, NULL) == -1)
+				LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+			else
 			{
-				double elapsed_time_sec = (now.tv_sec - last.tv_sec)
-										  + (now.tv_usec - last.tv_usec) / 1e6;
+				pthread_mutex_lock(&request->target->mutex);
+				struct timeval last = request->target->last_udp_sent;
+				pthread_mutex_unlock(&request->target->mutex);
 
-				/* Elapsed time between two consecutive udp probe to say below
-				   th max sending rate per second */
-				double gap = 1.0 / MAX_SENT_RATE_UDP_PER_SEC;
-				double sleep_time = gap - elapsed_time_sec;
-				if (sleep_time > 0)
+				if (last.tv_sec != 0 || last.tv_usec != 0)
 				{
-					struct timespec ts = {
-						.tv_sec = (time_t)sleep_time,
-						.tv_nsec
-						= (long)((sleep_time - (time_t)sleep_time) * 1e9),
-					};
-					nanosleep(&ts, NULL);
+					double elapsed_time_sec = (now.tv_sec - last.tv_sec)
+											  + (now.tv_usec - last.tv_usec) / 1e6;
+
+					/* Elapsed time between two consecutive udp probe to say below
+					   th max sending rate per second */
+					double gap = 1.0 / MAX_SENT_RATE_UDP_PER_SEC;
+					double sleep_time = gap - elapsed_time_sec;
+					if (sleep_time > 0)
+					{
+						struct timespec ts = {
+							.tv_sec = (time_t)sleep_time,
+							.tv_nsec
+							= (long)((sleep_time - (time_t)sleep_time) * 1e9),
+						};
+						nanosleep(&ts, NULL);
+					}
 				}
 			}
 		}
 
 		// Compute relative timestamp once for the whole probe (decoys + real)
-		gettimeofday(&sent_timestamp, NULL);
+		if (gettimeofday(&sent_timestamp, NULL) == -1)
+			LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
 		long seconds_elapsed
 			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
 		long microseconds_elapsed
@@ -219,7 +228,7 @@ void *send_routine(void *arg)
 			memset(packet, 0, sizeof(packet));
 			u32 packet_len = 0;
 			if (build_scan_packets(request, packet, src, &shared_data->id,
-								   &packet_len))
+								   &packet_len) == FAILURE)
 			{
 				/* Header build failed (bad address): skip this source.
 				 * The real probe will simply time out and be retried. */
@@ -245,7 +254,7 @@ void *send_routine(void *arg)
 					&shared_data->sent[iface_idx].safe_mut.mutex);
 				if (add_to_probe_queue(&shared_data->sent[iface_idx].head,
 									   &shared_data->sent[iface_idx].tail,
-									   request, sent_timestamp))
+									   request, sent_timestamp) == FAILURE)
 				{
 					pthread_mutex_unlock(
 						&shared_data->sent[iface_idx].safe_mut.mutex);
@@ -259,7 +268,8 @@ void *send_routine(void *arg)
 			if (HAS(shared_data->args->flags, F_PACKET_TRACE))
 			{
 				if (print_debug_packet_send(request, &relative_sent_time,
-											&datalink_hdr, ip_hdr, !is_me))
+											&datalink_hdr, ip_hdr, !is_me)
+					== FAILURE)
 				{
 					if (is_me)
 						pthread_mutex_unlock(
@@ -270,6 +280,7 @@ void *send_routine(void *arg)
 			}
 
 			if (send_packet(&used_socket, packet, &sent_timestamp, packet_len)
+					== FAILURE
 				&& is_me)
 			{
 				LOG("ft_nmap: failed to send packet to %s\n",
@@ -279,7 +290,8 @@ void *send_routine(void *arg)
 			if (is_me && request->type == SCAN_UDP)
 			{
 				pthread_mutex_lock(&request->target->mutex);
-				gettimeofday(&request->target->last_udp_sent, NULL);
+				if (gettimeofday(&request->target->last_udp_sent, NULL) == -1)
+					LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
 				pthread_mutex_unlock(&request->target->mutex);
 			}
 
