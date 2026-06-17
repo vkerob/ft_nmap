@@ -765,7 +765,11 @@ static void print_target_results(t_target *target, t_args *args)
 void print_scan_results(t_ctx *ctx)
 {
 	struct timeval now;
-	gettimeofday(&now, NULL);
+	if (gettimeofday(&now, NULL) == -1)
+	{
+		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+		return;
+	}
 
 	const double elapsed
 		= (double)(now.tv_sec - ctx->program_info.start.tv_sec)

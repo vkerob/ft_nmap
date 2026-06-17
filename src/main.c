@@ -96,7 +96,7 @@ int nmap_main(t_ctx *ctx)
 	pthread_t			*send_threads = NULL;
 	t_receiver_data		*pcap_ctxs = NULL;
 
-	if (initialize_shared_data_probe(&shared_data_probe, ctx))
+	if (initialize_shared_data_probe(&shared_data_probe, ctx) == FAILURE)
 	{
 		LOG("failed to initialize shared data\n");
 		return FAILURE;
@@ -104,13 +104,13 @@ int nmap_main(t_ctx *ctx)
 
 	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
 								 &shared_data_probe, ctx->ifaces,
-								 &ctx->program_info))
+								 &ctx->program_info) == FAILURE)
 	{
 		deinitialize_shared_data(&shared_data_probe, ctx);
 		return FAILURE;
 	}
 
-	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send))
+	if (initialize_to_send_queue(ctx, &shared_data_probe.to_send) == FAILURE)
 	{
 		LOG("failed to initialize probe request\n");
 		free(pcap_ctxs);
@@ -121,7 +121,7 @@ int nmap_main(t_ctx *ctx)
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : (u8)0x01;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
-									  &shared_data_probe, pcap_ctxs))
+									  &shared_data_probe, pcap_ctxs) == FAILURE)
 	{
 		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
@@ -159,10 +159,14 @@ int main(const int argc, char **argv)
 {
 	t_ctx ctx = { 0 };
 
-	gettimeofday(&ctx.program_info.start, NULL);
+	if (gettimeofday(&ctx.program_info.start, NULL) == -1)
+	{
+		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 
 	if (parse_args(argc, argv, &ctx.args, &ctx.targets_input,
-				   &ctx.target_count))
+				   &ctx.target_count) == FAILURE)
 	{
 		goto error;
 	}
@@ -175,28 +179,29 @@ int main(const int argc, char **argv)
 
 	set_scan_presence(&ctx.args);
 
-	if (resolve_targets(ctx.targets_input, ctx.target_count, &ctx.targets))
+	if (resolve_targets(ctx.targets_input, ctx.target_count, &ctx.targets)
+		== FAILURE)
 	{
 		goto error;
 	}
 
-	if (init_port_map(&ctx.args))
+	if (init_port_map(&ctx.args) == FAILURE)
 	{
 		goto error;
 	}
 
-	if (init_port_lists(&ctx))
+	if (init_port_lists(&ctx) == FAILURE)
 	{
 		goto error;
 	}
 
-	if (setup_signal_handlers())
+	if (setup_signal_handlers() == FAILURE)
 	{
 		goto error;
 	}
 
 	if (get_iface_info(&ctx.ifaces, &ctx.iface_count, ctx.targets,
-					   ctx.target_count))
+					   ctx.target_count) == FAILURE)
 	{
 		goto error;
 	}

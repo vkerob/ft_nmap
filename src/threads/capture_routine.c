@@ -12,6 +12,7 @@
 #include "tcp.h"
 #include "udp.h"
 
+#include <errno.h>
 #include <netinet/in.h>
 #include <pcap/pcap.h>
 #include <pthread.h>
@@ -207,7 +208,11 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 	const t_program_info *program_info = receiver_data->program_info;
 
 	struct timeval recv_timestamp;
-	gettimeofday(&recv_timestamp, NULL);
+	if (gettimeofday(&recv_timestamp, NULL) == -1)
+	{
+		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+		return;
+	}
 
 	long seconds_elapsed = recv_timestamp.tv_sec - program_info->start.tv_sec;
 	long microseconds_elapsed
@@ -235,7 +240,12 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 	while (tmp)
 	{
 		struct timeval current_time;
-		gettimeofday(&current_time, NULL);
+		if (gettimeofday(&current_time, NULL) == -1)
+		{
+			LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+			pthread_mutex_unlock(&sent->safe_mut.mutex);
+			return FAILURE;
+		}
 
 		long seconds_elapsed = current_time.tv_sec - tmp->timestamp.tv_sec;
 		long microseconds_elapsed

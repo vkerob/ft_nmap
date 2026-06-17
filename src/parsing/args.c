@@ -118,7 +118,7 @@ int resolve_targets(char **inputs, const size_t count, t_target **targets)
 	{
 		tmp[i].input = inputs[i];
 
-		if (resolve_target(inputs[i], &tmp[i].addr))
+		if (resolve_target(inputs[i], &tmp[i].addr) == FAILURE)
 		{
 			return FAILURE;
 		}
@@ -151,8 +151,8 @@ static int parse_port_strict(const char *s, u16 *out)
 		return FAILURE; // empty input is not a valid port
 
 	errno = 0;
-	char			   *end = NULL;
-	const unsigned long value = strtoul(s, &end, 10);
+	char	  *end = NULL;
+	const long value = strtol(s, &end, 10);
 
 	if (errno == ERANGE)
 		return FAILURE; // overflow/underflow
@@ -197,12 +197,12 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 	if (!dash)
 	{
 		u16 port;
-		if (parse_port_strict(token, &port))
+		if (parse_port_strict(token, &port) == FAILURE)
 		{
 			LOG("ft_nmap: invalid port: '%s'\n", token);
 			return FAILURE;
 		}
-		if (push_port(ports, count, port, duplicate_port_number))
+		if (push_port(ports, count, port, duplicate_port_number) == FAILURE)
 		{
 			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
 			return FAILURE;
@@ -227,8 +227,8 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 	}
 
 	u16 port_left, port_right;
-	if (parse_port_strict(left, &port_left)
-		|| parse_port_strict(right, &port_right))
+	if (parse_port_strict(left, &port_left) == FAILURE
+		|| parse_port_strict(right, &port_right) == FAILURE)
 	{
 		LOG("ft_nmap: invalid port range: '%s-%s'\n", left, right);
 		return FAILURE;
@@ -249,7 +249,7 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 
 	for (u32 port = port_left; port <= port_right; port++)
 	{
-		if (push_port(ports, count, (u16)port, duplicate_port_number))
+		if (push_port(ports, count, (u16)port, duplicate_port_number) == FAILURE)
 		{
 			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
 			return FAILURE;
@@ -286,7 +286,7 @@ int parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 		}
 
 		if (parse_token_and_push(trim_str, ports, port_count,
-								 &duplicate_port_number))
+								 &duplicate_port_number) == FAILURE)
 		{
 			error = FAILURE;
 			break;
@@ -363,7 +363,7 @@ int parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 		}
 		if (token)
 		{
-			if (parse_scan_type(token, &scan_type))
+			if (parse_scan_type(token, &scan_type) == FAILURE)
 			{
 				return FAILURE;
 			}
@@ -534,20 +534,20 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case IP_MODE:
 			SET(args->flags, F_IP_MODE);
 			if (get_targets_input(optarg, target_count, targets_input, IP_MODE,
-								  args->flags))
+								  args->flags) == FAILURE)
 				return FAILURE;
 			break;
 
 		case FILE_MODE:
 			SET(args->flags, F_FILE_MODE);
 			if (get_targets_input(optarg, target_count, targets_input,
-								  FILE_MODE, args->flags))
+								  FILE_MODE, args->flags) == FAILURE)
 				return FAILURE;
 			break;
 
 		case PORTS:
 			SET(args->flags, F_PORTS);
-			if (parse_ports(optarg, args->ports, &args->port_count))
+			if (parse_ports(optarg, args->ports, &args->port_count) == FAILURE)
 				return FAILURE;
 			break;
 
@@ -555,7 +555,7 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_SCAN_TYPE);
 			if (parse_scan_types(optarg, &args->scan_types,
 								 &args->nb_scan_types, &args->tcp_scan,
-								 &args->udp_scan))
+								 &args->udp_scan) == FAILURE)
 			{
 				return FAILURE;
 			}
@@ -563,7 +563,7 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 		case SPEED:
 			SET(args->flags, F_SPEED);
-			if (parse_speed_strict(optarg, &args->speed))
+			if (parse_speed_strict(optarg, &args->speed) == FAILURE)
 				return FAILURE;
 			break;
 
@@ -585,7 +585,7 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 			case DECOY:
 			SET(args->flags, F_DECOY);
-			if (parse_decoys(optarg, args->decoys, &args->decoy_count))
+			if (parse_decoys(optarg, args->decoys, &args->decoy_count) == FAILURE)
 				return FAILURE;
 			break;
 

@@ -171,7 +171,8 @@ int initialize_to_send_queue(t_ctx *ctx, t_probe_queue *to_send)
 						&to_send->head, &to_send->tail, &ctx->targets[i],
 						ctx->args.ports[j], ctx->args.scan_types[k],
 						(u32)(i * ctx->args.port_count * ctx->args.nb_scan_types
-							  + j * ctx->args.nb_scan_types + k)))
+							  + j * ctx->args.nb_scan_types + k))
+					== FAILURE)
 				{
 					return FAILURE;
 				}
