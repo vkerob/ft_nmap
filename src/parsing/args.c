@@ -161,10 +161,10 @@ static int parse_port_strict(const char *s, u16 *out)
 	if (*end != '\0')
 		return FAILURE; // extra characters after number
 
-	/* value is unsigned and MIN_PORT_NUMBER is 0, so only the upper bound can
-	 * be exceeded (a `value < 0` check would be dead code, -Wtype-limits). */
-	if (value > MAX_PORT_NUMBER)
+	if (value < MIN_PORT_NUMBER || value > MAX_PORT_NUMBER)
+	{
 		return FAILURE;
+	}
 
 	*out = (u16)value;
 	return SUCCESS;
@@ -251,7 +251,8 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 
 	for (u32 port = port_left; port <= port_right; port++)
 	{
-		if (push_port(ports, count, (u16)port, duplicate_port_number) == FAILURE)
+		if (push_port(ports, count, (u16)port, duplicate_port_number)
+			== FAILURE)
 		{
 			LOG("ft_nmap: too many ports (max %d)\n", MAX_PORT_COUNT);
 			return FAILURE;
@@ -288,7 +289,8 @@ int parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 		}
 
 		if (parse_token_and_push(trim_str, ports, port_count,
-								 &duplicate_port_number) == FAILURE)
+								 &duplicate_port_number)
+			== FAILURE)
 		{
 			error = FAILURE;
 			break;
@@ -536,14 +538,16 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		case IP_MODE:
 			SET(args->flags, F_IP_MODE);
 			if (get_targets_input(optarg, target_count, targets_input, IP_MODE,
-								  args->flags) == FAILURE)
+								  args->flags)
+				== FAILURE)
 				return FAILURE;
 			break;
 
 		case FILE_MODE:
 			SET(args->flags, F_FILE_MODE);
 			if (get_targets_input(optarg, target_count, targets_input,
-								  FILE_MODE, args->flags) == FAILURE)
+								  FILE_MODE, args->flags)
+				== FAILURE)
 				return FAILURE;
 			break;
 
@@ -557,7 +561,8 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_SCAN_TYPE);
 			if (parse_scan_types(optarg, &args->scan_types,
 								 &args->nb_scan_types, &args->tcp_scan,
-								 &args->udp_scan) == FAILURE)
+								 &args->udp_scan)
+				== FAILURE)
 			{
 				return FAILURE;
 			}
@@ -587,7 +592,8 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 			case DECOY:
 			SET(args->flags, F_DECOY);
-			if (parse_decoys(optarg, args->decoys, &args->decoy_count) == FAILURE)
+			if (parse_decoys(optarg, args->decoys, &args->decoy_count)
+				== FAILURE)
 				return FAILURE;
 			break;
 

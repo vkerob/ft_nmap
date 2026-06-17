@@ -536,7 +536,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 		   "SERVICE", multi_scan_tcp ? col_scan_result : 0,
 		   multi_scan_tcp ? "SCAN RESULTS" : "");
 	if (HAS(args->flags, F_REASON))
-		printf(" %-*s", col_reason, "REASON");
+		printf("%-*s", col_reason, "REASON");
 	if (show_version)
 		printf(" %s", "VERSION");
 	printf("\n");
@@ -568,9 +568,8 @@ static void print_port_states(const t_target *target, const t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 
-			const char *svc = port_services_udp[port]
-								  ? port_services_udp[port]
-								  : "unknown";
+			const char *svc
+				= port_services_udp[port] ? port_services_udp[port] : "unknown";
 
 			const char *state = port_state_to_str(final_port_state.port_state);
 
@@ -589,7 +588,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 			if (HAS(args->flags, F_REASON))
 			{
 				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len, " %-*s", col_reason,
+						 sizeof(recap_udp) - recap_udp_len, "%-*s", col_reason,
 						 final_port_state.reasons[0]);
 				recap_udp_len = strlen(recap_udp);
 			}
@@ -604,9 +603,8 @@ static void print_port_states(const t_target *target, const t_args *args,
 					== false
 				|| HAS(args->flags, F_VERBOSE)))
 		{
-			const char *svc = port_services_tcp[port]
-								  ? port_services_tcp[port]
-								  : "unknown";
+			const char *svc
+				= port_services_tcp[port] ? port_services_tcp[port] : "unknown";
 
 			t_port_output final_port_state
 				= target->port_list.port_final_state[TCP_INDEX][idx];
@@ -644,15 +642,15 @@ static void print_port_states(const t_target *target, const t_args *args,
 							  .reasons[1];
 
 					char	   *reasons_alloc = NULL;
-					const char *reasons       = NULL;
+					const char *reasons = NULL;
 
 					if (first_reason && second_reason)
 					{
-						const size_t len_first  = strlen(first_reason);
+						const size_t len_first = strlen(first_reason);
 						const size_t len_second = strlen(second_reason);
 
-						reasons_alloc = calloc(len_first + len_second + 3,
-											   sizeof(char));
+						reasons_alloc
+							= calloc(len_first + len_second + 3, sizeof(char));
 						if (reasons_alloc == NULL)
 						{
 							LOG("ft_nmap: calloc failed: %s\n",
