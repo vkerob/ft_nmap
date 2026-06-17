@@ -22,9 +22,9 @@
 #include <string.h>
 #include <unistd.h>
 
-static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
-							  bpf_u_int32	  l3_caplen,
-							  struct timeval *relative_recv_time, u16 flags)
+static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
+							  bpf_u_int32		  l3_caplen,
+							  const struct timeval *relative_recv_time, u16 flags)
 {
 	const u8	  *protocol_hdr;
 	t_datalink_hdr datalink_hdr = { 0 };
@@ -41,9 +41,9 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	u16			   source_port;
-	t_datalink_hdr nested_datalink_header = { 0 };
-	t_ip		  *nested_ip_header = NULL;
+	u16				source_port;
+	t_datalink_hdr	nested_datalink_header = { 0 };
+	const t_ip	   *nested_ip_header = NULL;
 
 	switch (ip_hdr->ip_p)
 	{
@@ -78,7 +78,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 
 		// 8 bytes is the size of icmp header
 		nested_ip_header
-			= (t_ip *)((u8 *)ip_hdr + ip_hlen + sizeof(t_icmp_hdr));
+			= (const t_ip *)((const u8 *)ip_hdr + ip_hlen + sizeof(t_icmp_hdr));
 
 		/* The ICMP payload echoes back [IP header + L4 header] of our probe.
 		 * Make sure the capture is long enough before dereferencing it. */
@@ -90,7 +90,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 			|| l4_len < sizeof(t_icmp_hdr) + ip2_hlen)
 			return FAILURE;
 
-		u8			*datalink_header = (u8 *)nested_ip_header + ip2_hlen;
+		const u8	*datalink_header = (const u8 *)nested_ip_header + ip2_hlen;
 		const size_t nested_l4_len = l4_len - sizeof(t_icmp_hdr) - ip2_hlen;
 
 		switch (nested_ip_header->ip_p)
@@ -98,7 +98,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		case IPPROTO_TCP:
 			if (nested_l4_len < sizeof(struct tcphdr))
 				return FAILURE;
-			nested_datalink_header.tcp_hdr = *(t_tcp_hdr *)datalink_header;
+			nested_datalink_header.tcp_hdr = *(const t_tcp_hdr *)datalink_header;
 			/* The ICMP payload echoes our original (non-swapped) probe:
 			 * th_dport = target port (identifies the port), th_sport = our
 			 * source port which encodes the scan type. */
@@ -112,7 +112,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 		case IPPROTO_UDP:
 			if (nested_l4_len < sizeof(struct udphdr))
 				return FAILURE;
-			nested_datalink_header.udp_hdr = *(t_udp_hdr *)datalink_header;
+			nested_datalink_header.udp_hdr = *(const t_udp_hdr *)datalink_header;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
 								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP);
@@ -141,8 +141,8 @@ static int handle_ip_protocol(t_probe_queue *sent_list, t_ip *ip_hdr,
 
 static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 								const u_char *packet, bpf_u_int32 caplen,
-								struct timeval *relative_recv_time,
-								const u16		flags)
+								const struct timeval *relative_recv_time,
+								const u16			  flags)
 {
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
@@ -194,7 +194,7 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 		return SUCCESS;
 	}
 
-	return handle_ip_protocol(sent_list, (t_ip *)ip_start, l3_caplen,
+	return handle_ip_protocol(sent_list, (const t_ip *)ip_start, l3_caplen,
 							  relative_recv_time, flags);
 }
 
@@ -256,7 +256,7 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 			seconds_elapsed--;
 			microseconds_elapsed += 1000000;
 		}
-		double time_elapsed = seconds_elapsed + (microseconds_elapsed / 1e6);
+		const double time_elapsed = seconds_elapsed + (microseconds_elapsed / 1e6);
 
 		next = tmp->next;
 

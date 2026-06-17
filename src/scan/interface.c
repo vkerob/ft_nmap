@@ -120,8 +120,8 @@ int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		// packets because it's a UDP socket, but it will cause the kernel to
 		// assign a local IP address and interface to the socket based on the
 		// routing table.
-		int rc = connect(fd, (struct sockaddr *)&dst_addr,
-						 sizeof(struct sockaddr_in));
+		const int rc = connect(fd, (struct sockaddr *)&dst_addr,
+							   sizeof(struct sockaddr_in));
 		if (rc == -1)
 		{
 			perror("connect");

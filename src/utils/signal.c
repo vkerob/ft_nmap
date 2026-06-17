@@ -1,17 +1,18 @@
-#include "my_signal.h"
 #include "defines.h"
+#include "my_signal.h"
 
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
-void	handle_signal(int signum)
+void handle_signal(int signum)
 {
 	(void)signum;
 	g_stop = 1;
+	exit(EXIT_FAILURE);
 }
 
-int	setup_signal_handlers(void)
+int setup_signal_handlers(void)
 {
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));

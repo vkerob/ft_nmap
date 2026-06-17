@@ -75,7 +75,7 @@ int initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
 							  t_program_info	   *program_info);
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
-							  t_ctx				   *ctx);
+							  const t_ctx		   *ctx);
 
 int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								   pthread_t		   **send_threads,

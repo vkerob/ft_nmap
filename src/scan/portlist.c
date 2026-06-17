@@ -9,7 +9,7 @@
 void set_port_state_reason(t_port *port, t_port_state_reason reason)
 {
 
-	char *reason_str;
+	const char *reason_str;
 
 	switch (reason)
 	{
@@ -100,7 +100,7 @@ int init_port_lists(t_ctx *ctx)
 }
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				  u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
+				  const u16 ports[MAX_PORT_COUNT], const u8 scan_types[MAX_NB_SCAN_TYPE],
 				  const u8 nb_scan_type, const bool tcp_scan,
 				  const bool udp_scan, u16 *max_port_nb, int *port_map)
 {

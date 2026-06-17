@@ -21,9 +21,10 @@ void print_debug_probe_exceed_timeout(const t_probe		   *probe,
 									  const struct timeval *current_time,
 									  const unsigned long	seconds_elapsed);
 
-int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
-							 bool is_decoy);
+int print_debug_packet_send(const t_probe *probe,
+							 const struct timeval *relative_sent_time,
+							 const t_datalink_hdr *datalink_hdr,
+							 const t_ip *ip_hdr, bool is_decoy);
 
 int print_debug_packet_recv(const struct ip	  *ip_hdr,
 							 const t_datalink_hdr *datalink_hdr,
@@ -39,7 +40,7 @@ void print_debug_packet_start();
 
 void print_debug_packet_end();
 
-void print_debug_ethernet_header(t_eth_hdr *eth_header);
+void print_debug_ethernet_header(const t_eth_hdr *eth_header);
 
 void print_debug_protocol(int protocol);
 
@@ -51,24 +52,24 @@ void print_debug_datalink_type(int datalink_type);
 
 void print_debug_parsing_args(t_ctx ctx);
 
-void print_debug_iface_info(t_iface_info *ifaces, size_t iface_count);
+void print_debug_iface_info(const t_iface_info *ifaces, size_t iface_count);
 
-void print_debug_tcp_header(t_tcp_hdr *tcp_hdr);
+void print_debug_tcp_header(const t_tcp_hdr *tcp_hdr);
 
-void print_debug_ip_header(struct ip *ip_hdr);
+void print_debug_ip_header(const struct ip *ip_hdr);
 
-void print_debug_udp_header(t_udp_hdr *udp_hdr);
+void print_debug_udp_header(const t_udp_hdr *udp_hdr);
 
-void print_debug_icmp_header(t_icmp_hdr *icmp_hdr);
+void print_debug_icmp_header(const t_icmp_hdr *icmp_hdr);
 
 void print_debug_probe_request(const t_probe *request);
 
 void print_debug_receiver_data(const t_receiver_data *receiver_data);
 
-void print_debug_shared_data_probe(t_shared_data_sender *shared_data_probe,
-								   t_iface_info			*ifaces);
+void print_debug_shared_data_probe(const t_shared_data_sender *shared_data_probe,
+								   const t_iface_info		  *ifaces);
 
-void print_debug_definitive_port_state_tcp(t_port_output *port);
+void print_debug_definitive_port_state_tcp(const t_port_output *port);
 
 char *port_state_to_str(t_port_state state);
 

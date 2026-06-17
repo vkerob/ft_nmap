@@ -19,6 +19,6 @@ typedef union u_datalink_hdr
 	t_icmp_hdr icmp_hdr;
 } t_datalink_hdr;
 
-u16 calculate_checksum(void *buffer, int len);
+u16 calculate_checksum(const void *buffer, int len);
 
 #endif

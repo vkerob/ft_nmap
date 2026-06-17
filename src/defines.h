@@ -16,7 +16,6 @@
 /* Maximum number of decoy IPs the user can specify */
 #define MAX_DECOYS 3
 #define MIN_PORT_NUMBER 0
-#define SCAN_INVALID 255
 /* Maximum number of threads our program can run (option set with --speed)*/
 #define SPEED_MAX 250
 #define SPEED_MIN 0
@@ -28,8 +27,6 @@
 #endif
 #define SUCCESS 0
 #define FAILURE -1
-/* Lengt of ethernet header */
-#define ETH_ALEN 6
 /* Maximum number of port a user can scan with one execution of the program */
 #define MAX_PORT_COUNT 1024
 /* Maximum port number possible */
@@ -59,7 +56,6 @@
 #define ANSI_COLOR_CYAN "\x1b[36m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 #define ANSI_BOLD "\x1b[1m"
-#define ANSI_UNDERLINE "\x1b[4m"
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_RED "\x1b[31m"
 

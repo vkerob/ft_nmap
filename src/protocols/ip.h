@@ -23,7 +23,7 @@ int build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
 void build_ip_header(t_ip *ip_hdr, const t_probe *request,
 					 struct in_addr src_ip, _Atomic uint16_t *id_counter);
 
-u16	calculate_checksum(void *buffer, int len);
+u16	calculate_checksum(const void *buffer, int len);
 
 
 #endif

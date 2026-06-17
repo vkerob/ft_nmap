@@ -38,7 +38,7 @@ static int pcap_configure(pcap_t *handle, int snaplen, int promisc,
 	return SUCCESS;
 }
 
-static char *build_filter_expr(const char *ip_src_interface, t_target *targets,
+static char *build_filter_expr(const char *ip_src_interface, const t_target *targets,
 							   size_t target_count, int iface_index)
 {
 	const size_t filter_len = 100 + 30 * target_count;
@@ -112,7 +112,7 @@ static int pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 	return SUCCESS;
 }
 
-int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, t_target *targets,
+int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, const t_target *targets,
 				size_t target_count)
 {
 	const char *ip_src_interface = inet_ntoa(pcap_ctx->iface_info->ip_addr);

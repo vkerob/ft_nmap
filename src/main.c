@@ -104,7 +104,8 @@ int nmap_main(t_ctx *ctx)
 
 	if (initialize_receiver_data(&pcap_ctxs, ctx->iface_count,
 								 &shared_data_probe, ctx->ifaces,
-								 &ctx->program_info) == FAILURE)
+								 &ctx->program_info)
+		== FAILURE)
 	{
 		deinitialize_shared_data(&shared_data_probe, ctx);
 		return FAILURE;
@@ -121,7 +122,8 @@ int nmap_main(t_ctx *ctx)
 	ctx->args.speed = (ctx->args.speed > 0) ? ctx->args.speed : (u8)0x01;
 
 	if (initialize_and_launch_threads(ctx, &pcap_threads, &send_threads,
-									  &shared_data_probe, pcap_ctxs) == FAILURE)
+									  &shared_data_probe, pcap_ctxs)
+		== FAILURE)
 	{
 		free(pcap_ctxs);
 		deinitialize_shared_data(&shared_data_probe, ctx);
@@ -145,7 +147,7 @@ int nmap_main(t_ctx *ctx)
 	return SUCCESS;
 }
 
-static void display_program_header(t_ctx *ctx)
+static void display_program_header(const t_ctx *ctx)
 {
 	// Header — "Starting ft_nmap at 2026-03-18 08:36 +0100"
 	char date_buf[32] = { 0 };
@@ -165,8 +167,8 @@ int main(const int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (parse_args(argc, argv, &ctx.args, &ctx.targets_input,
-				   &ctx.target_count) == FAILURE)
+	if (parse_args(argc, argv, &ctx.args, &ctx.targets_input, &ctx.target_count)
+		== FAILURE)
 	{
 		goto error;
 	}
@@ -201,7 +203,8 @@ int main(const int argc, char **argv)
 	}
 
 	if (get_iface_info(&ctx.ifaces, &ctx.iface_count, ctx.targets,
-					   ctx.target_count) == FAILURE)
+					   ctx.target_count)
+		== FAILURE)
 	{
 		goto error;
 	}

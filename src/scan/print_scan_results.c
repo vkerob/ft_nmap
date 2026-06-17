@@ -218,7 +218,7 @@ append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
  *
  * Returns true iff every scanned port ended up in a grouped state (nothing
  * left to display in the detailed table). */
-static bool print_ignored_port_states(t_target *target, bool tcp_scan,
+static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 									  bool udp_scan, u16 port_count,
 									  bool *ignored_tcp, bool *ignored_udp)
 {
@@ -319,7 +319,7 @@ static void build_results_str(const t_target *target, const t_args *args,
 
 // Compute max "port/proto" string width across all ports of a target
 // so that columns align regardless of port numbers (like nmap does).
-int compute_port_col_width(t_args *args)
+int compute_port_col_width(const t_args *args)
 {
 	int max = 9; // minimum: "65535/tcp"
 	for (u16 i = 0; i < args->port_count; i++)
@@ -333,7 +333,7 @@ int compute_port_col_width(t_args *args)
 
 int find_or_update_state_and_reason_combination(
 	t_port_state_and_reason **state_and_reason_lst, t_port_state port_state,
-	char *reason)
+	const char *reason)
 {
 	t_port_state_and_reason *tmp = *state_and_reason_lst;
 	t_port_state_and_reason *prev = NULL;
@@ -443,7 +443,7 @@ static bool is_ignored_state(const bool	 *ignored_states_by_idx,
 	return ignored_states_by_idx[port_state];
 }
 
-static void resolve_final_port_state(t_args *args, t_target *target)
+static void resolve_final_port_state(const t_args *args, t_target *target)
 {
 	for (u16 i = 0; i < args->port_count; i++)
 	{
@@ -499,7 +499,7 @@ static void resolve_final_port_state(t_args *args, t_target *target)
 	}
 }
 
-static void print_port_states(t_target *target, t_args *args,
+static void print_port_states(const t_target *target, const t_args *args,
 							  const bool *ignored_tcp, const bool *ignored_udp)
 {
 	char recap_udp[65535] = { 0 };
@@ -635,37 +635,33 @@ static void print_port_states(t_target *target, t_args *args,
 				// Print reason for each type of scan ran
 				if (HAS(args->flags, F_REASON))
 				{
-					const int idx = target->port_list.port_map[port];
-					char	 *first_reason
+					const int	idx = target->port_list.port_map[port];
+					const char *first_reason
 						= target->port_list.port_final_state[TCP_INDEX][idx]
 							  .reasons[0];
-					char *second_reason
+					const char *second_reason
 						= target->port_list.port_final_state[TCP_INDEX][idx]
 							  .reasons[1];
 
-					char *reasons = NULL;
-					bool  alloc = false;
+					char	   *reasons_alloc = NULL;
+					const char *reasons       = NULL;
 
 					if (first_reason && second_reason)
 					{
-						size_t len_first_reason = strlen(first_reason);
-						size_t len_second_reason = strlen(second_reason);
+						const size_t len_first  = strlen(first_reason);
+						const size_t len_second = strlen(second_reason);
 
-						reasons = calloc(strlen(first_reason)
-											 + strlen(second_reason) + 3,
-										 sizeof(char));
-						if (reasons == NULL)
+						reasons_alloc = calloc(len_first + len_second + 3,
+											   sizeof(char));
+						if (reasons_alloc == NULL)
 						{
 							LOG("ft_nmap: calloc failed: %s\n",
 								strerror(errno));
 							continue;
 						}
-						alloc = true;
-						strncpy(reasons, first_reason, len_first_reason);
-						const char *comma = ", ";
-						strncat(reasons + len_first_reason, comma, 2);
-						strncpy(reasons + len_first_reason + 2, second_reason,
-								len_second_reason);
+						snprintf(reasons_alloc, len_first + len_second + 3,
+								 "%s, %s", first_reason, second_reason);
+						reasons = reasons_alloc;
 					}
 					else if (second_reason == NULL)
 					{
@@ -680,10 +676,7 @@ static void print_port_states(t_target *target, t_args *args,
 							 col_reason, reasons);
 
 					recap_tcp_len = strlen(recap_tcp);
-					if (alloc)
-					{
-						free(reasons);
-					}
+					free(reasons_alloc);
 				}
 				recap_tcp_len = strlen(recap_tcp);
 				snprintf(recap_tcp + recap_tcp_len,
@@ -728,7 +721,7 @@ static void print_port_states(t_target *target, t_args *args,
 	}
 }
 
-static void print_target_results(t_target *target, t_args *args)
+static void print_target_results(t_target *target, const t_args *args)
 {
 	/* Per-protocol "is this state hidden in Not shown ?" lookup tables.
 	 * Indexed by t_port_state value. We need two tables because a state
