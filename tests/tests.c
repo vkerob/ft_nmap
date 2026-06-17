@@ -1,9 +1,9 @@
 #include "tests.h"
 #include "greatest.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
-#include <errno.h>
 #include <unistd.h>
 
 extern SUITE(parsing_suite);
@@ -12,6 +12,7 @@ extern SUITE(scan_suite);
 GREATEST_MAIN_DEFS();
 
 sig_atomic_t volatile g_stop = 0;
+sig_atomic_t g_display_output;
 
 t_server *g_server_data = NULL;
 
@@ -97,7 +98,8 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 
 	for (int i = 0; i < n; i++)
 	{
-		total_len += snprintf(buf, sizeof(buf), "%s%d", i ? "," : "", sockets[i].port);
+		total_len += snprintf(buf, sizeof(buf), "%s%d", i ? "," : "",
+							  sockets[i].port);
 	}
 	*ptr = malloc(total_len + 1);
 	if (*ptr == NULL)
@@ -107,8 +109,8 @@ static void build_port_arg(t_socket *sockets, int n, char **ptr)
 	}
 	for (int i = 0; i < n; i++)
 	{
-		written
-			+= snprintf(*ptr + written, total_len + 1 - written, "%s%d", i ? "," : "", sockets[i].port);
+		written += snprintf(*ptr + written, total_len + 1 - written, "%s%d",
+							i ? "," : "", sockets[i].port);
 	}
 }
 
@@ -123,8 +125,7 @@ static void init_servers(void)
 	srand((unsigned)time(NULL) ^ (unsigned)getpid());
 
 	// Number of ports to scan by nmap/ft_nmap
-	int max_port_nb_tcp = 1 + rand() % MAX_NUMBER_PORT_TO_SCAN
-;
+	int max_port_nb_tcp = 1 + rand() % MAX_NUMBER_PORT_TO_SCAN;
 	int max_port_nb_udp = 1 + rand() % MAX_NUMBER_PORT_TO_SCAN;
 
 	/* --- TCP --- */
@@ -150,7 +151,8 @@ static void init_servers(void)
 		int port = random_port();
 		g_server_data->udp_sockets[i].port = port;
 
-		// This add randomness so that we don't end up with only open port at the end in our scan result
+		// This add randomness so that we don't end up with only open port at
+		// the end in our scan result
 		int open = rand() % 2;
 		if (open == 1)
 		{
@@ -196,7 +198,8 @@ int main(const int argc, char **argv)
 
 	RUN_SUITE(parsing_suite);
 
-	// Doesn't seem to works when i call this function using setup and teardown greatest.h hooks
+	// Doesn't seem to works when i call this function using setup and teardown
+	// greatest.h hooks
 	init_servers();
 	RUN_SUITE(scan_suite);
 	close_servers();

@@ -8,8 +8,10 @@
 void handle_signal(int signum)
 {
 	(void)signum;
+	// This will stop the sender threads
 	g_stop = 1;
-	exit(EXIT_FAILURE);
+	// No scan output since we stop the program before the scan finished
+	g_display_output = 1;
 }
 
 int setup_signal_handlers(void)
