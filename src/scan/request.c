@@ -98,3 +98,15 @@ t_probe *get_our_probe_request(t_probe **head, t_probe **tail, u16 source_port,
 	}
 	return tmp;
 }
+
+bool probe_in_queue(const t_probe *head, u16 port, t_scan_type type,
+					struct in_addr ip)
+{
+	for (const t_probe *tmp = head; tmp; tmp = tmp->next)
+	{
+		if (tmp->port == port && tmp->type == type
+			&& tmp->target->addr.s_addr == ip.s_addr)
+			return true;
+	}
+	return false;
+}
