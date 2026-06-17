@@ -1,0 +1,30 @@
+# Public hosts for ft_nmap testing
+# WARNING: Only scan hosts you are authorized to scan.
+# Some providers (Google, Cloudflare, etc.) may block or rate-limit scans.
+
+# Search engines
+google.com
+bing.com
+duckduckgo.com
+
+# Reference / encyclopedias
+wikipedia.org
+wikimedia.org
+
+# News
+bbc.com
+reuters.com
+lemonde.fr
+
+# Tech companies
+github.com
+gitlab.com
+stackoverflow.com
+reddit.com
+
+# CDN / DNS providers (commonly used in nmap labs)
+1.1.1.1
+8.8.8.8
+
+# Dedicated scan-me hosts (explicitly authorized)
+scanme.nmap.org
