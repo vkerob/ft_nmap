@@ -149,7 +149,7 @@ static void free_to_send_queue(t_probe_queue *to_send_queue)
 }
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
-							  t_ctx				   *ctx)
+							  const t_ctx		   *ctx)
 {
 	free_sent_queues(ctx->iface_count, shared_data_probe->sent);
 	free_to_send_queue(&shared_data_probe->to_send);

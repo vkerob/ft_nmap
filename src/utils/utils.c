@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-int substr(char *str, int start, int end, char **ptr)
+int substr(const char *str, int start, int end, char **ptr)
 {
 	int	  len = end - start;
 
@@ -20,7 +20,7 @@ int substr(char *str, int start, int end, char **ptr)
 	return SUCCESS;
 }
 
-u16 get_max_port_number(u16 ports[MAX_PORT_COUNT])
+u16 get_max_port_number(const u16 ports[MAX_PORT_COUNT])
 {
 	u16 max_port_val = 0;
 

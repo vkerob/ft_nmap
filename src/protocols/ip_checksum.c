@@ -1,10 +1,10 @@
 #include "ip.h"
 #include "typesdef.h"
 
-u16	calculate_checksum(void *buffer, int len)
+u16	calculate_checksum(const void *buffer, int len)
 {
 	uint32_t	checksum = 0;
-	u16			*ptr = (uint16_t *)buffer;
+	const u16	*ptr = (const uint16_t *)buffer;
 	int odd = (len % 2) != 0;
 
 	while (len > odd)

@@ -40,9 +40,10 @@ void sync_printf(const char *format, ...)
 #define PT_FLAG  ANSI_BOLD
 #define PT_KV    ANSI_COLOR_RESET
 
-int print_debug_packet_send(t_probe *probe, struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
-							 bool is_decoy)
+int print_debug_packet_send(const t_probe *probe,
+							 const struct timeval *relative_sent_time,
+							 const t_datalink_hdr *datalink_hdr,
+							 const t_ip *ip_hdr, bool is_decoy)
 {
 	char src[32];
 	char target[32];
@@ -306,7 +307,7 @@ void print_debug_sender_thread_proceed_probe(pthread_t			   phid,
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_udp_header(t_udp_hdr *udp_hdr)
+void print_debug_udp_header(const t_udp_hdr *udp_hdr)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_BOLD ANSI_COLOR_YELLOW "\nUDP Header:\n" ANSI_COLOR_RESET);
@@ -324,7 +325,7 @@ void print_debug_udp_header(t_udp_hdr *udp_hdr)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_tcp_header(t_tcp_hdr *tcp_hdr)
+void print_debug_tcp_header(const t_tcp_hdr *tcp_hdr)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_BOLD ANSI_COLOR_GREEN "\nTCP Header:\n" ANSI_COLOR_RESET);
@@ -401,7 +402,7 @@ void print_debug_packet_end()
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_ethernet_header(t_eth_hdr *eth_header)
+void print_debug_ethernet_header(const t_eth_hdr *eth_header)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_BOLD ANSI_COLOR_YELLOW "\nEthernet Header:\n" ANSI_COLOR_RESET);
@@ -423,7 +424,7 @@ void print_debug_ethernet_header(t_eth_hdr *eth_header)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_definitive_port_state_tcp(t_port_output *port)
+void print_debug_definitive_port_state_tcp(const t_port_output *port)
 {
 
 	pthread_mutex_lock(&printf_mutex);
@@ -440,7 +441,7 @@ void print_debug_definitive_port_state_tcp(t_port_output *port)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_icmp_header(t_icmp_hdr *icmp_hdr)
+void print_debug_icmp_header(const t_icmp_hdr *icmp_hdr)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_BOLD ANSI_COLOR_CYAN "\nICMP Header:\n" ANSI_COLOR_RESET);
@@ -518,7 +519,7 @@ void print_debug_ethernet_type(const int ether_type)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_ip_header(struct ip *ip_hdr)
+void print_debug_ip_header(const struct ip *ip_hdr)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nIP Header:\n" ANSI_COLOR_RESET);
@@ -617,7 +618,7 @@ void print_debug_parsing_args(const t_ctx ctx)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_iface_info(t_iface_info *ifaces, const size_t iface_count)
+void print_debug_iface_info(const t_iface_info *ifaces, const size_t iface_count)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -665,8 +666,8 @@ void print_debug_receiver_data(const t_receiver_data *receiver_data)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_shared_data_probe(t_shared_data_sender *shared_data_probe,
-								   t_iface_info			*ifaces)
+void print_debug_shared_data_probe(const t_shared_data_sender *shared_data_probe,
+								   const t_iface_info		  *ifaces)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN

@@ -52,8 +52,8 @@ static int regex_capture(const char *pattern, const char *subject,
     if (rc > group)
     {
         PCRE2_SIZE *ov    = pcre2_get_ovector_pointer(md);
-        PCRE2_SIZE  start = ov[2 * group];
-        PCRE2_SIZE  end   = ov[2 * group + 1];
+        const PCRE2_SIZE  start = ov[2 * group];
+        const PCRE2_SIZE  end   = ov[2 * group + 1];
         size_t      len   = end - start;
         if (len >= out_size)
             len = out_size - 1;
@@ -113,7 +113,7 @@ static void sanitise_banner(char *buf, size_t buf_size)
 */
 static int parse_banner(const char *raw, char *out, size_t out_size)
 {
-    size_t raw_len = strlen(raw);
+    const size_t raw_len = strlen(raw);
     char   software[128];
     char   proto[32];
 
@@ -207,7 +207,7 @@ static void grab_banner(struct in_addr target_addr, u16 port, char *out,
 ** whose final state is OPEN, attempt banner grabbing and store the result in
 ** port_final_state[TCP_INDEX][idx].version.
 */
-void grab_versions(t_target *target, t_args *args)
+void grab_versions(t_target *target, const t_args *args)
 {
     if (!args->tcp_scan)
         return;

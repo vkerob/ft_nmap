@@ -5,8 +5,8 @@
 #include "defines.h"
 #include "typesdef.h"
 
-int substr(char *str, int start, int end, char **ptr);
+int substr(const char *str, int start, int end, char **ptr);
 
-u16 get_max_port_number(u16 ports[MAX_PORT_COUNT]);
+u16 get_max_port_number(const u16 ports[MAX_PORT_COUNT]);
 
 #endif

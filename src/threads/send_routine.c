@@ -74,12 +74,12 @@ static int build_scan_packets(const t_probe *request, u_char *packet,
 	return SUCCESS;
 }
 
-static int send_packet(t_socket *socket, const u8 *packet,
+static int send_packet(const t_socket *socket, const u8 *packet,
 					   struct timeval *sent_timestamp, u32 packet_len)
 {
 	const ssize_t res
 		= sendto(socket->sfd, packet, packet_len, 0,
-				 (struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
+				 (const struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
 
 	if (res < 0)
 	{
@@ -215,14 +215,13 @@ void *send_routine(void *arg)
 		if (!has_me)
 			send_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
 
-		u8	 iface_idx = request->target->iface_info->iface_index;
-		bool tracked
-			= false; // true once the real probe lives in the sent queue
+		const u8 iface_idx = request->target->iface_info->iface_index;
+		bool	 tracked   = false; // true once the real probe lives in the sent queue
 
 		for (u8 i = 0; i < send_count; i++)
 		{
-			bool		   is_me = (send_list[i].s_addr == INADDR_ANY);
-			struct in_addr src
+			const bool		  is_me = (send_list[i].s_addr == INADDR_ANY);
+			const struct in_addr src
 				= is_me ? request->target->iface_info->ip_addr : send_list[i];
 
 			memset(packet, 0, sizeof(packet));

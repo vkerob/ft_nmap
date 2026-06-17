@@ -48,12 +48,12 @@ typedef struct s_port
 {
 	u16			 port_number;
 	t_port_state port_state;
-	char		*reasons[MAX_REASONS_NUMBER];
+	const char	*reasons[MAX_REASONS_NUMBER];
 } t_port;
 
 typedef struct s_port_output
 {
-	char		*reasons[MAX_REASONS_NUMBER];
+	const char	*reasons[MAX_REASONS_NUMBER];
 	u16			 port_number;
 	t_port_state port_state;
 	char		 version[128]; // banner grabbed via version detection
@@ -62,7 +62,7 @@ typedef struct s_port_output
 typedef struct s_port_state_and_reason
 {
 	int			 count;
-	char		*reason;
+	const char	*reason;
 	t_port_state port_state;
 
 	/* Maximum of 2 reasons, only be filled with tcp scans if more than one
@@ -156,7 +156,7 @@ typedef struct s_ctx
 } t_ctx;
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				  u16 ports[MAX_PORT_COUNT], u8 scan_types[MAX_NB_SCAN_TYPE],
+				  const u16 ports[MAX_PORT_COUNT], const u8 scan_types[MAX_NB_SCAN_TYPE],
 				  const u8 nb_scan_type, const bool tcp_scan,
 				  const bool udp_scan, u16 *max_port_nb, int *port_map);
 
@@ -171,7 +171,7 @@ void print_scan_results(t_ctx *ctx);
 
 void set_port_state_reason(t_port *port, t_port_state_reason reason);
 
-void grab_versions(t_target *target, t_args *args);
+void grab_versions(t_target *target, const t_args *args);
 
 const char *guess_os(u8 ttl, u16 tcp_window);
 
