@@ -29,21 +29,23 @@ void sync_printf(const char *format, ...)
 	va_end(args);
 }
 
-/* ── packet-trace helpers (active under -PT flag, always compiled) ────────── */
+/* ── packet-trace helpers (active under -PT flag, always compiled) ──────────
+ */
 
-#define PT_SENT  ANSI_COLOR_GREEN  "SENT" ANSI_COLOR_RESET
-#define PT_RCVD  ANSI_COLOR_CYAN   "RCVD" ANSI_COLOR_RESET
+#define PT_SENT ANSI_COLOR_GREEN "SENT" ANSI_COLOR_RESET
+#define PT_RCVD ANSI_COLOR_CYAN "RCVD" ANSI_COLOR_RESET
 #define PT_DECOY ANSI_COLOR_MAGENTA "[DECOY] " ANSI_COLOR_RESET
-#define PT_UDP   ANSI_COLOR_YELLOW  "UDP" ANSI_COLOR_RESET
-#define PT_TCP   ANSI_COLOR_YELLOW  "TCP" ANSI_COLOR_RESET
-#define PT_ICMP  ANSI_COLOR_YELLOW  "ICMP" ANSI_COLOR_RESET
-#define PT_FLAG  ANSI_BOLD
-#define PT_KV    ANSI_COLOR_RESET
+#define PT_UDP ANSI_COLOR_YELLOW "UDP" ANSI_COLOR_RESET
+#define PT_TCP ANSI_COLOR_YELLOW "TCP" ANSI_COLOR_RESET
+#define PT_ICMP ANSI_COLOR_YELLOW "ICMP" ANSI_COLOR_RESET
+#define PT_FLAG ANSI_BOLD
+#define PT_KV ANSI_COLOR_RESET
 
-int print_debug_packet_send(struct in_addr target_addr, t_scan_type type,
-							 struct timeval *relative_sent_time,
-							 t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
-							 bool is_decoy)
+int print_debug_packet_send(const struct in_addr  target_addr,
+							const t_scan_type	  type,
+							const struct timeval *relative_sent_time,
+							const t_datalink_hdr *datalink_hdr, t_ip *ip_hdr,
+							const bool is_decoy)
 {
 	char src[32];
 	char target[32];
@@ -65,15 +67,14 @@ int print_debug_packet_send(struct in_addr target_addr, t_scan_type type,
 	pthread_mutex_lock(&printf_mutex);
 	if (is_decoy)
 		printf(PT_DECOY);
-	printf(PT_SENT " (%ld.%06lu) %s %s:%d > %s:%d ",
-		   relative_sent_time->tv_sec,
+	printf(PT_SENT " (%ld.%06lu) %s %s:%d > %s:%d ", relative_sent_time->tv_sec,
 		   (unsigned long)relative_sent_time->tv_usec,
 		   type == SCAN_UDP ? PT_UDP : PT_TCP, src,
 		   ntohs(datalink_hdr->tcp_hdr.th_sport), target,
 		   ntohs(datalink_hdr->tcp_hdr.th_dport));
 
-	printf("ttl:%d id:%d iplen:%d ",
-		   ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id), ntohs(ip_hdr->ip_len));
+	printf("ttl:%d id:%d iplen:%d ", ip_hdr->ip_ttl, ntohs(ip_hdr->ip_id),
+		   ntohs(ip_hdr->ip_len));
 	if (type != SCAN_UDP)
 	{
 		if (datalink_hdr->tcp_hdr.th_flags & TH_URG)
@@ -98,11 +99,11 @@ int print_debug_packet_send(struct in_addr target_addr, t_scan_type type,
 	return SUCCESS;
 }
 
-int print_debug_packet_recv(const struct ip	  *ip_hdr,
-							 const t_datalink_hdr *datalink_hdr,
-							 const t_datalink_hdr *nested_datalink_hdr,
-							 const struct ip	  *nested_ip_hdr,
-							 const struct timeval *relative_recv_time)
+int print_debug_packet_recv(const struct ip		 *ip_hdr,
+							const t_datalink_hdr *datalink_hdr,
+							const t_datalink_hdr *nested_datalink_hdr,
+							const struct ip		 *nested_ip_hdr,
+							const struct timeval *relative_recv_time)
 {
 	char	   src[32];
 	char	   dst[32];
@@ -174,7 +175,7 @@ int print_debug_packet_recv(const struct ip	  *ip_hdr,
 		}
 
 		printf(PT_ICMP " [%s:%d > %s:%d (type=%d/code=%d)] "
-			   "IP [ttl=%d id=%d iplen=%d]",
+					   "IP [ttl=%d id=%d iplen=%d]",
 			   src, dest_port, dst, source_port,
 			   ICMP_TYPE(datalink_hdr->icmp_hdr),
 			   ICMP_CODE(datalink_hdr->icmp_hdr), ip_hdr->ip_ttl,
@@ -185,7 +186,8 @@ int print_debug_packet_recv(const struct ip	  *ip_hdr,
 	return SUCCESS;
 }
 
-/* ── debug-only functions (always compiled, call sites guarded by #ifdef DEBUG) */
+/* ── debug-only functions (always compiled, call sites guarded by #ifdef DEBUG)
+ */
 
 void print_debug_max_retries_exceeded(const t_probe *probe)
 {
@@ -617,7 +619,8 @@ void print_debug_parsing_args(const t_ctx ctx)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_iface_info(const t_iface_info *ifaces, const size_t iface_count)
+void print_debug_iface_info(const t_iface_info *ifaces,
+							const size_t		iface_count)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
@@ -665,8 +668,9 @@ void print_debug_receiver_data(const t_receiver_data *receiver_data)
 	pthread_mutex_unlock(&printf_mutex);
 }
 
-void print_debug_shared_data_probe(const t_shared_data_sender *shared_data_probe,
-								   const t_iface_info		  *ifaces)
+void
+print_debug_shared_data_probe(const t_shared_data_sender *shared_data_probe,
+							  const t_iface_info		 *ifaces)
 {
 	pthread_mutex_lock(&printf_mutex);
 	printf(ANSI_COLOR_CYAN
