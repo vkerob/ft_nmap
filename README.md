@@ -2,6 +2,8 @@
 
 🌐 [Français](README.fr.md) · **English**
 
+[![Documentation](https://img.shields.io/badge/📖_Documentation-View_page-blue?style=for-the-badge)](https://vkerob.github.io/ft_nmap/)
+
 A C reimplementation of a `nmap`-inspired port scanner. The program sends raw
 packets (raw sockets) and captures the replies with `libpcap` to determine the
 state of each port on one or more targets.
