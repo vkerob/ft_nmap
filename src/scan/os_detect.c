@@ -1,4 +1,4 @@
-#include "scan.h" // u8, u16
+#include "scan.h"
 
 /*
 ** OS detection based on IP TTL and TCP window size from SYN-ACK responses.
