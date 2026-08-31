@@ -179,20 +179,24 @@ static bool contains_port(const u16 *ports, const size_t count, const u16 port)
 }
 
 static int push_port(u16 *ports, u16 *count, const u16 port,
-					 int *duplicate_port_number)
+					 bool *duplicate_port_number)
 {
-	*duplicate_port_number |= contains_port(ports, *count, port);
+	bool duplicate = contains_port(ports, *count, port);
 
+	*duplicate_port_number |= duplicate;
 	if (*count >= MAX_PORT_COUNT)
 		return FAILURE;
 
-	ports[*count] = port;
-	(*count)++;
+	if (duplicate == false)
+	{
+		ports[*count] = port;
+		(*count)++;
+	}
 	return SUCCESS;
 }
 
 static int parse_token_and_push(char *token, u16 *ports, u16 *count,
-								int *duplicate_port_number)
+								bool *duplicate_port_number)
 {
 	char *dash = strchr(token, '-');
 
@@ -265,7 +269,7 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 int parse_ports(const char *port_str, u16 *ports, u16 *port_count)
 {
 	*port_count = 0;
-	int duplicate_port_number = 0;
+	bool duplicate_port_number = false;
 
 	char *copy = strdup(port_str);
 	if (!copy)
