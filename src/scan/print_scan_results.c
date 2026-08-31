@@ -150,7 +150,7 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
  * (TCP_INDEX or UDP_INDEX), keeping TCP and UDP totals separate. */
 static void count_states_for_proto(const t_target *target, u8 proto_index,
 								   u16 port_count,
-								   int counts[HIGHEST_PORT_STATE])
+								   u16 counts[HIGHEST_PORT_STATE])
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 		counts[s] = 0;
@@ -216,11 +216,11 @@ append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
  * (size HIGHEST_PORT_STATE), set to true for states that should be hidden
  * from the per-port table.
  *
- * Returns true iff every scanned port ended up in a grouped state (nothing
+ * Returns true if every scanned port ended up in a grouped state (nothing
  * left to display in the detailed table). */
 static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 									  bool udp_scan, u16 port_count,
-									  bool *ignored_tcp, bool *ignored_udp)
+									  bool *ignored_tcp, bool *ignored_udp, bool verbose_mode)
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 	{
@@ -228,8 +228,10 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 		ignored_udp[s] = false;
 	}
 
-	int tcp_counts[HIGHEST_PORT_STATE];
-	int udp_counts[HIGHEST_PORT_STATE];
+	u16 tcp_counts[HIGHEST_PORT_STATE] = { 0 };
+	u16 udp_counts[HIGHEST_PORT_STATE] = { 0 };
+
+	printf("port count %d\n", port_count);
 	count_states_for_proto(target, TCP_INDEX, port_count, tcp_counts);
 	count_states_for_proto(target, UDP_INDEX, port_count, udp_counts);
 
@@ -243,29 +245,38 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 	{
 		const bool tcp_group = tcp_scan && tcp_counts[state] > PRINT_LIMIT;
 		const bool udp_group = udp_scan && udp_counts[state] > PRINT_LIMIT;
+
 		if (!tcp_group && !udp_group)
 			continue;
 
-		if (first_segment)
+		// In verbose mode the 'Not shown' message is not relevant
+		if (verbose_mode == false && first_segment)
 		{
 			buf_len = snprintf(buf, sizeof(buf), "Not shown: ");
 		}
 
 		if (tcp_group)
 		{
-			buf_len = append_not_shown_segment(
-				buf, sizeof(buf), buf_len,
-				target->port_list.state_and_reason[TCP_INDEX], state, "tcp",
-				&first_segment);
+			if (verbose_mode == false)
+			{
+				buf_len = append_not_shown_segment(
+					buf, sizeof(buf), buf_len,
+					target->port_list.state_and_reason[TCP_INDEX], state, "tcp",
+					&first_segment);
+			}
+
 			ignored_tcp[state] = true;
 			tcp_hidden += tcp_counts[state];
 		}
 		if (udp_group)
 		{
-			buf_len = append_not_shown_segment(
-				buf, sizeof(buf), buf_len,
-				target->port_list.state_and_reason[UDP_INDEX], state, "udp",
-				&first_segment);
+			if (verbose_mode == false)
+			{
+				buf_len = append_not_shown_segment(
+					buf, sizeof(buf), buf_len,
+					target->port_list.state_and_reason[UDP_INDEX], state, "udp",
+					&first_segment);
+			}
 			ignored_udp[state] = true;
 			udp_hidden += udp_counts[state];
 		}
@@ -290,6 +301,7 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 	}
 	return all_ignored;
 }
+
 static void build_results_str(const t_target *target, const t_args *args,
 							  const u16 port, char *buf, size_t buf_size,
 							  u8 protocol)
@@ -743,12 +755,16 @@ static void print_target_results(t_target *target, const t_args *args)
 
 	resolve_final_port_state(args, target);
 
-	const bool all_ignored = print_ignored_port_states(
-		target, args->tcp_scan, args->udp_scan, args->port_count,
-		ignored_tcp, ignored_udp);
+	const bool all_ignored
+		= print_ignored_port_states(target, args->tcp_scan, args->udp_scan,
+									args->port_count, ignored_tcp, ignored_udp, HAS(args->flags, F_VERBOSE));
 
 	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
 	{
+		if  (all_ignored)
+		{
+			fprintf(stderr, "ALL IGNORED\n");
+		}
 		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
 }

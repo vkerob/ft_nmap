@@ -117,6 +117,7 @@ int init_portlist(t_port_list *port_list, const u16 port_count,
 		}
 		for (u16 i = 0; i < port_count; i++)
 		{
+			port_list->port_final_state[TCP_INDEX][i].port_number = ports[i];
 			port_list->port_final_state[TCP_INDEX][i].port_state = DEFAULT;
 			port_list->port_final_state[TCP_INDEX][i].reasons[0] = NULL;
 			port_list->port_final_state[TCP_INDEX][i].reasons[1] = NULL;
@@ -134,6 +135,7 @@ int init_portlist(t_port_list *port_list, const u16 port_count,
 		}
 		for (u16 i = 0; i < port_count; i++)
 		{
+			port_list->port_final_state[UDP_INDEX][i].port_number = ports[i];
 			port_list->port_final_state[UDP_INDEX][i].port_state = DEFAULT;
 			port_list->port_final_state[UDP_INDEX][i].reasons[0] = NULL;
 			port_list->port_final_state[UDP_INDEX][i].reasons[1] = NULL;
@@ -142,18 +144,6 @@ int init_portlist(t_port_list *port_list, const u16 port_count,
 	}
 
 	port_list->port_map = port_map;
-
-	for (u16 j = 0; j < port_count; j++)
-	{
-		if (udp_scan)
-		{
-			port_list->port_final_state[UDP_INDEX][j].port_number = ports[j];
-		}
-		if (tcp_scan)
-		{
-			port_list->port_final_state[TCP_INDEX][j].port_number = ports[j];
-		}
-	}
 
 	for (u8 i = 0; i < nb_scan_type; i++)
 	{
