@@ -231,7 +231,6 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 	u16 tcp_counts[HIGHEST_PORT_STATE] = { 0 };
 	u16 udp_counts[HIGHEST_PORT_STATE] = { 0 };
 
-	printf("port count %d\n", port_count);
 	count_states_for_proto(target, TCP_INDEX, port_count, tcp_counts);
 	count_states_for_proto(target, UDP_INDEX, port_count, udp_counts);
 
@@ -556,10 +555,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 	// For each port we check that his state is not among the "ignored states"
 	// which are all the state with more than 25 ports in If thats not the case
 	// we add a row to the table
-
-	/* Iterate over all ports actually requested (the lowest scannable port is
-	 * MIN_PORT_NUMBER = 1, NOT 1024 — that constant is the lowest *source*
-	 * port we may use, not the lowest destination port). */
 	for (u16 port = MIN_PORT_NUMBER; port <= args->max_port_nb; port++)
 	{
 		const int idx = target->port_list.port_map[port];
@@ -761,10 +756,6 @@ static void print_target_results(t_target *target, const t_args *args)
 
 	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
 	{
-		if  (all_ignored)
-		{
-			fprintf(stderr, "ALL IGNORED\n");
-		}
 		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
 }
