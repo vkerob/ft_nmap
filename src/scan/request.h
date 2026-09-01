@@ -21,7 +21,7 @@ typedef struct s_probe
 
 void print_debug_probe_request(const t_probe *request);
 
-int pop_probe_request(t_probe **head, t_probe **tail,
+void pop_probe_request(t_probe **head, t_probe **tail,
 					   t_probe **popped_request);
 
 int append_probe_request(t_probe **head, t_probe **tail, t_target *target,

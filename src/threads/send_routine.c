@@ -198,7 +198,13 @@ void *send_routine(void *arg)
 
 		// Compute relative timestamp once for the whole probe (decoys + real)
 		if (gettimeofday(&sent_timestamp, NULL) == -1)
+		{
 			LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
+			/* Skip this probe rather than computing timestamps from garbage. */
+			atomic_fetch_sub(&shared_data->outstanding, 1);
+			free(request);
+			continue;
+		}
 		long seconds_elapsed
 			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
 		long microseconds_elapsed

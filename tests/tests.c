@@ -6,8 +6,13 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-extern SUITE(parsing_suite);
-extern SUITE(scan_suite);
+extern SUITE(parse_ports_suite);
+extern SUITE(parse_scan_types_suite);
+extern SUITE(parse_args_suite);
+extern SUITE(scan_udp_suite);
+extern SUITE(scan_syn_suite);
+extern SUITE(scan_ack_suite);
+extern SUITE(scan_stealth_suite);
 
 GREATEST_MAIN_DEFS();
 
@@ -180,11 +185,13 @@ static void close_servers()
 {
 	for (int i = 0; i < g_server_data->nb_open_sock_tcp; i++)
 	{
-		close(g_server_data->tcp_sockets[i].fd);
+		if (g_server_data->tcp_sockets[i].fd > 0)
+			close(g_server_data->tcp_sockets[i].fd);
 	}
 	for (int i = 0; i < g_server_data->nb_open_sock_udp; i++)
 	{
-		close(g_server_data->udp_sockets[i].fd);
+		if (g_server_data->udp_sockets[i].fd > 0)
+			close(g_server_data->udp_sockets[i].fd);
 	}
 }
 
@@ -196,12 +203,16 @@ int main(const int argc, char **argv)
 {
 	GREATEST_MAIN_BEGIN();
 
-	RUN_SUITE(parsing_suite);
+	RUN_SUITE(parse_ports_suite);
+	RUN_SUITE(parse_scan_types_suite);
+	RUN_SUITE(parse_args_suite);
 
-	// Doesn't seem to works when i call this function using setup and teardown
-	// greatest.h hooks
+	// Scan suites share the same server setup
 	init_servers();
-	RUN_SUITE(scan_suite);
+	RUN_SUITE(scan_udp_suite);
+	RUN_SUITE(scan_syn_suite);
+	RUN_SUITE(scan_ack_suite);
+	RUN_SUITE(scan_stealth_suite);
 	close_servers();
 	GREATEST_MAIN_END();
 }

@@ -16,9 +16,9 @@ void handle_udp_response(t_probe_queue *sent_list, const u16 source_port,
 	t_probe *probe
 		= get_our_probe_request(&sent_list->head, &sent_list->tail, source_port,
 								ip_src, SCAN_UDP, &sent_list->nb_probe);
-	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 	if (!probe)
 	{
+		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		return;
 	}
 
@@ -28,5 +28,6 @@ void handle_udp_response(t_probe_queue *sent_list, const u16 source_port,
 	port->port_state = OPEN;
 	set_port_state_reason(port, UDP_RESPONSE);
 	atomic_fetch_sub(sent_list->outstanding, 1);
+	pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 	free(probe);
 }
