@@ -23,7 +23,7 @@ void erase_reference_to_node(t_probe **head, t_probe **tail, t_probe *node,
 	(*nb_probe)--;
 }
 
-int pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
+void pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 {
 	t_probe *node = *tail;
 
@@ -42,7 +42,6 @@ int pop_probe_request(t_probe **head, t_probe **tail, t_probe **popped_request)
 	/* Fully detach the popped node so no dangling links remain. */
 	node->prev = NULL;
 	node->next = NULL;
-	return FAILURE;
 }
 
 int append_probe_request(t_probe **head, t_probe **tail, t_target *target,

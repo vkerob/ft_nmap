@@ -412,6 +412,8 @@ int find_or_update_state_and_reason_combination(
 					if (tmp->second_reason == NULL)
 					{
 						LOG("ft_nmap: calloc failed: %s\n", strerror(errno));
+						free(tmp->first_reason);
+						tmp->first_reason = NULL;
 						return FAILURE;
 					}
 
@@ -513,8 +515,14 @@ static void resolve_final_port_state(const t_args *args, t_target *target)
 static void print_port_states(const t_target *target, const t_args *args,
 							  const bool *ignored_tcp, const bool *ignored_udp)
 {
-	char recap_udp[65535] = { 0 };
-	char recap_tcp[65535] = { 0 };
+	char *recap_udp = calloc(65535, 1);
+	char *recap_tcp = calloc(65535, 1);
+	if (!recap_udp || !recap_tcp)
+	{
+		free(recap_udp);
+		free(recap_tcp);
+		return;
+	}
 
 	const int col_port = compute_port_col_width(args);
 	const int col_state = 14;
@@ -586,7 +594,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
 
 			snprintf(recap_udp + recap_udp_len,
-					 sizeof(recap_udp) - recap_udp_len, "%-*s %-*s %-*s %-*s",
+					 65535U - recap_udp_len, "%-*s %-*s %-*s %-*s",
 					 col_port, port_str, col_state, state, col_svc,
 					 svc ? svc : "unknown",
 					 multi_scan_tcp ? col_scan_result : 0, "");
@@ -595,12 +603,12 @@ static void print_port_states(const t_target *target, const t_args *args,
 			if (HAS(args->flags, F_REASON))
 			{
 				snprintf(recap_udp + recap_udp_len,
-						 sizeof(recap_udp) - recap_udp_len, "%-*s", col_reason,
-						 final_port_state.reasons[0]);
+						 65535U - recap_udp_len, "%-*s", col_reason,
+						 final_port_state.reasons[0] ? final_port_state.reasons[0] : "");
 				recap_udp_len = strlen(recap_udp);
 			}
 			snprintf(recap_udp + recap_udp_len,
-					 sizeof(recap_udp) - recap_udp_len, "\n");
+					 65535U - recap_udp_len, "\n");
 		}
 		if (args->tcp_scan
 			&& (is_ignored_state(
@@ -629,7 +637,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len,
+						 65535U - recap_tcp_len,
 						 "%-*s %-*s %-*s %-*s%s%s", col_port, port_str,
 						 col_state, state, col_svc, svc ? svc : "unknown",
 						 col_scan_result, results_buf,
@@ -677,7 +685,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 						reasons = second_reason ? second_reason : "";
 					}
 					snprintf(recap_tcp + recap_tcp_len,
-							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
+							 65535U - recap_tcp_len, " %-*s",
 							 col_reason, reasons);
 
 					recap_tcp_len = strlen(recap_tcp);
@@ -685,19 +693,19 @@ static void print_port_states(const t_target *target, const t_args *args,
 				}
 				recap_tcp_len = strlen(recap_tcp);
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len, "\n");
+						 65535U - recap_tcp_len, "\n");
 			}
 			else
 			{
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len, "%-*s %-*s %-*s",
+						 65535U - recap_tcp_len, "%-*s %-*s %-*s",
 						 col_port, port_str, col_state, state, col_svc,
 						 svc ? svc : "unknown");
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
 					snprintf(recap_tcp + recap_tcp_len,
-							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
+							 65535U - recap_tcp_len, " %-*s",
 							 col_reason,
 							 final_port_state.reasons[0]
 								 ? final_port_state.reasons[0]
@@ -707,12 +715,12 @@ static void print_port_states(const t_target *target, const t_args *args,
 				if (show_version && ver[0])
 				{
 					snprintf(recap_tcp + recap_tcp_len,
-							 sizeof(recap_tcp) - recap_tcp_len, " %-*s",
+							 65535U - recap_tcp_len, " %-*s",
 							 col_version, ver);
 					recap_tcp_len = strlen(recap_tcp);
 				}
 				snprintf(recap_tcp + recap_tcp_len,
-						 sizeof(recap_tcp) - recap_tcp_len, "\n");
+						 65535U - recap_tcp_len, "\n");
 			}
 		}
 	}
@@ -724,6 +732,8 @@ static void print_port_states(const t_target *target, const t_args *args,
 	{
 		sync_printf("%s\n", recap_udp);
 	}
+	free(recap_udp);
+	free(recap_tcp);
 }
 
 static void print_target_results(t_target *target, const t_args *args)

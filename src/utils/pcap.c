@@ -41,6 +41,13 @@ static int pcap_configure(pcap_t *handle, int snaplen, int promisc,
 static char *build_filter_expr(const char *ip_src_interface, const t_target *targets,
 							   size_t target_count, int iface_index)
 {
+	/* Guard against overflow: each target IP needs at most 30 chars.
+	 * On 32-bit builds, SIZE_MAX/30 is the safe upper bound. */
+	if (target_count > (SIZE_MAX - 100) / 30)
+	{
+		LOG("ft_nmap: too many targets for pcap filter\n");
+		return NULL;
+	}
 	const size_t filter_len = 100 + 30 * target_count;
 	char		*filter_expr = malloc(filter_len);
 	if (!filter_expr)
