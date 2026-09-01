@@ -146,6 +146,21 @@ static void udp_rate_limit(t_target *target)
 		nanosleep(&ts, NULL);
 	}
 }
+static void 	compute_relative_timestamp(struct timeval *relative_ts, struct timeval *ts_end, struct timeval *ts_start)
+{
+
+		long seconds_elapsed
+			= ts_end->tv_sec - ts_start->tv_sec;
+		long microseconds_elapsed
+			= ts_end->tv_usec - ts_start->tv_usec;
+		if (microseconds_elapsed < 0)
+		{
+			seconds_elapsed--;
+			microseconds_elapsed += 1000000;
+		}
+		relative_ts->tv_sec = seconds_elapsed;
+		relative_ts->tv_usec = microseconds_elapsed;
+}
 
 void *send_routine(void *arg)
 {
@@ -155,7 +170,9 @@ void *send_routine(void *arg)
 	t_socket			  udp_socket;
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
-	struct timeval		  sent_timestamp;
+	struct timeval sent_timestamp = { 0 };
+	struct timeval relative_sent_timestamp = { 0 };
+
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP) == FAILURE)
 		return NULL;
@@ -186,6 +203,11 @@ void *send_routine(void *arg)
 				ts.tv_sec += 1;
 				ts.tv_nsec -= 1000000000L;
 			}
+			/* Right before the sleep the mutex is unlock, right before the threads 
+			 * wakes up pthread_cond_timedwait re-lock the mutex.
+			 * The sleeping threads will either be woke up when pthread_cond_signal is called 
+			 * in the capture routine when a probe is added back or if it reach the final time.
+			*/
 			pthread_cond_timedwait(&shared_data->to_send.cond,
 								   &shared_data->to_send.safe_mut.mutex, &ts);
 			pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
@@ -196,7 +218,6 @@ void *send_routine(void *arg)
 		shared_data->to_send.nb_probe--;
 		pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
 
-		// Compute relative timestamp once for the whole probe (decoys + real)
 		if (gettimeofday(&sent_timestamp, NULL) == -1)
 		{
 			LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
@@ -205,17 +226,9 @@ void *send_routine(void *arg)
 			free(request);
 			continue;
 		}
-		long seconds_elapsed
-			= sent_timestamp.tv_sec - shared_data->program_info->start.tv_sec;
-		long microseconds_elapsed
-			= sent_timestamp.tv_usec - shared_data->program_info->start.tv_usec;
-		if (microseconds_elapsed < 0)
-		{
-			seconds_elapsed--;
-			microseconds_elapsed += 1000000;
-		}
-		struct timeval relative_sent_time
-			= { .tv_sec = seconds_elapsed, .tv_usec = microseconds_elapsed };
+
+		// Compute relative timestamp once for the whole probe (decoys + real)
+		compute_relative_timestamp(&relative_sent_timestamp, &sent_timestamp, &shared_data->program_info->start);
 
 		struct in_addr send_list[MAX_DECOYS + 1];
 		u8			   send_count = 0;
@@ -231,7 +244,10 @@ void *send_routine(void *arg)
 			}
 		}
 		if (!has_me)
+		{
+			// Place holder in decoy list for our own IP
 			send_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
+		}
 		t_target		 *target = request->target;
 		const u16		  req_port = request->port;
 		const t_scan_type req_type = request->type;
@@ -246,6 +262,7 @@ void *send_routine(void *arg)
 		payloads[0].len = 0;
 		if (req_type == SCAN_UDP)
 		{
+			// Used to identify which service run on port
 			size_t n = get_udp_payloads(req_port, payloads,
 										MAX_UDP_PAYLOADS_PER_PORT);
 			if (n > 0)
@@ -329,7 +346,7 @@ void *send_routine(void *arg)
 					&& HAS(shared_data->args->flags, F_PACKET_TRACE))
 				{
 					if (print_debug_packet_send(target->addr, req_type,
-												&relative_sent_time,
+												&relative_sent_timestamp,
 												&datalink_hdr, (t_ip *)packet,
 												!is_me))
 					{

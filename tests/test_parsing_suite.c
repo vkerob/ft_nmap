@@ -193,9 +193,11 @@ TEST parse_args_parses_scan_types(void)
 	u8	 nb_scan_type = 0;
 	bool tcp_scan = false;
 	bool udp_scan = false;
-
-	ASSERT_FALSE(parse_scan_types(strdup("SYN,ACK,UDP"), &scan_types,
-								  &nb_scan_type, &tcp_scan, &udp_scan));
+	char *arg = strdup("SYN,ACK,UDP");
+	
+	ASSERT(parse_scan_types(arg, &scan_types,
+								  &nb_scan_type, &tcp_scan, &udp_scan) == SUCCESS);
+	free(arg);
 	ASSERT_EQ(nb_scan_type, 3);
 	ASSERT_EQ(tcp_scan, true);
 	ASSERT_EQ(udp_scan, true);
@@ -211,10 +213,12 @@ TEST parse_scan_types_all_types(void)
 	u8   nb_scan_type = 0;
 	bool tcp_scan = false;
 	bool udp_scan = false;
+	char *arg = strdup("SYN,NULL,ACK,FIN,XMAS,UDP");
 
-	ASSERT_FALSE(parse_scan_types(strdup("SYN,NULL,ACK,FIN,XMAS,UDP"),
+	ASSERT(parse_scan_types(arg,
 								  &scan_types, &nb_scan_type, &tcp_scan,
-								  &udp_scan));
+								  &udp_scan) == SUCCESS);
+	free(arg);
 	ASSERT_EQ(6, nb_scan_type);
 	ASSERT_EQ(true, tcp_scan);
 	ASSERT_EQ(true, udp_scan);
@@ -233,9 +237,11 @@ TEST parse_scan_types_rejects_duplicate(void)
 	u8   nb_scan_type = 0;
 	bool tcp_scan = false;
 	bool udp_scan = false;
+	char *arg = strdup("SYN,SYN");
 
-	ASSERT(parse_scan_types(strdup("SYN,SYN"), &scan_types, &nb_scan_type,
-							&tcp_scan, &udp_scan));
+	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_type,
+							&tcp_scan, &udp_scan) == FAILURE);
+	free(arg);
 	PASS();
 }
 
@@ -245,9 +251,11 @@ TEST parse_scan_types_case_insensitive(void)
 	u8   nb_scan_type = 0;
 	bool tcp_scan = false;
 	bool udp_scan = false;
+	char *arg = strdup("syn,udp");
 
-	ASSERT_FALSE(parse_scan_types(strdup("syn,udp"), &scan_types, &nb_scan_type,
-								  &tcp_scan, &udp_scan));
+	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_type,
+								  &tcp_scan, &udp_scan) == SUCCESS);
+	free(arg);
 	ASSERT_EQ(2, nb_scan_type);
 	ASSERT_EQ(SCAN_SYN, scan_types[0]);
 	ASSERT_EQ(SCAN_UDP, scan_types[1]);
@@ -259,11 +267,11 @@ TEST parse_scan_types_rejects_empty_string(void)
 	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
 	u8   nb_scan_types = 0;
 	bool tcp_scan = false, udp_scan = false;
-	char *s = strdup("");
+	char *arg = strdup("");
 
 	/* An empty scan string must fail (no type selected) */
-	ASSERT(parse_scan_types(s, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan));
-	free(s);
+	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan) == FAILURE);
+	free(arg);
 	PASS();
 }
 
@@ -272,16 +280,17 @@ TEST parse_scan_types_accepts_trailing_comma(void)
 	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
 	u8   nb_scan_types = 0;
 	bool tcp_scan = false, udp_scan = false;
-	char *s = strdup("SYN,");
+	char *arg = strdup("SYN,");
 
+	//TODO: comment on justifie ca ?
 	/* strtok_r silently drops the trailing comma so "SYN," parses as
 	 * "SYN".  This is intentionally different from parse_ports which
 	 * rejects "80," (empty token).  The inconsistency is a known quirk
 	 * of the two parsers; this test documents the current behaviour. */
-	ASSERT_FALSE(parse_scan_types(s, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan));
+	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan) == SUCCESS);
 	ASSERT_EQ(1, nb_scan_types);
 	ASSERT_EQ(SCAN_SYN, scan_types[0]);
-	free(s);
+	free(arg);
 	PASS();
 }
 
@@ -297,7 +306,7 @@ TEST parse_args_invalid_scan_returns_error(void)
 	int	   argc = 3;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -308,7 +317,7 @@ TEST parse_args_invalid_option(void)
 	int	   argc = 2;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -323,7 +332,7 @@ TEST parse_args_sets_verbose_flag(void)
 	int    argc = 2;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_VERBOSE));
 	PASS();
 }
@@ -335,7 +344,7 @@ TEST parse_args_sets_reason_flag(void)
 	int    argc = 2;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_REASON));
 	PASS();
 }
@@ -347,7 +356,7 @@ TEST parse_args_sets_packet_trace_flag(void)
 	int    argc = 2;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_PACKET_TRACE));
 	PASS();
 }
@@ -359,7 +368,7 @@ TEST parse_args_sets_version_flag(void)
 	int    argc = 2;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_VERSION));
 	PASS();
 }
@@ -371,7 +380,7 @@ TEST parse_args_sets_os_detect_flag(void)
 	int    argc = 2;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL )== SUCCESS);
 	ASSERT(HAS(args.flags, F_OS_DETECT));
 	PASS();
 }
@@ -387,7 +396,7 @@ TEST parse_args_speedup_valid(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_SPEED));
 	ASSERT_EQ(10, args.speed);
 	PASS();
@@ -400,7 +409,7 @@ TEST parse_args_speedup_zero(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_SPEED));
 	ASSERT_EQ(0, args.speed);
 	PASS();
@@ -413,7 +422,7 @@ TEST parse_args_speedup_max(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_SPEED));
 	ASSERT_EQ(250, args.speed);
 	PASS();
@@ -426,7 +435,7 @@ TEST parse_args_speedup_exceeds_max(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -437,7 +446,7 @@ TEST parse_args_speedup_invalid_string(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -449,7 +458,7 @@ TEST parse_args_speedup_overflow(void)
 
 	/* Values far above SPEED_MAX must be rejected */
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -461,7 +470,7 @@ TEST parse_args_rejects_positional_argument(void)
 
 	/* Non-option arguments after options must be rejected */
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -477,7 +486,7 @@ TEST parse_args_decoy_single_ip(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT(HAS(args.flags, F_DECOY));
 	ASSERT_EQ(1, args.decoy_count);
 	PASS();
@@ -490,7 +499,7 @@ TEST parse_args_decoy_multiple(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(2, args.decoy_count);
 	PASS();
 }
@@ -502,7 +511,7 @@ TEST parse_args_decoy_me_sentinel(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(1, args.decoy_count);
 	/* ME is stored as INADDR_ANY (0) as a sentinel for "our own IP" */
 	ASSERT_EQ((in_addr_t)INADDR_ANY, args.decoys[0].s_addr);
@@ -518,7 +527,7 @@ TEST parse_args_decoy_too_many(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -529,7 +538,7 @@ TEST parse_args_decoy_invalid_ip(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -545,7 +554,7 @@ TEST parse_args_default_ports_fills_1_to_1024(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(MAX_PORT_COUNT, args.port_count);
 	ASSERT_EQ(1,    args.ports[0]);
 	ASSERT_EQ(1024, args.ports[MAX_PORT_COUNT - 1]);
@@ -560,7 +569,7 @@ TEST parse_args_default_scan_uses_all_types(void)
 	int    argc = 3;
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, NULL, NULL));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(MAX_NB_SCAN_TYPE, args.nb_scan_types);
 	/* Verify each scan type value is present in the default set */
 	ASSERT_EQ(SCAN_SYN,  args.scan_types[0]);
@@ -593,7 +602,7 @@ TEST parse_args_file_valid(void)
 	fclose(f);
 
 	optind = 1;
-	ASSERT_FALSE(parse_args(argc, argv, &args, &targets, &target_count));
+	ASSERT(parse_args(argc, argv, &args, &targets, &target_count) == SUCCESS);
 	ASSERT(HAS(args.flags, F_FILE_MODE));
 	ASSERT_EQ(2, (int)target_count);
 	ASSERT_STR_EQ("127.0.0.1",   targets[0]);
@@ -612,11 +621,9 @@ TEST parse_args_file_rejects_nonexistent(void)
 	char   *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_no_such_file.txt",
 					  NULL };
 	int     argc = 3;
-	char  **targets = NULL;
-	size_t  target_count = 0;
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, &targets, &target_count));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
 
@@ -625,8 +632,6 @@ TEST parse_args_file_rejects_empty(void)
 	t_args  args = { 0 };
 	char   *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_empty.txt", NULL };
 	int     argc = 3;
-	char  **targets = NULL;
-	size_t  target_count = 0;
 
 	/* An empty file (or one with only comments/blanks) must be rejected */
 	FILE *f = fopen("/tmp/ft_nmap_empty.txt", "w");
@@ -635,7 +640,7 @@ TEST parse_args_file_rejects_empty(void)
 	fclose(f);
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, &targets, &target_count));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	remove("/tmp/ft_nmap_empty.txt");
 	PASS();
 }
@@ -657,7 +662,7 @@ TEST parse_args_file_and_ip_conflict(void)
 	fclose(f);
 
 	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, &targets, &target_count));
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	if (targets)
 	{
 		for (size_t i = 0; i < target_count; i++)

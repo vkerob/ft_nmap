@@ -324,7 +324,7 @@ sudo ./ft_nmap [options] (--ip <target> | --file <file>)
 | `--verbose` | — | Show all port states (no state ignored) (bonus) |
 | `--version` | — | Probe open ports to determine service/version (bonus) |
 | `--os-detect` | — | Enable OS detection (bonus) |
-| `--decoy` | `ip1,ip2,ip3` | Cloak the scan with decoy source IPs, max 3; (bonus) |
+| `--decoy` | `ip1,ip2[,ME]` | Cloak the scan with decoy source IPs, max 3; `ME` marks where the real IP goes (bonus) |
 | `--help` | — | Show help |
 
 > **Mandatory vs bonus.** Only `--help`, `--ip`, `--file`, `--ports`, `--scan`
