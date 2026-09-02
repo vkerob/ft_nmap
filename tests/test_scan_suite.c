@@ -251,10 +251,8 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	if (get_port_list(ft_nmap_output, re, &port_list_ft_nmap)
 		|| get_port_list(nmap_output, re, &port_list_nmap))
 	{
-		pcre2_code_free(re);
 		goto fail;
 	}
-	pcre2_code_free(re);
 
 	u16 size_port_list_ft_nmap = get_port_list_size(port_list_ft_nmap);
 	u16 size_port_list_nmap = get_port_list_size(port_list_nmap);
