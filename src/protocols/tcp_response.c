@@ -9,7 +9,7 @@
 
 void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 						 const t_scan_type scan_type, const u16 source_port,
-						 const struct in_addr ip_src)
+						 const struct in_addr ip_src, const u8 ttl)
 {
 
 	pthread_mutex_lock(&sent_list->safe_mut.mutex);
@@ -75,6 +75,10 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 
 	if (matched)
 	{
+		/* A RST carries the hop distance just as well as a SYN-ACK. */
+		if (probe->target->reply_ttl == 0)
+			probe->target->reply_ttl = ttl;
+
 		atomic_fetch_sub(sent_list->outstanding, 1);
 		free(probe);
 	}

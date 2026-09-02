@@ -13,6 +13,8 @@
 #define VERBOSE 1008
 #define VERSION_DETECT 1009
 #define DECOY 1011
+#define TRACEROUTE 1012
+#define TRACEROUTE_ICMP 1013
 /* Maximum number of decoy IPs the user can specify */
 #define MAX_DECOYS 3
 #define MIN_PORT_NUMBER 0
@@ -68,7 +70,7 @@
 #define LOG(fmt, ...)                                                          \
 	do                                                                         \
 	{                                                                          \
-		fprintf(stderr, fmt, ##__VA_ARGS__);                               \
+		fprintf(stderr, fmt, ##__VA_ARGS__);                                   \
 	} while (0)
 
 #endif // DEFINES_H

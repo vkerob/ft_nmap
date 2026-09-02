@@ -527,6 +527,8 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "verbose", no_argument, 0, VERBOSE },
 		{ "version", no_argument, 0, VERSION_DETECT },
 		{ "decoy", required_argument, 0, DECOY },
+		{ "traceroute", no_argument, 0, TRACEROUTE },
+		{ "traceroute-icmp", no_argument, 0, TRACEROUTE_ICMP },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -599,6 +601,14 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			if (parse_decoys(optarg, args->decoys, &args->decoy_count)
 				== FAILURE)
 				return FAILURE;
+			break;
+
+		case TRACEROUTE:
+			SET(args->flags, F_TRACEROUTE);
+			break;
+
+		case TRACEROUTE_ICMP:
+			SET(args->flags, F_TRACEROUTE_ICMP);
 			break;
 
 		case '?':

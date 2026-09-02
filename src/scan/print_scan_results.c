@@ -2,6 +2,7 @@
 #include "parsing.h"
 #include "port_services.h"
 #include "scan.h"
+#include "traceroute.h"
 #include "utils.h"
 
 #include <arpa/inet.h>
@@ -60,7 +61,8 @@ static void update_port_reasons(t_port_output *port_conclusion,
 	}
 	else
 	{
-		// Different port state (a more precise one) so we erase the last reasons
+		// Different port state (a more precise one) so we erase the last
+		// reasons
 		port_conclusion->reasons[0] = port->reasons[0];
 		port_conclusion->reasons[1] = NULL;
 	}
@@ -68,7 +70,8 @@ static void update_port_reasons(t_port_output *port_conclusion,
 
 static void set_unknown_port_state(t_port_output *port_conclusion)
 {
-	// By setting the port state conclusion to unknown we also erase the condition
+	// By setting the port state conclusion to unknown we also erase the
+	// condition
 	port_conclusion->port_state = UNKNOWN;
 	port_conclusion->reasons[0] = NULL;
 	port_conclusion->reasons[1] = NULL;
@@ -79,10 +82,6 @@ static void
 update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 										const t_port  *port)
 {
-	/* Unknown state is definitive, if we do not put this condition
-	 * we can two scan types gave us opposite result which result in unknown state
-	 *  and after that a third one arrive and put his own status
-	 * (not acknowledging the previous ones)*/
 	if (port_conclusion->port_state == UNKNOWN)
 	{
 		port_conclusion->port_state = port->port_state;
@@ -96,11 +95,13 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 		// UNKNOWN
 		if ((port->port_state == CLOSE && port_conclusion->port_state == OPEN)
 			|| (port->port_state == OPEN
-				&& port_conclusion->port_state == CLOSE) || port_conclusion->port_state == FILTERED)
+				&& port_conclusion->port_state == CLOSE)
+			|| port_conclusion->port_state == FILTERED)
 		{
 			set_unknown_port_state(port_conclusion);
 		}
-		else{
+		else
+		{
 			update_port_reasons(port_conclusion, port);
 			port_conclusion->port_state = port->port_state;
 		}
@@ -136,8 +137,6 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 		{
 			port_conclusion->port_state = OPEN;
 		}
-		// If port conclusion is open or closed we prefer keep it that way since it
-		// we can decude it from open/close that this is unfiltered and not the inverse
 		break;
 	case FILTERED:
 		if (port_conclusion->port_state == OPEN
@@ -160,10 +159,6 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 	}
 }
 
-/* Ignored states are print from the most common to the least common and with a
- * reason associated (no-response, reset, ...)
- * Count the number of ports in each state for a given protocol slot
- * (TCP_INDEX or UDP_INDEX), keeping TCP and UDP totals separate. */
 static void count_states_for_proto(const t_target *target, u8 proto_index,
 								   u16 port_count,
 								   u16 counts[HIGHEST_PORT_STATE])
@@ -188,9 +183,6 @@ static void count_states_for_proto(const t_target *target, u8 proto_index,
 	}
 }
 
-/* Append one "Not shown" segment for a given (state, protocol) by walking the
- * state_and_reason linked list of that protocol and printing every reason
- * subtotal. */
 static size_t
 append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
 						 t_port_state_and_reason *head, t_port_state state,
@@ -242,7 +234,8 @@ append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
  * left to display in the detailed table). */
 static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 									  bool udp_scan, u16 port_count,
-									  bool *ignored_tcp, bool *ignored_udp, bool verbose_mode)
+									  bool *ignored_tcp, bool *ignored_udp,
+									  bool verbose_mode)
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
 	{
@@ -265,7 +258,8 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 	for (t_port_state state = DEFAULT; state < HIGHEST_PORT_STATE; state++)
 	{
 		// Open state is not ignored
-		if (state == OPEN) continue ;
+		if (state == OPEN)
+			continue;
 		const bool tcp_group = tcp_scan && tcp_counts[state] > PRINT_LIMIT;
 		const bool udp_group = udp_scan && udp_counts[state] > PRINT_LIMIT;
 
@@ -525,8 +519,9 @@ static int resolve_final_port_state(const t_args *args, t_target *target)
 			/* Keep track of the occurences of each port state (OPEN, FILTERED,
 			 ...) with their associated reason */
 			if (find_or_update_state_and_reason_combination(
-				&target->port_list.state_and_reason[TCP_INDEX],
-				target_port_state, target_port_output.reasons[0]) == FAILURE)
+					&target->port_list.state_and_reason[TCP_INDEX],
+					target_port_state, target_port_output.reasons[0])
+				== FAILURE)
 			{
 				return FAILURE;
 			}
@@ -536,11 +531,12 @@ static int resolve_final_port_state(const t_args *args, t_target *target)
 				!= NULL)
 			{
 				if (find_or_update_state_and_reason_combination(
-					&target->port_list.state_and_reason[TCP_INDEX],
-					target_port_state, target_port_output.reasons[1]) == FAILURE)
-					{
-						return FAILURE;
-					}
+						&target->port_list.state_and_reason[TCP_INDEX],
+						target_port_state, target_port_output.reasons[1])
+					== FAILURE)
+				{
+					return FAILURE;
+				}
 			}
 		}
 
@@ -553,11 +549,12 @@ static int resolve_final_port_state(const t_args *args, t_target *target)
 			t_port_state target_port_state = target_port_output.port_state;
 
 			if (find_or_update_state_and_reason_combination(
-				&target->port_list.state_and_reason[UDP_INDEX],
-				target_port_state, target_port_output.reasons[0]) == FAILURE)
-				{
-					return FAILURE;
-				}
+					&target->port_list.state_and_reason[UDP_INDEX],
+					target_port_state, target_port_output.reasons[0])
+				== FAILURE)
+			{
+				return FAILURE;
+			}
 		}
 	}
 	return SUCCESS;
@@ -662,8 +659,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 						 final_port_state.reasons[0] ? final_port_state.reasons[0] : "");
 				recap_udp_len = strlen(recap_udp);
 			}
-			snprintf(recap_udp + recap_udp_len,
-					 65535U - recap_udp_len, "\n");
+			snprintf(recap_udp + recap_udp_len, 65535U - recap_udp_len, "\n");
 		}
 		if (args->tcp_scan
 			&& (is_ignored_state(
@@ -691,8 +687,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
-				snprintf(recap_tcp + recap_tcp_len,
-						 65535U - recap_tcp_len,
+				snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
 						 "%-*s %-*s %-*s %-*s%s%s", col_port, port_str,
 						 col_state, state, col_svc, svc ? svc : "unknown",
 						 col_scan_result, results_buf,
@@ -739,29 +734,26 @@ static void print_port_states(const t_target *target, const t_args *args,
 					{
 						reasons = second_reason ? second_reason : "";
 					}
-					snprintf(recap_tcp + recap_tcp_len,
-							 65535U - recap_tcp_len, " %-*s",
-							 col_reason, reasons);
+					snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+							 " %-*s", col_reason, reasons);
 
 					recap_tcp_len = strlen(recap_tcp);
 					free(reasons_alloc);
 				}
 				recap_tcp_len = strlen(recap_tcp);
-				snprintf(recap_tcp + recap_tcp_len,
-						 65535U - recap_tcp_len, "\n");
+				snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+						 "\n");
 			}
 			else
 			{
-				snprintf(recap_tcp + recap_tcp_len,
-						 65535U - recap_tcp_len, "%-*s %-*s %-*s",
-						 col_port, port_str, col_state, state, col_svc,
-						 svc ? svc : "unknown");
+				snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+						 "%-*s %-*s %-*s", col_port, port_str, col_state, state,
+						 col_svc, svc ? svc : "unknown");
 				recap_tcp_len = strlen(recap_tcp);
 				if (HAS(args->flags, F_REASON))
 				{
-					snprintf(recap_tcp + recap_tcp_len,
-							 65535U - recap_tcp_len, " %-*s",
-							 col_reason,
+					snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+							 " %-*s", col_reason,
 							 final_port_state.reasons[0]
 								 ? final_port_state.reasons[0]
 								 : "");
@@ -769,13 +761,12 @@ static void print_port_states(const t_target *target, const t_args *args,
 				}
 				if (show_version && ver[0])
 				{
-					snprintf(recap_tcp + recap_tcp_len,
-							 65535U - recap_tcp_len, " %-*s",
-							 col_version, ver);
+					snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+							 " %-*s", col_version, ver);
 					recap_tcp_len = strlen(recap_tcp);
 				}
-				snprintf(recap_tcp + recap_tcp_len,
-						 65535U - recap_tcp_len, "\n");
+				snprintf(recap_tcp + recap_tcp_len, 65535U - recap_tcp_len,
+						 "\n");
 			}
 		}
 	}
@@ -822,14 +813,32 @@ static int print_target_results(t_target *target, const t_args *args)
 		return FAILURE;
 	}
 
-	const bool all_ignored
-		= print_ignored_port_states(target, args->tcp_scan, args->udp_scan,
-									args->port_count, ignored_tcp, ignored_udp, HAS(args->flags, F_VERBOSE));
+	const bool all_ignored = print_ignored_port_states(
+		target, args->tcp_scan, args->udp_scan, args->port_count, ignored_tcp,
+		ignored_udp, HAS(args->flags, F_VERBOSE));
 
 	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
 	{
 		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
+
+	/* After the scan threads are joined: the raw ICMP socket used by the
+	 * trace would otherwise also pick up the port-unreachable replies the UDP
+	 * scan is waiting for. */
+	if (HAS(args->flags, F_TRACEROUTE) || HAS(args->flags, F_TRACEROUTE_ICMP))
+	{
+		t_trace_opts trace_opts;
+
+		trace_opts_init(&trace_opts);
+		trace_opts.flags = 0;
+		if (HAS(args->flags, F_TRACEROUTE))
+			SET(trace_opts.flags, F_TR_UDP);
+		if (HAS(args->flags, F_TRACEROUTE_ICMP))
+			SET(trace_opts.flags, F_TR_ICMP);
+
+		print_traceroute(target, &trace_opts);
+	}
+
 	return SUCCESS;
 }
 

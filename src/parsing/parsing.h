@@ -19,17 +19,19 @@ enum e_flags
 	F_REASON = 1u << 7,
 	F_VERBOSE = 1u << 8,
 	F_VERSION = 1u << 9,
-	F_DECOY     = 1u << 11
+	F_DECOY     = 1u << 11,
+	F_TRACEROUTE = 1u << 12,
+	F_TRACEROUTE_ICMP = 1u << 13
 };
 
-int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
+int	 parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 				size_t *target_count);
-int get_targets_input(const char *arg, size_t *args_count, char ***targets,
+int	 get_targets_input(const char *arg, size_t *args_count, char ***targets,
 					   int mode, u8 flags);
-int resolve_targets(char **inputs, size_t count, t_target **out);
-int parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
+int	 resolve_targets(char **inputs, size_t count, t_target **out);
+int	 parse_scan_types(char *scan_str, u8 (*out)[MAX_NB_SCAN_TYPE],
 					  u8 *nb_scan_types, bool *tcp_scan, bool *udp_scan);
-int parse_ports(const char *port_str, u16 *ports, u16 *port_count);
+int	 parse_ports(const char *port_str, u16 *ports, u16 *port_count);
 void free_targets(t_target **targets, size_t count, u8 nb_scan_types,
 				  u8 *scan_types);
 
