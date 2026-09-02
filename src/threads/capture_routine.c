@@ -57,7 +57,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type,
-							source_port, ip_hdr->ip_src);
+							source_port, ip_hdr->ip_src, ip_hdr->ip_ttl);
 		break;
 
 	case IPPROTO_UDP:
@@ -72,26 +72,26 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		break;
 
 	case IPPROTO_ICMP:
-		if (l4_len < sizeof(t_icmp_hdr))
+		if (l4_len < ICMP_HDR_LEN)
 			return FAILURE;
-		datalink_hdr.icmp_hdr = *(const t_icmp_hdr *)protocol_hdr;
+		/* Bounded copy: the struct is larger than the header on BSD/macOS. */
+		memcpy(&datalink_hdr.icmp_hdr, protocol_hdr, ICMP_HDR_LEN);
 
-		// 8 bytes is the size of icmp header
 		nested_ip_header
-			= (const t_ip *)((const u8 *)ip_hdr + ip_hlen + sizeof(t_icmp_hdr));
+			= (const t_ip *)((const u8 *)ip_hdr + ip_hlen + ICMP_HDR_LEN);
 
 		/* The ICMP payload echoes back [IP header + L4 header] of our probe.
 		 * Make sure the capture is long enough before dereferencing it. */
-		if (l4_len < sizeof(t_icmp_hdr) + sizeof(struct ip))
+		if (l4_len < ICMP_HDR_LEN + sizeof(struct ip))
 			return FAILURE;
 
 		const size_t ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
 		if (ip2_hlen < sizeof(struct ip)
-			|| l4_len < sizeof(t_icmp_hdr) + ip2_hlen)
+			|| l4_len < ICMP_HDR_LEN + ip2_hlen)
 			return FAILURE;
 
 		const u8	*datalink_header = (const u8 *)nested_ip_header + ip2_hlen;
-		const size_t nested_l4_len = l4_len - sizeof(t_icmp_hdr) - ip2_hlen;
+		const size_t nested_l4_len = l4_len - ICMP_HDR_LEN - ip2_hlen;
 
 		switch (nested_ip_header->ip_p)
 		{

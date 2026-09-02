@@ -12,6 +12,11 @@ typedef struct ip			t_ip;
 typedef struct tcphdr		t_tcp_hdr;
 typedef struct udphdr		t_udp_hdr;
 typedef struct ether_header t_eth_hdr;
+/* Wire size of an ICMP header. sizeof(t_icmp_hdr) does not give it: the
+ * typedef is struct icmphdr (8 bytes) on Linux but struct icmp (28 bytes)
+ * on BSD/macOS. */
+#define ICMP_HDR_LEN 8
+
 #ifdef __APPLE__
 typedef struct icmp t_icmp_hdr;
 #define ICMP_CODE(hdr) ((hdr).icmp_code)

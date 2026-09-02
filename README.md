@@ -323,7 +323,13 @@ sudo ./ft_nmap [options] (--ip <target> | --file <file>)
 | `--reason` | — | Show the reason a port is in a given state (bonus) |
 | `--verbose` | — | Show all port states (no state ignored) (bonus) |
 | `--decoy` | `ip1,ip2[,ME]` | Cloak the scan with decoy source IPs, max 3; `ME` marks where the real IP goes (bonus) |
+| `--traceroute` | — | Trace the route to each target after the scan, with UDP probes (bonus) |
+| `--traceroute-icmp` | — | Same, with ICMP echo probes; combined with `--traceroute`, each hop is probed with both (bonus) |
 | `--help` | — | Show help |
+
+> **Root required.** Every scan type crafts its own packets on raw sockets and
+> libpcap needs to open the interface, so ft_nmap refuses to start unless it is
+> run as root. `--help` remains available without privileges.
 
 > **Mandatory vs bonus.** Only `--help`, `--ip`, `--file`, `--ports`, `--scan`
 > and `--speedup` are part of the subject's mandatory part. Every option marked
@@ -403,6 +409,41 @@ ft_nmap done: 1 IP address (1 host up) scanned in 0.21 seconds
 
 ---
 
+### Traceroute
+
+`--traceroute` traces the route to each target once that target's scan is done,
+and prints the result right under its port table:
+
+```bash
+sudo ./ft_nmap --ip scanme.nmap.org --ports 22 --scan SYN --traceroute
+```
+
+```
+TRACEROUTE (using UDP ports 33434-33457)
+HOP RTT       ADDRESS
+1   0.62 ms   192.168.1.1
+2   8.30 ms   10.0.0.1, 10.0.0.2
+3   ... 6
+7   24.55 ms  62.115.120.1
+8   31.02 ms  scanme.nmap.org (45.33.32.156)
+```
+
+Three probes are sent per hop. The `RTT` column shows the best of them, and a
+hop answered by several routers (load balancing) lists every address. Silent
+hops are collapsed on one line: `3   ... 6` means hops 3 through 6 went
+unanswered.
+
+`--traceroute-icmp` sends ICMP echo requests instead of UDP datagrams, which
+gets through where a firewall drops UDP to high ports. Passing **both** flags
+probes every hop with both kinds and keeps whichever answers first: twice the
+packets, but one kind being dropped no longer blinds the whole trace.
+
+Intermediate hops are shown as IP addresses. Resolving them would block for
+seconds on every router without a `PTR` record, so only the destination shows a
+name, reused from the scan's own reverse DNS.
+
+---
+
 ## Differences from real nmap
 
 ft_nmap reproduces nmap's behavior, with a few project-specific quirks:
@@ -429,6 +470,18 @@ ft_nmap reproduces nmap's behavior, with a few project-specific quirks:
    - at most **3 decoys** (`--decoy`, bonus);
    - default port range **1-1024**;
    - **IPv4 only**.
+
+4. **`--traceroute` (bonus): classic forward walk.** ft_nmap walks TTL 1, 2, 3…
+   as `traceroute(8)` does, sending UDP datagrams to unused high ports
+   (33434 and up) so that the destination answers `ICMP port unreachable`.
+   Real nmap works the other way round: it deduces the hop distance from the
+   TTL of the packets received during the scan, then probes backwards from
+   that distance while reusing a port it already found open. Two consequences
+   in practice: ft_nmap sends more probes, and it shows hops that nmap hides
+   (a VPN endpoint on the path, for instance). ft_nmap borrows one idea from
+   nmap: when the scan captured a reply from the target, its TTL bounds the
+   number of hops to walk instead of the default 30.
+
 ---
 
 ## Port states and what the responses mean

@@ -12,8 +12,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 sig_atomic_t volatile g_stop = 0;
+sig_atomic_t volatile g_interrupted = 0;
 sig_atomic_t volatile g_display_output = 0;
 
 static void print_usage()
@@ -43,6 +45,13 @@ static void print_usage()
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf(" --verbose: No port states are ignored\n");
 	printf(" --reason: Show the reason why the port is in that state\n");
+	printf("\nTRACEROUTE:\n");
+	printf(" --traceroute: Trace the route to each target once the scan is "
+		   "done (UDP probes)\n");
+	printf(" --traceroute-icmp: Same, with ICMP echo probes instead\n");
+	printf("  Both flags together probe each hop with UDP and ICMP, so a "
+		   "firewall\n");
+	printf("  dropping one kind does not blind the whole trace\n");
 	printf("\nDECOY SCAN:\n");
 	printf(" --decoy <decoy1,decoy2[,ME],...>: Cloak scan with decoy source "
 		   "IPs\n");
@@ -181,6 +190,13 @@ int main(const int argc, char **argv)
 	{
 		print_usage();
 		goto free_and_return_success;
+	}
+
+	if (geteuid() != 0)
+	{
+		LOG("ft_nmap: you requested a scan type which requires root "
+			"privileges.\nQUITTING!\n");
+		goto error;
 	}
 
 	set_scan_presence(&ctx.args);

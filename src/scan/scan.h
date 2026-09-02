@@ -114,6 +114,9 @@ typedef struct s_target
 	struct in_addr addr;
 	t_port_list	   port_list;
 	t_iface_info  *iface_info;
+	/* TTL of the first TCP reply from the target, SYN-ACK or RST. Feeds the
+	 * hop-distance estimate of --traceroute. 0 = nothing received. */
+	u8			   reply_ttl;
 
 	/* How much ICMP errors (icmp_kernel_throttle[0]) the target returns in some
 	 amount of time (icmp_kernel_throttle[1]) */
