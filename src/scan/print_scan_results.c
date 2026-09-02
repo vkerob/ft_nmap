@@ -352,6 +352,23 @@ static void build_results_str(const t_target *target, const t_args *args,
 		buf[offset - 1] = '\0';
 }
 
+static int compute_scan_result_col_width(const t_target *target,
+											   const t_args *args, u8 protocol)
+{
+	char results_buf[256];
+	int  max = (int)strlen("SCAN RESULTS");
+
+	for (u16 i = 0; i < args->port_count; i++)
+	{
+		build_results_str(target, args, (u16)args->ports[i], results_buf,
+						  sizeof(results_buf), protocol);
+		const int len = (int)strlen(results_buf);
+		if (len > max)
+			max = len;
+	}
+	return max + 2;
+}
+
 // Compute max "port/proto" string width across all ports of a target
 // so that columns align regardless of port numbers (like nmap does).
 int compute_port_col_width(const t_args *args)
@@ -575,9 +592,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 		}
 	}
 	const int col_scan_result
-		= (args->nb_scan_types == 1 || nb_scan_type_tcp == 1)
-			  ? 18
-			  : nb_scan_type_tcp * 14;
+		= compute_scan_result_col_width(target, args, IPPROTO_TCP);
 	const int col_reason = 12;
 
 	const bool multi_scan_tcp = nb_scan_type_tcp > 1;
@@ -585,11 +600,12 @@ static void print_port_states(const t_target *target, const t_args *args,
 
 	// Multi scan is only usefull for tcp, but we put it also for UDP because
 	// otherwise we have an empty column when mixing UDP,TCP scan
-	printf("%-*s %-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
-		   "SERVICE", multi_scan_tcp ? col_scan_result : 0,
-		   multi_scan_tcp ? "SCAN RESULTS" : "");
+	printf("%-*s %-*s %-*s", col_port, "PORT", col_state, "STATE", col_svc,
+		   "SERVICE");
+	if (multi_scan_tcp)
+		printf(" %-*s", col_scan_result, "SCAN RESULTS");
 	if (HAS(args->flags, F_REASON))
-		printf("%-*s", col_reason, "REASON");
+		printf(" %-*s", col_reason, "REASON");
 	if (show_version)
 		printf(" %s", "VERSION");
 	printf("\n");
@@ -628,16 +644,21 @@ static void print_port_states(const t_target *target, const t_args *args,
 			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
 
 			snprintf(recap_udp + recap_udp_len,
-					 65535U - recap_udp_len, "%-*s %-*s %-*s %-*s",
+					 65535U - recap_udp_len, "%-*s %-*s %-*s",
 					 col_port, port_str, col_state, state, col_svc,
-					 svc ? svc : "unknown",
-					 multi_scan_tcp ? col_scan_result : 0, "");
+					 svc ? svc : "unknown");
+			recap_udp_len = strlen(recap_udp);
+			if (multi_scan_tcp)
+			{
+				snprintf(recap_udp + recap_udp_len, 65535U - recap_udp_len,
+						 " %-*s", col_scan_result, "");
+			}
 			recap_udp_len = strlen(recap_udp);
 
 			if (HAS(args->flags, F_REASON))
 			{
 				snprintf(recap_udp + recap_udp_len,
-						 65535U - recap_udp_len, "%-*s", col_reason,
+						 65535U - recap_udp_len, " %-*s", col_reason,
 						 final_port_state.reasons[0] ? final_port_state.reasons[0] : "");
 				recap_udp_len = strlen(recap_udp);
 			}
