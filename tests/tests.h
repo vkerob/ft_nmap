@@ -1,7 +1,7 @@
 #ifndef TESTS_H
 #define TESTS_H
 
-#define MAX_NUMBER_PORT_TO_SCAN 100
+#define MAX_NUMBER_PORT_TO_SCAN 25
 
 typedef struct s_socket
 {

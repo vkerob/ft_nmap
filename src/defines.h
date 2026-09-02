@@ -68,10 +68,7 @@
 #define LOG(fmt, ...)                                                          \
 	do                                                                         \
 	{                                                                          \
-		if (getenv("TEST_MODE") == NULL)                                       \
-		{                                                                      \
-			fprintf(stderr, fmt, ##__VA_ARGS__);                               \
-		}                                                                      \
+		fprintf(stderr, fmt, ##__VA_ARGS__);                               \
 	} while (0)
 
 #endif // DEFINES_H

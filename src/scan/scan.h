@@ -165,12 +165,10 @@ void scan_type_to_str(t_scan_type scan_type, char buf[16]);
 int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 				   t_target *targets, size_t target_count);
 
-void print_scan_results(t_ctx *ctx);
+int print_scan_results(t_ctx *ctx);
 
 void set_port_state_reason(t_port *port, t_port_state_reason reason);
 
 void grab_versions(t_target *target, const t_args *args);
-
-const char *guess_os(u8 ttl, u16 tcp_window);
 
 #endif

@@ -146,7 +146,8 @@ static void udp_rate_limit(t_target *target)
 		nanosleep(&ts, NULL);
 	}
 }
-static void 	compute_relative_timestamp(struct timeval *relative_ts, struct timeval *ts_end, struct timeval *ts_start)
+static void 	compute_relative_timestamp(struct timeval *relative_ts, 
+	struct timeval *ts_end, struct timeval *ts_start)
 {
 
 		long seconds_elapsed
@@ -160,6 +161,27 @@ static void 	compute_relative_timestamp(struct timeval *relative_ts, struct time
 		}
 		relative_ts->tv_sec = seconds_elapsed;
 		relative_ts->tv_usec = microseconds_elapsed;
+}
+
+static void set_source_ips_list(struct in_addr *source_ips, u8 *source_ips_count, bool decoy,
+	const struct in_addr *decoy_ips, u8 decoy_count)
+{
+	bool		   has_me = false;
+
+	if (decoy)
+	{
+		for (u8 i = 0; i < decoy_count; i++)
+		{
+			source_ips[*source_ips_count++] = decoy_ips[i];
+			if (decoy_ips[i].s_addr == INADDR_ANY)
+				has_me = true;
+		}
+	}
+	if (!has_me)
+	{
+		// Place holder in list of source ip for our own IP
+		source_ips[*source_ips_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
+	}
 }
 
 void *send_routine(void *arg)
@@ -228,26 +250,17 @@ void *send_routine(void *arg)
 		}
 
 		// Compute relative timestamp once for the whole probe (decoys + real)
-		compute_relative_timestamp(&relative_sent_timestamp, &sent_timestamp, &shared_data->program_info->start);
+		compute_relative_timestamp(&relative_sent_timestamp, &sent_timestamp, 
+			&shared_data->program_info->start);
 
-		struct in_addr send_list[MAX_DECOYS + 1];
+
+		struct in_addr source_ips_list[MAX_DECOYS + 1];
 		u8			   send_count = 0;
-		bool		   has_me = false;
+		bool decoy_activated = HAS(shared_data->args->flags, F_DECOY);
+		set_source_ips_list(source_ips_list, &send_count, decoy_activated,
+			shared_data->args->decoys, shared_data->args->decoy_count);
+	
 
-		if (shared_data->args && HAS(shared_data->args->flags, F_DECOY))
-		{
-			for (u8 i = 0; i < shared_data->args->decoy_count; i++)
-			{
-				send_list[send_count++] = shared_data->args->decoys[i];
-				if (shared_data->args->decoys[i].s_addr == INADDR_ANY)
-					has_me = true;
-			}
-		}
-		if (!has_me)
-		{
-			// Place holder in decoy list for our own IP
-			send_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
-		}
 		t_target		 *target = request->target;
 		const u16		  req_port = request->port;
 		const t_scan_type req_type = request->type;
@@ -271,9 +284,9 @@ void *send_routine(void *arg)
 
 		for (u8 i = 0; i < send_count; i++)
 		{
-			bool		   is_me = (send_list[i].s_addr == INADDR_ANY);
+			bool		   is_me = (source_ips_list[i].s_addr == INADDR_ANY);
 			struct in_addr src
-				= is_me ? target->iface_info->ip_addr : send_list[i];
+				= is_me ? target->iface_info->ip_addr : source_ips_list[i];
 
 			used_socket = (req_type == SCAN_UDP) ? udp_socket : tcp_socket;
 			used_socket.sin.sin_addr = target->addr;
@@ -315,6 +328,10 @@ void *send_routine(void *arg)
 				if (req_type == SCAN_UDP)
 					udp_rate_limit(target);
 
+				/* The first probe is sent unconditionaly
+				 * So for the next ones we check if we can find the first one
+				 * in sent list, if thats not the case then it means the target answered
+				 * us already so we do not need to send more payload for this source ip */
 				if (send_count == 1 && p > 0 && req_type == SCAN_UDP)
 				{
 					pthread_mutex_lock(

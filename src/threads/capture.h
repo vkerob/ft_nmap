@@ -2,7 +2,6 @@
 #define CAPTURE_H
 
 #include "shared.h"
-#include "typesdef.h"
 
 #include <pcap/pcap.h>
 extern pthread_mutex_t printf_mutex;

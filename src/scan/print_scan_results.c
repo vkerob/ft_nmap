@@ -45,14 +45,14 @@ static void update_port_reasons(t_port_output *port_conclusion,
 	if (port->reasons[0] == NULL)
 		return;
 
-	//  Same port state but maybe the reason the port is in that state is
-	//  different
 	if (port_conclusion->port_state == port->port_state)
 	{
 		if (port_conclusion->reasons[0] == NULL)
 		{
 			port_conclusion->reasons[0] = port->reasons[0];
 		}
+		/* Same port state but maybe the reason the port is in that state is
+		 * different */
 		else if (strcmp(port_conclusion->reasons[0], port->reasons[0]) != 0)
 		{
 			port_conclusion->reasons[1] = port->reasons[0];
@@ -60,6 +60,7 @@ static void update_port_reasons(t_port_output *port_conclusion,
 	}
 	else
 	{
+		// Different port state (a more precise one) so we erase the last reasons
 		port_conclusion->reasons[0] = port->reasons[0];
 		port_conclusion->reasons[1] = NULL;
 	}
@@ -67,6 +68,7 @@ static void update_port_reasons(t_port_output *port_conclusion,
 
 static void set_unknown_port_state(t_port_output *port_conclusion)
 {
+	// By setting the port state conclusion to unknown we also erase the condition
 	port_conclusion->port_state = UNKNOWN;
 	port_conclusion->reasons[0] = NULL;
 	port_conclusion->reasons[1] = NULL;
@@ -77,6 +79,10 @@ static void
 update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 										const t_port  *port)
 {
+	/* Unknown state is definitive, if we do not put this condition
+	 * we can two scan types gave us opposite result which result in unknown state
+	 *  and after that a third one arrive and put his own status
+	 * (not acknowledging the previous ones)*/
 	if (port_conclusion->port_state == UNKNOWN)
 	{
 		port_conclusion->port_state = port->port_state;
@@ -90,13 +96,14 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 		// UNKNOWN
 		if ((port->port_state == CLOSE && port_conclusion->port_state == OPEN)
 			|| (port->port_state == OPEN
-				&& port_conclusion->port_state == CLOSE))
+				&& port_conclusion->port_state == CLOSE) || port_conclusion->port_state == FILTERED)
 		{
 			set_unknown_port_state(port_conclusion);
-			return;
 		}
-		update_port_reasons(port_conclusion, port);
-		port_conclusion->port_state = port->port_state;
+		else{
+			update_port_reasons(port_conclusion, port);
+			port_conclusion->port_state = port->port_state;
+		}
 		break;
 	case OPEN_FILTERED:
 		if (port_conclusion->port_state == DEFAULT
@@ -110,6 +117,7 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 		{
 			set_unknown_port_state(port_conclusion);
 		}
+		// If open or filtered we already have a more precise port status
 		break;
 	case UNFILTERED:
 		if (port_conclusion->port_state == UNFILTERED
@@ -118,51 +126,65 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 			update_port_reasons(port_conclusion, port);
 			port_conclusion->port_state = port->port_state;
 		}
-		if (port_conclusion->port_state == FILTERED
-			|| port_conclusion->port_state == OPEN_FILTERED)
+		if (port_conclusion->port_state == FILTERED)
 		{
 			set_unknown_port_state(port_conclusion);
 		}
+		/* Previous scan gave us open or filtered and current give us unfiltered
+			so logically the port is open */
+		if (port_conclusion->port_state == OPEN_FILTERED)
+		{
+			port_conclusion->port_state = OPEN;
+		}
+		// If port conclusion is open or closed we prefer keep it that way since it
+		// we can decude it from open/close that this is unfiltered and not the inverse
 		break;
 	case FILTERED:
 		if (port_conclusion->port_state == OPEN
-			|| port_conclusion->port_state == CLOSE)
+			|| port_conclusion->port_state == CLOSE
+			|| UNFILTERED)
 		{
 			set_unknown_port_state(port_conclusion);
 		}
 		else if (port_conclusion->port_state == OPEN_FILTERED
 				 || port_conclusion->port_state == DEFAULT
-				 || port_conclusion->port_state == FILTERED
-				 || port_conclusion->port_state == UNFILTERED)
+				 || port_conclusion->port_state == FILTERED)
 		{
 			update_port_reasons(port_conclusion, port);
 			port_conclusion->port_state = port->port_state;
 		}
+
 		break;
 	default:
 		break;
 	}
 }
 
-// Ignored states are print from the most common to the least common and with a
-// reason associated (no-response, reset, ...)
-/* Count the number of ports in each state for a given protocol slot
+/* Ignored states are print from the most common to the least common and with a
+ * reason associated (no-response, reset, ...)
+ * Count the number of ports in each state for a given protocol slot
  * (TCP_INDEX or UDP_INDEX), keeping TCP and UDP totals separate. */
 static void count_states_for_proto(const t_target *target, u8 proto_index,
 								   u16 port_count,
 								   u16 counts[HIGHEST_PORT_STATE])
 {
 	for (u8 s = 0; s < HIGHEST_PORT_STATE; s++)
+	{
 		counts[s] = 0;
+	}
 
 	const t_port_output *arr = target->port_list.port_final_state[proto_index];
 	if (arr == NULL)
+	{
 		return;
+	}
 	for (u16 i = 0; i < port_count; i++)
 	{
 		const t_port_state st = arr[i].port_state;
 		if (st < HIGHEST_PORT_STATE)
+		{
 			counts[st]++;
+		}
 	}
 }
 
@@ -242,6 +264,8 @@ static bool print_ignored_port_states(const t_target *target, bool tcp_scan,
 
 	for (t_port_state state = DEFAULT; state < HIGHEST_PORT_STATE; state++)
 	{
+		// Open state is not ignored
+		if (state == OPEN) continue ;
 		const bool tcp_group = tcp_scan && tcp_counts[state] > PRINT_LIMIT;
 		const bool udp_group = udp_scan && udp_counts[state] > PRINT_LIMIT;
 
@@ -456,10 +480,11 @@ static bool is_ignored_state(const bool	 *ignored_states_by_idx,
 	return ignored_states_by_idx[port_state];
 }
 
-static void resolve_final_port_state(const t_args *args, t_target *target)
+static int resolve_final_port_state(const t_args *args, t_target *target)
 {
 	for (u16 i = 0; i < args->port_count; i++)
 	{
+		// Index of the port inside our map
 		const int idx = target->port_list.port_map[args->ports[i]];
 
 		for (u8 j = 0; j < args->nb_scan_types; j++)
@@ -469,8 +494,7 @@ static void resolve_final_port_state(const t_args *args, t_target *target)
 				= (scan_type_index == SCAN_UDP) ? UDP_INDEX : TCP_INDEX;
 
 			/* Update the conclusion of a port state based off what each scan
-				type gave us */
-
+				type gave us, also keep track of the reasons associated */
 			update_definitive_port_state_and_reason(
 				&target->port_list.port_final_state[protocol_index][idx],
 				&target->port_list.port_map_rev[scan_type_index][idx]);
@@ -483,17 +507,23 @@ static void resolve_final_port_state(const t_args *args, t_target *target)
 
 			/* Keep track of the occurences of each port state (OPEN, FILTERED,
 			 ...) with their associated reason */
-			find_or_update_state_and_reason_combination(
+			if (find_or_update_state_and_reason_combination(
 				&target->port_list.state_and_reason[TCP_INDEX],
-				target_port_state, target_port_output.reasons[0]);
+				target_port_state, target_port_output.reasons[0]) == FAILURE)
+			{
+				return FAILURE;
+			}
 
 			// Second reason can be empty
 			if (target->port_list.port_final_state[TCP_INDEX][idx].reasons[1]
 				!= NULL)
 			{
-				find_or_update_state_and_reason_combination(
+				if (find_or_update_state_and_reason_combination(
 					&target->port_list.state_and_reason[TCP_INDEX],
-					target_port_state, target_port_output.reasons[1]);
+					target_port_state, target_port_output.reasons[1]) == FAILURE)
+					{
+						return FAILURE;
+					}
 			}
 		}
 
@@ -505,11 +535,15 @@ static void resolve_final_port_state(const t_args *args, t_target *target)
 				= target->port_list.port_final_state[UDP_INDEX][idx];
 			t_port_state target_port_state = target_port_output.port_state;
 
-			find_or_update_state_and_reason_combination(
+			if (find_or_update_state_and_reason_combination(
 				&target->port_list.state_and_reason[UDP_INDEX],
-				target_port_state, target_port_output.reasons[0]);
+				target_port_state, target_port_output.reasons[0]) == FAILURE)
+				{
+					return FAILURE;
+				}
 		}
 	}
+	return SUCCESS;
 }
 
 static void print_port_states(const t_target *target, const t_args *args,
@@ -736,7 +770,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 	free(recap_tcp);
 }
 
-static void print_target_results(t_target *target, const t_args *args)
+static int print_target_results(t_target *target, const t_args *args)
 {
 	/* Per-protocol "is this state hidden in Not shown ?" lookup tables.
 	 * Indexed by t_port_state value. We need two tables because a state
@@ -748,6 +782,11 @@ static void print_target_results(t_target *target, const t_args *args)
 	/* Header: show "hostname (IP)" when reverse DNS found something,
 	 * otherwise fall back to whatever the user typed. */
 	const char *ip_str = inet_ntoa(target->addr);
+	if (ip_str == NULL)
+	{
+		LOG("ft_nmap: inet_ntoa");
+		return FAILURE;
+	}
 	if (target->hostname && strcmp(target->hostname, target->input) != 0)
 	{
 		printf("Nmap scan report for %s (%s)\n", target->hostname, ip_str);
@@ -757,8 +796,10 @@ static void print_target_results(t_target *target, const t_args *args)
 		printf("Nmap scan report for %s\n", target->input);
 	}
 	printf("Host is up.\n");
-
-	resolve_final_port_state(args, target);
+	if (resolve_final_port_state(args, target) == FAILURE)
+	{
+		return FAILURE;
+	}
 
 	const bool all_ignored
 		= print_ignored_port_states(target, args->tcp_scan, args->udp_scan,
@@ -768,15 +809,16 @@ static void print_target_results(t_target *target, const t_args *args)
 	{
 		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}
+	return SUCCESS;
 }
 
-void print_scan_results(t_ctx *ctx)
+int print_scan_results(t_ctx *ctx)
 {
 	struct timeval now;
 	if (gettimeofday(&now, NULL) == -1)
 	{
 		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));
-		return;
+		return FAILURE;
 	}
 
 	const double elapsed
@@ -784,11 +826,16 @@ void print_scan_results(t_ctx *ctx)
 		  + (double)(now.tv_usec - ctx->program_info.start.tv_usec) / 1e6;
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
-		print_target_results(&ctx->targets[i], &ctx->args);
+		if (print_target_results(&ctx->targets[i], &ctx->args) == FAILURE)
+		{
+			return FAILURE;
+		}
 	}
 
 	printf("\nft_nmap done: %zu IP address%s (%zu host%s up) scanned in %.2f "
 		   "seconds\n",
 		   ctx->target_count, ctx->target_count > 1 ? "es" : "",
 		   ctx->target_count, ctx->target_count > 1 ? "s" : "", elapsed);
+
+	return SUCCESS;
 }
