@@ -323,7 +323,7 @@ SUITE(scan_syn_suite)
 	};
 	RUN_TESTp(compare, args_syn, ft_nmap_args_syn);
 
-	/* SYN with --speedup: verifies parallelism does not alter results */
+	// /* SYN with --speedup: verifies parallelism does not alter results */
 	char *args_syn_speed[]
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sS",			 "-v",		  NULL };
@@ -335,10 +335,10 @@ SUITE(scan_syn_suite)
 
 	/* SYN over a fixed 7-port range (below PRINT_LIMIT=25, usually all closed) */
 	char *args_syn_range[]
-		= { "/usr/bin/nmap", "127.0.0.1", "-p", "1024-1030",
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sS",			 "-v",		  NULL };
 	char *ft_nmap_args_syn_range[] = {
-		"./ft_nmap", "--ip",   "127.0.0.1", "--ports", "1024-1030",
+		"./ft_nmap", "--ip",   "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "SYN",	  "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_syn_range, ft_nmap_args_syn_range);
@@ -346,13 +346,11 @@ SUITE(scan_syn_suite)
 
 SUITE(scan_ack_suite)
 {
-	/* Fixed 7-port range keeps count below PRINT_LIMIT so both tools show
-	 * individual port lines (all unfiltered on localhost without firewall). */
 	char *args_ack[]
-		= { "/usr/bin/nmap", "127.0.0.1", "-p", "1031-1037",
+		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sA",			 "-v",		  NULL };
 	char *ft_nmap_args_ack[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", "1031-1037",
+		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
 		"--scan",	 "ACK",	  "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_ack, ft_nmap_args_ack);

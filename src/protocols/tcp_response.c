@@ -28,8 +28,10 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	/* Did the response match a state this scan can actually conclude? If not
 	 * (unexpected/unsolicited packet), we must NOT resolve the port — otherwise
 	 * it would stay stuck in DEFAULT. We re-queue the probe (keeping its
-	 * original timestamp) so purge_timedout_probe_request classifies it later. */
-	int matched = 0;
+	 * original timestamp) so purge_timedout_probe_request classifies it later.
+	 * This can happen if we scan TCP SYN 127.0.0.1 we will receive also the probe we send with
+	 * only the SYN flag set, the matched boolean help us dodge this edge case */
+	bool matched = false;
 	switch (scan_type)
 	{
 	case SCAN_SYN:
@@ -39,12 +41,13 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = CLOSE;
 			set_port_state_reason(port, CONNECTION_RESET);
-			matched = 1;
+			matched = true;
 		}
 		else if ((flags & TH_SYN) && (flags & TH_ACK))
 		{
 			port->port_state = OPEN;
 			set_port_state_reason(port, SYN_ACK);
+			matched = true;
 		}
 		break;
 	case SCAN_ACK:
@@ -52,7 +55,7 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = UNFILTERED;
 			set_port_state_reason(port, CONNECTION_RESET);
-			matched = 1;
+			matched = true;
 		}
 		break;
 	case SCAN_FIN:
@@ -62,10 +65,10 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		{
 			port->port_state = CLOSE;
 			set_port_state_reason(port, CONNECTION_RESET);
-			matched = 1;
+			matched = true;
 		}
 		break;
-	// SCAN UDP (nothing to do but compiler complain if not handle)
+	// SCAN UDP (nothing to do because handle in udp_response but compiler complain if not handle)
 	default:
 		break;
 	}
