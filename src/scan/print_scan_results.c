@@ -142,7 +142,7 @@ update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 	case FILTERED:
 		if (port_conclusion->port_state == OPEN
 			|| port_conclusion->port_state == CLOSE
-			|| UNFILTERED)
+			|| port_conclusion->port_state == UNFILTERED)
 		{
 			set_unknown_port_state(port_conclusion);
 		}

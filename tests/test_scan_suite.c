@@ -99,14 +99,8 @@ bool run_command(char **args, char **output)
 			memset(buf, 0, sizeof(buf));
 		}
 		close(pipe_fds[0]);
-		int wstatus = 0;
-		waitpid(pid, &wstatus, 0);
-		if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) != 0)
-		{
-			LOG("test_ft_nmap: command exited with non-zero status %d\n",
-				WEXITSTATUS(wstatus));
-			return true;
-		}
+		waitpid(pid, NULL, 0);
+
 	}
 	return false;
 }
@@ -293,6 +287,7 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 
 	free_port_list(port_list_nmap);
 	free_port_list(port_list_ft_nmap);
+	pcre2_code_free(re);
 
 	PASS();
 

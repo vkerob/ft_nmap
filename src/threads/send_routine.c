@@ -163,27 +163,6 @@ static void 	compute_relative_timestamp(struct timeval *relative_ts,
 		relative_ts->tv_usec = microseconds_elapsed;
 }
 
-static void set_source_ips_list(struct in_addr *source_ips, u8 *source_ips_count, bool decoy,
-	const struct in_addr *decoy_ips, u8 decoy_count)
-{
-	bool		   has_me = false;
-
-	if (decoy)
-	{
-		for (u8 i = 0; i < decoy_count; i++)
-		{
-			source_ips[*source_ips_count++] = decoy_ips[i];
-			if (decoy_ips[i].s_addr == INADDR_ANY)
-				has_me = true;
-		}
-	}
-	if (!has_me)
-	{
-		// Place holder in list of source ip for our own IP
-		source_ips[*source_ips_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
-	}
-}
-
 void *send_routine(void *arg)
 {
 	t_shared_data_sender *shared_data = arg;
@@ -256,10 +235,21 @@ void *send_routine(void *arg)
 
 		struct in_addr source_ips_list[MAX_DECOYS + 1];
 		u8			   send_count = 0;
-		bool decoy_activated = HAS(shared_data->args->flags, F_DECOY);
-		set_source_ips_list(source_ips_list, &send_count, decoy_activated,
-			shared_data->args->decoys, shared_data->args->decoy_count);
-	
+			bool has_me = false;
+		if (shared_data->args && HAS(shared_data->args->flags, F_DECOY))
+		{
+			for (u8 i = 0; i < shared_data->args->decoy_count; i++)
+			{
+				source_ips_list[send_count++] = shared_data->args->decoys[i];
+				if (shared_data->args->decoys[i].s_addr == INADDR_ANY)
+					has_me = true;
+			}
+		}
+		if (!has_me)
+		{
+			// Place holder in decoy list for our own IP
+			source_ips_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
+		}
 
 		t_target		 *target = request->target;
 		const u16		  req_port = request->port;
