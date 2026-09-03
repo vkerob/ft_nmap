@@ -8,6 +8,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* Map every ICMP type-3 (destination unreachable) code to its nmap-style
  * reason. Any code not listed here still indicates filtering (we just fall
@@ -52,7 +53,7 @@ static t_port_state_reason icmp_code_to_reason(const u8 code)
 /* Can either be from a UDP or TCP probe so we pass the scan type as argument */
 void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 						  const struct in_addr ip_src, t_icmp_hdr icmp_hdr,
-						  const t_scan_type scan_type, const u8 protocol)
+						  const t_scan_type scan_type, const u8 protocol, t_eth_hdr *eth_hdr)
 {
 	if (ICMP_TYPE(icmp_hdr) != 3)
 	{
@@ -67,6 +68,11 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 	{
 		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		return;
+	}
+	if (eth_hdr != NULL && probe->target->mac_address == false)
+	{
+		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETH_ALEN);
+		probe->target->mac_address = true;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];
 	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];

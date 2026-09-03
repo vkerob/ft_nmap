@@ -6,10 +6,11 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <string.h>
 
 void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 						 const t_scan_type scan_type, const u16 source_port,
-						 const struct in_addr ip_src, const u8 ttl)
+						 const struct in_addr ip_src, const u8 ttl, t_eth_hdr *eth_hdr)
 {
 
 	pthread_mutex_lock(&sent_list->safe_mut.mutex);
@@ -22,6 +23,13 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		return;
 	}
+
+	if (eth_hdr != NULL && probe->target->mac_address == false)
+	{
+		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETH_ALEN);
+		probe->target->mac_address = true;
+	}
+
 	const int idx = probe->target->port_list.port_map[source_port];
 	t_port	 *port = &probe->target->port_list.port_map_rev[scan_type][idx];
 

@@ -125,6 +125,8 @@ typedef struct s_target
 	struct timeval
 		last_udp_sent; // zero = no UDP probe sent yet for this target
 	pthread_mutex_t mutex;
+	bool mac_address;
+  uint8_t  mac[ETH_ALEN];	/* source ether addr	*/
 } t_target;
 
 typedef enum e_scan_type

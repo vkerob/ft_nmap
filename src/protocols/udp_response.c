@@ -7,9 +7,10 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <string.h>
 
 void handle_udp_response(t_probe_queue *sent_list, const u16 source_port,
-						 struct in_addr ip_src)
+						 struct in_addr ip_src, t_eth_hdr *eth_hdr)
 {
 	pthread_mutex_lock(&sent_list->safe_mut.mutex);
 
@@ -20,6 +21,12 @@ void handle_udp_response(t_probe_queue *sent_list, const u16 source_port,
 	{
 		pthread_mutex_unlock(&sent_list->safe_mut.mutex);
 		return;
+	}
+
+	if (eth_hdr != NULL && probe->target->mac_address == false)
+	{
+		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETH_ALEN);
+		probe->target->mac_address = true;
 	}
 
 	const int idx = probe->target->port_list.port_map[source_port];

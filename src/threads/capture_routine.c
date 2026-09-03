@@ -24,7 +24,8 @@
 
 static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 							  bpf_u_int32		  l3_caplen,
-							  const struct timeval *relative_recv_time, u16 flags)
+							  const struct timeval *relative_recv_time, u16 flags,
+								t_eth_hdr *eth_hdr)
 {
 	const u8	  *protocol_hdr;
 	t_datalink_hdr datalink_hdr = { 0 };
@@ -57,7 +58,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type,
-							source_port, ip_hdr->ip_src, ip_hdr->ip_ttl);
+							source_port, ip_hdr->ip_src, ip_hdr->ip_ttl, eth_hdr);
 		break;
 
 	case IPPROTO_UDP:
@@ -68,7 +69,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		/* Copy the header BEFORE reading any field from it. */
 		datalink_hdr.udp_hdr = *(const struct udphdr *)protocol_hdr;
 		source_port = ntohs(datalink_hdr.udp_hdr.uh_sport);
-		handle_udp_response(sent_list, source_port, ip_hdr->ip_src);
+		handle_udp_response(sent_list, source_port, ip_hdr->ip_src, eth_hdr);
 		break;
 
 	case IPPROTO_ICMP:
@@ -107,7 +108,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 				ntohs(nested_datalink_header.tcp_hdr.th_sport));
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
 								 datalink_hdr.icmp_hdr, nested_scan_type,
-								 IPPROTO_TCP);
+								 IPPROTO_TCP, eth_hdr);
 			break;
 		case IPPROTO_UDP:
 			if (nested_l4_len < sizeof(struct udphdr))
@@ -115,7 +116,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 			nested_datalink_header.udp_hdr = *(const t_udp_hdr *)datalink_header;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP);
+								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP, eth_hdr);
 			break;
 		default:
 			return FAILURE;
@@ -147,6 +148,7 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
 	bpf_u_int32	  l3_caplen = 0;
+	t_eth_hdr *eth_header = NULL;
 
 	switch (datalink_type)
 	{
@@ -157,18 +159,9 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 		if (caplen < l2_len + sizeof(struct ip))
 			return SUCCESS;
 
-		struct ether_header *eth_header = (struct ether_header *)packet;
+		eth_header = (t_eth_hdr *)packet;
 		if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 			return SUCCESS;
-
-		printf("MAC Address: ");
-		for (int i = 0; i < ETHER_ADDR_LEN; i++)
-		{
-			printf("%02X", eth_header->ether_shost[i]);
-			if (i != ETHER_ADDR_LEN - 1)
-				printf(":");
-		}
-		printf("\n");
 
 		ip_start = packet + l2_len;
 		l3_caplen = caplen - (bpf_u_int32)l2_len;
@@ -204,7 +197,7 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 	}
 
 	return handle_ip_protocol(sent_list, (const t_ip *)ip_start, l3_caplen,
-							  relative_recv_time, flags);
+							  relative_recv_time, flags, eth_header);
 }
 
 void handle_packet(u8 *args, const struct pcap_pkthdr *header,
