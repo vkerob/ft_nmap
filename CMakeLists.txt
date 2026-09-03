@@ -15,8 +15,19 @@ option(FT_NMAP_SANITIZERS "Enable ASAN/UBSAN in Debug builds" ON)
 set(FT_NMAP_SANITIZER_COMPILE_FLAGS)
 set(FT_NMAP_SANITIZER_LINK_FLAGS)
 if(FT_NMAP_SANITIZERS)
-        list(APPEND FT_NMAP_SANITIZER_COMPILE_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
-        list(APPEND FT_NMAP_SANITIZER_LINK_FLAGS -fsanitize=address,undefined)
+        include(CheckCSourceCompiles)
+        set(CMAKE_REQUIRED_FLAGS "-fsanitize=address,undefined")
+        check_c_source_compiles("int main(void) { return 0; }" FT_NMAP_HAVE_SANITIZERS)
+        unset(CMAKE_REQUIRED_FLAGS)
+
+        if(FT_NMAP_HAVE_SANITIZERS)
+                list(APPEND FT_NMAP_SANITIZER_COMPILE_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
+                list(APPEND FT_NMAP_SANITIZER_LINK_FLAGS -fsanitize=address,undefined)
+        else()
+                message(WARNING
+                        "FT_NMAP_SANITIZERS=ON but this toolchain has no ASAN/UBSAN runtime "
+                        "(libasan/libubsan missing). Building without sanitizers.")
+        endif()
 endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.c)

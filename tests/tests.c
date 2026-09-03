@@ -17,7 +17,8 @@ extern SUITE(scan_stealth_suite);
 GREATEST_MAIN_DEFS();
 
 sig_atomic_t volatile g_stop = 0;
-sig_atomic_t g_display_output;
+sig_atomic_t volatile g_interrupted = 0;
+sig_atomic_t volatile g_display_output = 0;
 
 t_server *g_server_data = NULL;
 
