@@ -301,8 +301,14 @@ void print_debug_sender_thread_proceed_probe(pthread_t			   phid,
 		   (unsigned long)phid, tv->tv_sec, (unsigned int)tv->tv_usec);
 	printf(ANSI_COLOR_RED "  • Destination Port: %d\n" ANSI_COLOR_RESET,
 		   request->port);
+
+	const char *ip = inet_ntoa(request->target->addr);
+	if (ip == NULL)
+	{
+		ip = request->target->input;
+	}
 	printf(ANSI_COLOR_RED "  • Destination IP: %s\n" ANSI_COLOR_RESET,
-		   inet_ntoa(request->target->addr));
+	ip);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
@@ -489,8 +495,13 @@ void print_debug_probe_request(const t_probe *request)
 	printf(ANSI_BOLD ANSI_COLOR_CYAN "New Probe Request:\n" ANSI_COLOR_RESET);
 	printf(ANSI_COLOR_GREEN
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
+	char *ip = inet_ntoa(request->target->addr);
+	if (ip == NULL)
+	{
+		ip = request->target->input;
+	}
 	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
-		   inet_ntoa(request->target->addr), request->port);
+		 ip, request->port);
 	scan_type_to_str(request->type, buf);
 	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
 
@@ -593,8 +604,13 @@ void print_debug_parsing_args(const t_ctx ctx)
 		   "--------------------------------------------\n" ANSI_COLOR_RESET);
 	for (size_t i = 0; i < ctx.target_count; i++)
 	{
+		const char *ip = inet_ntoa(ctx.targets[i].addr);
+		if (ip == NULL)
+		{
+			ip = ctx.targets[i].input;
+		}
 		printf(ANSI_COLOR_GREEN "  • %s (%s)\n" ANSI_COLOR_RESET,
-			   ctx.targets[i].input, inet_ntoa(ctx.targets[i].addr));
+			   ctx.targets[i].input, ip);
 	}
 
 	printf(ANSI_BOLD ANSI_COLOR_BLUE "\nPorts:\n" ANSI_COLOR_RESET);

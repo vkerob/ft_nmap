@@ -161,6 +161,15 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 		if (ntohs(eth_header->ether_type) != ETHERTYPE_IP)
 			return SUCCESS;
 
+		printf("MAC Address: ");
+		for (int i = 0; i < ETH_ALEN; i++)
+		{
+			printf("%02X", eth_header->ether_shost[i]);
+			if (i != ETH_ALEN - 1)
+				printf(":");
+		}
+		printf("\n");
+
 		ip_start = packet + l2_len;
 		l3_caplen = caplen - (bpf_u_int32)l2_len;
 		break;

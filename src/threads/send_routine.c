@@ -363,10 +363,16 @@ void *send_routine(void *arg)
 				}
 
 				if (send_packet(&used_socket, packet, &sent_timestamp,
-								packet_len)
+								packet_len) == FAILURE
 					&& is_me)
-					LOG("ft_nmap: failed to send packet to %s\n",
-						inet_ntoa(target->addr));
+					{
+						char *ip = inet_ntoa(target->addr);
+						if (ip == NULL)
+						{
+							ip = target->input;
+						}
+						LOG("ft_nmap: failed to send packet to %s\n", ip);
+					}
 			}
 		}
 

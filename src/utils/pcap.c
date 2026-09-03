@@ -123,6 +123,11 @@ int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, const t_target *targets,
 				size_t target_count)
 {
 	const char *ip_src_interface = inet_ntoa(pcap_ctx->iface_info->ip_addr);
+	if (ip_src_interface == NULL)
+	{
+		LOG("ft_nmap: inet_ntoa failed\n");
+		return FAILURE;
+	}
 	pcap_ctx->handle = pcap_create(pcap_ctx->iface_info->name, errbuf);
 	if (!pcap_ctx->handle)
 	{

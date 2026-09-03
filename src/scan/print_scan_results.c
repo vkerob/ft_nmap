@@ -796,8 +796,7 @@ static int print_target_results(t_target *target, const t_args *args)
 	const char *ip_str = inet_ntoa(target->addr);
 	if (ip_str == NULL)
 	{
-		LOG("ft_nmap: inet_ntoa");
-		return FAILURE;
+		ip_str = target->input;
 	}
 	if (target->hostname && strcmp(target->hostname, target->input) != 0)
 	{
