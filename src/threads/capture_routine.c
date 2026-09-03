@@ -162,10 +162,10 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 			return SUCCESS;
 
 		printf("MAC Address: ");
-		for (int i = 0; i < ETH_ALEN; i++)
+		for (int i = 0; i < ETHER_ADDR_LEN; i++)
 		{
 			printf("%02X", eth_header->ether_shost[i]);
-			if (i != ETH_ALEN - 1)
+			if (i != ETHER_ADDR_LEN - 1)
 				printf(":");
 		}
 		printf("\n");
