@@ -56,7 +56,6 @@ target_compile_options(ft_nmap PRIVATE
 )
 
 target_compile_options(tests_ft_nmap PRIVATE
-				-DTEST_MODE
         -Wall -Wextra -Werror -g
         ${FT_NMAP_SANITIZER_COMPILE_FLAGS}
 )
@@ -75,28 +74,20 @@ find_path(PCAP_ROOT_DIR
 
 set (HINT_DIR ${PCAP_ROOT_DIR}/lib)
 
-# message(${HINT_DIR})
-
-#set(CMAKE_FIND_DEBUG_MODE TRUE)
 
 set(HINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/pcre2-10.47/build/)
 
 find_library(LIBPCAP NAMES pcap HINTS ${HINT_DIR} REQUIRED NO_CMAKE_FIND_ROOT_PATH)
-# find_library(LIBPCRE2 NAMES pcre2-8 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/pcre2-10.47/build/ REQUIRED)
-# set(PCRE2_HEADER_DIR  PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/pcre2-10.47/build/interface/)
 
-# find_library(LIBPCRE2 NAMES pcre2-8 PATHS ${LIBPCRE2_PATH} REQUIRED)
 
 list(APPEND INCLUDE_DIRS ${PCRE2_HEADER_DIR})
 
-# message(${LIBPCRE2})
 
 target_include_directories(ft_nmap PRIVATE ${INCLUDE_DIRS})
 target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS})
 
-#set(CMAKE_FIND_DEBUG_MODE FALSE)
 
-target_link_libraries(ft_nmap PRIVATE ${LIBPCAP} pcre2-8)
+target_link_libraries(ft_nmap PRIVATE ${LIBPCAP})
 
 target_link_libraries(tests_ft_nmap ${LIBPCAP} pcre2-8)
 
