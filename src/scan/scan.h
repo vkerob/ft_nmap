@@ -116,7 +116,7 @@ typedef struct s_target
 	t_iface_info  *iface_info;
 	/* TTL of the first TCP reply from the target, SYN-ACK or RST. Feeds the
 	 * hop-distance estimate of --traceroute. 0 = nothing received. */
-	u8			   reply_ttl;
+	u8 reply_ttl;
 
 	/* How much ICMP errors (icmp_kernel_throttle[0]) the target returns in some
 	 amount of time (icmp_kernel_throttle[1]) */
@@ -125,8 +125,8 @@ typedef struct s_target
 	struct timeval
 		last_udp_sent; // zero = no UDP probe sent yet for this target
 	pthread_mutex_t mutex;
-	bool mac_address;
-  uint8_t  mac[ETH_ALEN];	/* source ether addr	*/
+	bool			mac_address;
+	uint8_t			mac[ETHER_ADDR_LEN]; /* source ether addr	*/
 } t_target;
 
 typedef enum e_scan_type
@@ -159,9 +159,10 @@ typedef struct s_ctx
 } t_ctx;
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				  const u16 ports[MAX_PORT_COUNT], const u8 scan_types[MAX_NB_SCAN_TYPE],
-				  const u8 nb_scan_type, const bool tcp_scan,
-				  const bool udp_scan, u16 *max_port_nb, int *port_map);
+				  const u16 ports[MAX_PORT_COUNT],
+				  const u8 scan_types[MAX_NB_SCAN_TYPE], const u8 nb_scan_type,
+				  const bool tcp_scan, const bool udp_scan, u16 *max_port_nb,
+				  int *port_map);
 
 int init_port_lists(t_ctx *ctx);
 

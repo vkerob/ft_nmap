@@ -25,7 +25,8 @@ void handle_udp_response(t_probe_queue *sent_list, const u16 source_port,
 
 	if (eth_hdr != NULL && probe->target->mac_address == false)
 	{
-		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETH_ALEN);
+		memcpy(probe->target->mac, eth_hdr->ether_shost,
+			   sizeof(u8) * ETHER_ADDR_LEN);
 		probe->target->mac_address = true;
 	}
 

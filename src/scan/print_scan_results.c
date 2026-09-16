@@ -862,10 +862,10 @@ int print_scan_results(t_ctx *ctx)
 		if (ctx->targets[i].mac_address == true)
 		{
 			printf("MAC Address: ");
-			for (u8 j = 0; j < ETH_ALEN; j++)
+			for (u8 j = 0; j < ETHER_ADDR_LEN; j++)
 			{
 				printf("%02X", ctx->targets[i].mac[j]);
-				if (j != ETH_ALEN - 1)
+				if (j != ETHER_ADDR_LEN - 1)
 					printf(":");
 			}
 			printf("\n");
