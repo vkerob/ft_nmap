@@ -592,11 +592,7 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_VERBOSE);
 			break;
 
-		case VERSION_DETECT:
-			SET(args->flags, F_VERSION);
-			break;
-
-			case DECOY:
+		case DECOY:
 			SET(args->flags, F_DECOY);
 			if (parse_decoys(optarg, args->decoys, &args->decoy_count)
 				== FAILURE)

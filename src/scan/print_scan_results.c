@@ -584,7 +584,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 	const int col_reason = 12;
 
 	const bool multi_scan_tcp = nb_scan_type_tcp > 1;
-	const bool show_version = HAS(args->flags, F_VERSION) && args->tcp_scan;
 
 	// Multi scan is only usefull for tcp, but we put it also for UDP because
 	// otherwise we have an empty column when mixing UDP,TCP scan
@@ -594,8 +593,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 		printf(" %-*s", col_scan_result, "SCAN RESULTS");
 	if (HAS(args->flags, F_REASON))
 		printf(" %-*s", col_reason, "REASON");
-	if (show_version)
-		printf(" %s", "VERSION");
 	printf("\n");
 
 	// For each port we check that his state is not among the "ignored states"
@@ -833,8 +830,8 @@ int print_scan_results(t_ctx *ctx)
 		if (ctx->targets[i].mac_address == true)
 		{
 			_print_mac_address(&ctx->targets[i]);
-			}
-			printf("\n");
+		}
+		printf("\n");
 	}
 
 	printf("ft_nmap done: %zu IP address%s (%zu host%s up) scanned in %.2f "

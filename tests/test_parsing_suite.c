@@ -361,18 +361,6 @@ TEST parse_args_sets_packet_trace_flag(void)
 	PASS();
 }
 
-TEST parse_args_sets_version_flag(void)
-{
-	t_args args = { 0 };
-	char  *argv[] = { "ft_nmap", "--version", NULL };
-	int    argc = 2;
-
-	optind = 1;
-	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
-	ASSERT(HAS(args.flags, F_VERSION));
-	PASS();
-}
-
 /* ------------------------------------------------------------------ */
 /*  parse_args: --speedup                                              */
 /* ------------------------------------------------------------------ */
