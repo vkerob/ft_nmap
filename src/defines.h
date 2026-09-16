@@ -40,6 +40,7 @@
 #define MAX_NB_SCAN_TYPE 6
 #define MAX_SCAN_TYPE_TCP 5
 #define HIGHEST_PORT_STATE 6
+#define NB_PORT_PORT_STATE 7
 #define IP_VERSION 4
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64

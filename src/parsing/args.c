@@ -242,7 +242,7 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 
 	if (port_left > port_right)
 	{
-		LOG("ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?",
+		LOG("ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?\n",
 			port_left, port_right, port_left, port_right);
 		return FAILURE;
 	}

@@ -167,7 +167,39 @@ static void display_program_header(const t_ctx *ctx)
 
 	const time_t t = ctx->program_info.start.tv_sec;
 	strftime(date_buf, sizeof(date_buf), "%Y-%m-%d %H:%M %z", localtime(&t));
-	sync_printf("Starting ft_nmap at %s\n", date_buf);
+	printf("Starting ft_nmap at %s\n", date_buf);
+	printf("ft_nmap Configurations:\n");
+	printf("Target IP addresses:\n");
+	for (size_t i = 0; i < ctx->target_count; i++)
+	{
+		t_target target = ctx->targets[i];
+		char *ip = inet_ntoa(target.addr);
+		if (ip == NULL)
+		{
+			ip = target.input;
+		}
+		printf("	");
+		if (target.hostname && strcmp(target.hostname, target.input) != 0)
+		{
+			printf("%s -> %s\n", target.hostname, ip);
+		}
+		else
+		{
+			printf("%s\n", target.input);
+		}
+	}
+	printf("Number of ports to scan: %hu\n", ctx->args.port_count);
+	printf("Scans to be performed: ");
+	char   scan_name[16];
+
+	for (u8 i = 0; i < ctx->args.nb_scan_types; i++)
+	{
+		scan_type_to_str(ctx->args.scan_types[i], scan_name);
+		printf("%s", scan_name);
+		i != ctx->args.nb_scan_types - 1 ? printf(", ") : printf("\n");
+	}
+	printf("Speed: %hu\n", ctx->args.speed);
+	printf("\n");
 }
 
 int main(const int argc, char **argv)
