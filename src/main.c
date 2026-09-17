@@ -41,6 +41,10 @@ static void print_usage()
 	printf(" --file <source file containing list of ip>\n");
 	printf("\nSCAN SPECIFICATION: \n");
 	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
+	printf(" --max-retries <0-5>: Number of times we send a probe after" \
+		" we didn't have any answer\n Default value is 3 sends\n");
+	printf(" --timeout <0-10000>: Delay in milliseconds after which we consider" \
+		" that a probe didn't get any answer\n Default value is 1 seconds\n");
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf(" --verbose: No port states are ignored\n");
