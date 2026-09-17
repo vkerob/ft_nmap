@@ -526,7 +526,7 @@ int parse_max_retries(const char *str, u8 *out)
 
 	if (errno != 0 || end == str)
 	{
-		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		LOG("ft_nmap: invalid max-retries value: '%s'\n", str);
 		return FAILURE;
 	}
 
@@ -556,7 +556,7 @@ int parse_timeout_ms(const char *str, double *out)
 
 	if (*str == '\0' || *str == '-' || *str == '+')
 	{
-		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		LOG("ft_nmap: invalid timeout value: '%s'\n", str);
 		return FAILURE;
 	}
 
@@ -566,7 +566,7 @@ int parse_timeout_ms(const char *str, double *out)
 
 	if (errno != 0 || end == str)
 	{
-		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		LOG("ft_nmap: invalid timeout value: '%s'\n", str);
 		return FAILURE;
 	}
 

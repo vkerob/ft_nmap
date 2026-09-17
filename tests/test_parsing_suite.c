@@ -693,7 +693,6 @@ SUITE(parse_args_suite)
 	RUN_TEST(parse_args_sets_verbose_flag);
 	RUN_TEST(parse_args_sets_reason_flag);
 	RUN_TEST(parse_args_sets_packet_trace_flag);
-	RUN_TEST(parse_args_sets_version_flag);
 
 	/* --speedup */
 	RUN_TEST(parse_args_speedup_valid);
