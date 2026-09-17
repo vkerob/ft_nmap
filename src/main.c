@@ -25,7 +25,7 @@ static void print_usage()
 		   "[--speedup [NUMBER]] [--scan [TYPE]] [--max-retries [NUMBER]] [--timeout [NUMBER]]\n");
 	printf("or\n");
 	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
-		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
+		   "[--speedup [NUMBER]] [--scan [TYPE]] [--max-retries [NUMBER]] [--timeout [NUMBER]]\n");
 	printf("\nSCAN TECHNIQUES: \n");
 	printf(" If no scan types are specified all will be run\n");
 	printf(" --scan <SYN, ACK, XMAS, NULL, FIN, UDP>\n");

@@ -10,6 +10,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+int init_socket(t_socket *sock, const int proto)
+{
+	sock->sfd = socket(PF_INET, SOCK_RAW, proto);
+	if (sock->sfd < 0)
+	{
+		LOG("ft_nmap: failed to create raw socket: %s\n", strerror(errno));
+		return FAILURE;
+	}
+	const int opt = 1;
+	if (setsockopt(sock->sfd, IPPROTO_IP, IP_HDRINCL, &opt, sizeof(opt)) == -1)
+	{
+		LOG("ft_nmap: %s\n", strerror(errno));
+		close(sock->sfd);
+		return FAILURE;
+	}
+	return SUCCESS;
+}
+
+
+
 int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 								   pthread_t		   **send_threads,
 								   t_shared_data_sender *shared_data_probe,
@@ -47,6 +68,18 @@ int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
 			goto fail;
 		}
 		created_pcap++;
+	}
+	t_socket			  icmp_socket;
+
+	if (init_socket(&ctx, IPPROTO_ICMP) == FAILURE)
+	{
+		goto fail;
+	}
+
+
+	for (u8 i = 0; i < ctx->target_count; i++)
+	{
+
 	}
 
 	for (u8 i = 0; i < ctx->args.speed; i++)

@@ -233,7 +233,7 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 						 &relative_recv_time, receiver_data->args->flags);
 }
 
-int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send, const t_args *args)
+int 	(t_probe_queue *sent, t_probe_queue *to_send, const t_args *args)
 {
 	t_probe *next = NULL;
 

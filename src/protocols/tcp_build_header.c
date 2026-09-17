@@ -25,10 +25,10 @@ static u8 scan_type_to_flag(t_scan_type scan_type)
 	return 0x00;
 }
 
-void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
+void build_tcp_header(t_tcp_hdr *tcp_hdr, uint16_t destination_port,
 					  const t_scan_type scan_type)
 {
-	memset(tcp_hdr, 0, sizeof(struct tcphdr));
+	memset(tcp_hdr, 0, sizeof(t_tcp_hdr));
 	/* Source port */
 	u16 src_port = get_random_source_port_in_scantype_interval(scan_type);
 	tcp_hdr->th_sport = htons(src_port);

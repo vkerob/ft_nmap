@@ -56,7 +56,6 @@ typedef struct s_port_output
 	const char	*reasons[MAX_REASONS_NUMBER];
 	u16			 port_number;
 	t_port_state port_state;
-	char		 version[128]; // banner grabbed via version detection
 } t_port_output;
 
 typedef struct s_port_state_and_reason
