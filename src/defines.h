@@ -11,16 +11,20 @@
 #define PACKET_TRACE 1006
 #define REASON 1007
 #define VERBOSE 1008
-#define VERSION_DETECT 1009
-#define DECOY 1011
-#define TRACEROUTE 1012
-#define TRACEROUTE_ICMP 1013
+#define DECOY 1009
+#define TRACEROUTE 1010
+#define TRACEROUTE_ICMP 1011
+#define MAX_RETRIES 1012
+#define TIMEOUT_MS 1013
 /* Maximum number of decoy IPs the user can specify */
 #define MAX_DECOYS 3
 #define MIN_PORT_NUMBER 0
 /* Maximum number of threads our program can run (option set with --speed)*/
 #define SPEED_MAX 250
 #define SPEED_MIN 0
+#define MAX_RETRIES_MIN 0
+#define MAX_RETRIES_MAX 5
+#define DEFAULT_SCAN_RETRIES 3
 #ifndef EXIT_FAILURE
 #define EXIT_FAILURE 1
 #endif
@@ -44,9 +48,10 @@
 #define IP_VERSION 4
 #define IP_IHL 5
 #define IP_TTL_DEFAULT 64
-#define MAX_SCAN_RETRIES 3
 /* Timeout after which we consider the server didn't responde us */
-#define TIMEOUT_DELAY 1
+#define TIMEOUT_MS_MIN 0
+#define TIMEOUT_MS_MAX 10000
+#define DEFAULT_TIMEOUT_DELAY_S 1
 /* Index used in final_port_state */
 #define TCP_INDEX 0
 #define UDP_INDEX 1

@@ -509,6 +509,87 @@ static int parse_speed_strict(const char *str, u8 *out)
 	return SUCCESS;
 }
 
+int parse_max_retries(const char *str, u8 *out)
+{
+	while (isspace((unsigned char)*str))
+		str++;
+
+	if (*str == '\0' || *str == '-' || *str == '+')
+	{
+		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	errno = 0;
+	char		 *end = NULL;
+	unsigned long value = strtoul(str, &end, 10);
+
+	if (errno != 0 || end == str)
+	{
+		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	while (isspace((unsigned char)*end))
+		end++;
+
+	if (*end != '\0')
+	{
+		LOG("ft_nmap: invalid characters in max-retries value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	if (value > MAX_RETRIES_MAX)
+	{
+		LOG("ft_nmap: max-retries must be between %d and %d\n", MAX_RETRIES_MIN, MAX_RETRIES_MAX);
+		return FAILURE;
+	}
+
+	*out = (u8)value;
+	return SUCCESS;
+}
+
+int parse_timeout_ms(const char *str, double *out)
+{
+		while (isspace((unsigned char)*str))
+		str++;
+
+	if (*str == '\0' || *str == '-' || *str == '+')
+	{
+		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	errno = 0;
+	char		 *end = NULL;
+	double value = strtod(str, &end);
+
+	if (errno != 0 || end == str)
+	{
+		LOG("ft_nmap: invalid speed value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	while (isspace((unsigned char)*end))
+		end++;
+
+	if (*end != '\0')
+	{
+		LOG("ft_nmap: invalid characters in timeout value: '%s'\n", str);
+		return FAILURE;
+	}
+
+	if (value > TIMEOUT_MS_MAX)
+	{
+		LOG("ft_nmap: timeout must be between %d ms and %d ms\n", TIMEOUT_MS_MIN, TIMEOUT_MS_MAX);
+		return FAILURE;
+	}
+
+	*out = value;
+	return SUCCESS;
+}
+
+
 int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			   size_t *target_count)
 {
@@ -525,10 +606,11 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{ "packet-trace", no_argument, 0, PACKET_TRACE },
 		{ "reason", no_argument, 0, REASON },
 		{ "verbose", no_argument, 0, VERBOSE },
-		{ "version", no_argument, 0, VERSION_DETECT },
 		{ "decoy", required_argument, 0, DECOY },
 		{ "traceroute", no_argument, 0, TRACEROUTE },
 		{ "traceroute-icmp", no_argument, 0, TRACEROUTE_ICMP },
+		{ "max-retries", required_argument, 0, MAX_RETRIES },
+		{ "timeout", required_argument, 0, TIMEOUT_MS },
 		{ 0, 0, 0, 0 } // required terminator
 	};
 	opterr = 0; // we handle errors ourselves
@@ -607,6 +689,18 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			SET(args->flags, F_TRACEROUTE_ICMP);
 			break;
 
+		case MAX_RETRIES:
+			SET(args->flags, F_MAX_RETRIES);
+			if (parse_max_retries(optarg, &args->max_retries) == FAILURE)
+				return FAILURE;
+			break;
+
+		case TIMEOUT_MS:
+			SET(args->flags, F_TIMEOUT_MS);
+			if (parse_timeout_ms(optarg, &args->timeout_ms) == FAILURE)
+				return FAILURE;
+			break;
+
 		case '?':
 		case ':':
 			LOG("ft_nmap: Invalid arguments. Use --help for usage "
@@ -638,6 +732,19 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 		{
 			args->scan_types[i] = i;
 		}
+	}
+
+	if (HAS(args->flags, F_TIMEOUT_MS))
+	{
+		 args->timeout_s = (args->timeout_ms / 1000);
+	}
+	else
+	{
+		args->timeout_s = DEFAULT_TIMEOUT_DELAY_S;
+	}
+	if (HAS(args->flags, F_MAX_RETRIES) == false)
+	{
+		args->max_retries = DEFAULT_SCAN_RETRIES;
 	}
 	return SUCCESS;
 }

@@ -20,7 +20,9 @@ enum e_flags
 	F_VERBOSE = 1u << 8,
 	F_DECOY     = 1u << 9,
 	F_TRACEROUTE = 1u << 10,
-	F_TRACEROUTE_ICMP = 1u << 11
+	F_TRACEROUTE_ICMP = 1u << 11,
+	F_MAX_RETRIES = 1u << 12,
+	F_TIMEOUT_MS = 1u << 13
 };
 
 int	 parse_args(int argc, char **argv, t_args *args, char ***targets_input,

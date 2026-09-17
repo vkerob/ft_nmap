@@ -77,14 +77,13 @@ static void set_unknown_port_state(t_port_output *port_conclusion)
 	port_conclusion->reasons[1] = NULL;
 }
 
-/* Return true when we update the port state */
 static void
 update_definitive_port_state_and_reason(t_port_output *port_conclusion,
 										const t_port  *port)
 {
 	if (port_conclusion->port_state == UNKNOWN)
 	{
-		port_conclusion->port_state = port->port_state;
+		// If a port state was set to unknown we leave it in that state
 		return;
 	}
 	switch (port->port_state)
@@ -383,6 +382,7 @@ int find_or_update_state_and_reason_combination(
 {
 	t_port_state_and_reason *tmp = *state_and_reason_lst;
 	t_port_state_and_reason *prev = NULL;
+
 	/* If no reason was ever attached to this port (state stayed DEFAULT,
 	 * timeout never fired, etc.) fall back to a placeholder so that NULL
 	 * never reaches strcmp below. */
@@ -505,7 +505,12 @@ static int resolve_final_port_state(const t_args *args, t_target *target)
 				= (scan_type_index == SCAN_UDP) ? UDP_INDEX : TCP_INDEX;
 
 			/* Update the conclusion of a port state based off what each scan
-				type gave us, also keep track of the reasons associated */
+				type gave us, also keep track of the reasons associated
+				port_final_state store the port state for each ports and foreach protocol (TCP AND UDP)
+				this function is useful mostly for TCP scans where we have multiple port_map_rev array
+				and need to decide which is the conclusion we take on port state
+				If we change the update the port state with a more conclusive state we also update the reasons
+				*/
 			update_definitive_port_state_and_reason(
 				&target->port_list.port_final_state[protocol_index][idx],
 				&target->port_list.port_map_rev[scan_type_index][idx]);
@@ -566,9 +571,8 @@ static void print_port_states(const t_target *target, const t_args *args,
 	const int col_port = compute_port_col_width(args);
 	const int col_state = 14;
 	const int col_svc = 20;
-	const int col_version = 28;
-
 	static u8 nb_scan_type_tcp = 0;
+
 	if (nb_scan_type_tcp == 0)
 	{
 		for (u8 i = 0; i < args->nb_scan_types; i++)
@@ -659,18 +663,15 @@ static void print_port_states(const t_target *target, const t_args *args,
 			snprintf(port_str, sizeof(port_str), "%u/tcp", port);
 			const char *state = port_state_to_str(
 				target->port_list.port_final_state[TCP_INDEX][idx].port_state);
-			const char *ver = (show_version && final_port_state.version[0])
-								  ? final_port_state.version
-								  : "";
+
 			if (multi_scan_tcp)
 			{
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
-				printf("%-*s %-*s %-*s %-*s%s%s", col_port, port_str,
+				printf("%-*s %-*s %-*s %-*s", col_port, port_str,
 						 col_state, state, col_svc, svc ? svc : "unknown",
-						 col_scan_result, results_buf,
-						 (show_version && ver[0]) ? "  " : "", ver);
+						 col_scan_result, results_buf);
 
 
 				// Print reason for each type of scan ran
@@ -728,10 +729,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 								 ? final_port_state.reasons[0]
 								 : "");
 				}
-				if (show_version && ver[0])
-				{
-					printf(" %-*s", col_version, ver);
-				}
 				printf("\n");
 			}
 		}
@@ -768,11 +765,15 @@ static int print_target_results(t_target *target, const t_args *args)
 		return FAILURE;
 	}
 
-	const bool all_ignored = print_ignored_port_states(
-		target, args->tcp_scan, args->udp_scan, args->port_count, ignored_tcp,
-		ignored_udp, HAS(args->flags, F_VERBOSE));
+	bool all_ignored = false;
+	if (HAS(args->flags, F_VERBOSE) == false)
+	{
+		all_ignored = print_ignored_port_states(
+			target, args->tcp_scan, args->udp_scan, args->port_count, ignored_tcp,
+			ignored_udp, HAS(args->flags, F_VERBOSE));
+	}
 
-	if (HAS(args->flags, F_VERBOSE) || all_ignored == false)
+	if (all_ignored == false)
 	{
 		print_port_states(target, args, ignored_tcp, ignored_udp);
 	}

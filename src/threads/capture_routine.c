@@ -233,7 +233,7 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 						 &relative_recv_time, receiver_data->args->flags);
 }
 
-int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
+int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send, const t_args *args)
 {
 	t_probe *next = NULL;
 
@@ -262,7 +262,7 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 
 		next = tmp->next;
 
-		if (time_elapsed > TIMEOUT_DELAY)
+		if (time_elapsed > args->timeout_s)
 		{
 			// Erase tmp from the sent list
 			erase_reference_to_node(&sent->head, &sent->tail, tmp,
@@ -270,7 +270,7 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send)
 			// Update retries and reinject in to_send probe queue
 			tmp->retries++;
 
-			if (tmp->retries > MAX_SCAN_RETRIES)
+			if (tmp->retries >= args->max_retries)
 			{
 				const int index = tmp->target->port_list.port_map[tmp->port];
 				t_port	 *port
@@ -353,7 +353,7 @@ void *capture_routine(void *arg)
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
 			purge_timedout_probe_request(receiver_data->sent,
-										 receiver_data->to_send);
+										 receiver_data->to_send, receiver_data->args);
 		}
 	}
 	return NULL;

@@ -26,6 +26,9 @@ typedef struct	s_args
 	bool			udp_scan;
 	struct in_addr	decoys[MAX_DECOYS];
 	u8				decoy_count;
+	u8				max_retries;
+	double		timeout_ms;
+	double		timeout_s;
 }	t_args;
 
 #endif

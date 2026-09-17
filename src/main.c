@@ -22,7 +22,7 @@ static void print_usage()
 {
 	printf("Usage:\n");
 	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS "
-		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
+		   "[--speedup [NUMBER]] [--scan [TYPE]] [--max-retries [NUMBER]] [--timeout [NUMBER]]\n");
 	printf("or\n");
 	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
 		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
