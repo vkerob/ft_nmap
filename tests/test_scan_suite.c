@@ -129,11 +129,13 @@ static bool get_port_list(char *subject, pcre2_code *regex, t_port **head)
 						 match_data, NULL);
 		if (rc == PCRE2_ERROR_NOMATCH)
 		{
+			pcre2_match_data_free(match_data);
 			break;
 		}
 		else if (rc < 0)
 		{
 			fprintf(stderr, "Matching error\n");
+			pcre2_match_data_free(match_data);
 			break;
 		}
 		else
@@ -286,10 +288,25 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	free_port_list(port_list_nmap);
 	free_port_list(port_list_ft_nmap);
 	pcre2_code_free(re);
-
+	if (ft_nmap_output != NULL)
+	{
+		free(ft_nmap_output);
+	}
+	if (nmap_output)
+	{
+		free(nmap_output);
+	}
 	PASS();
 
 fail:
+	if (ft_nmap_output != NULL)
+	{
+		free(ft_nmap_output);
+	}
+	if (nmap_output)
+	{
+		free(nmap_output);
+	}
 	free_port_list(port_list_nmap);
 	free_port_list(port_list_ft_nmap);
 	pcre2_code_free(re);
