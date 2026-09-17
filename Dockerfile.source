@@ -6,6 +6,8 @@ RUN apk update && apk upgrade musl && apk add --no-cache \
     gcc g++ make cmake musl-dev linux-headers \
     # network libs
     libpcap-dev \
+    # regex lib used by the test suite
+    pcre2-dev \
     # shells & editors
     bash vim \
     # network debug & sniffing

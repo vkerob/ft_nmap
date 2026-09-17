@@ -9,8 +9,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 include(CTest)
 
-add_subdirectory(lib/pcre2-10.47)
-
 option(FT_NMAP_SANITIZERS "Enable ASAN/UBSAN in Debug builds" ON)
 set(FT_NMAP_SANITIZER_COMPILE_FLAGS)
 set(FT_NMAP_SANITIZER_LINK_FLAGS)
@@ -74,22 +72,19 @@ find_path(PCAP_ROOT_DIR
 
 set (HINT_DIR ${PCAP_ROOT_DIR}/lib)
 
-
-set(HINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/pcre2-10.47/build/)
-
 find_library(LIBPCAP NAMES pcap HINTS ${HINT_DIR} REQUIRED NO_CMAKE_FIND_ROOT_PATH)
 
-
-list(APPEND INCLUDE_DIRS ${PCRE2_HEADER_DIR})
+find_library(LIBPCRE2 NAMES pcre2-8 REQUIRED)
+find_path(PCRE2_INCLUDE_DIR NAMES pcre2.h REQUIRED)
 
 
 target_include_directories(ft_nmap PRIVATE ${INCLUDE_DIRS})
-target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS})
+target_include_directories(tests_ft_nmap PRIVATE ${INCLUDE_DIRS} ${PCRE2_INCLUDE_DIR})
 
 
 target_link_libraries(ft_nmap PRIVATE ${LIBPCAP})
 
-target_link_libraries(tests_ft_nmap ${LIBPCAP} pcre2-8)
+target_link_libraries(tests_ft_nmap ${LIBPCAP} ${LIBPCRE2})
 
 list(APPEND TEST_SUITES parsing scan)
 

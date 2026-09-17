@@ -269,7 +269,8 @@ There are two independent axes.
 Takeaways:
 
 - A silent **`DROP`** is the slowest to detect: there is no reply, so we can
-  only conclude `filtered` after waiting out every retry (port `4302`/`4303`
+  only conclude `filtered` after waiting out every retry (see
+  [Timeout and retries](#timeout-and-retries); port `4302`/`4303`
   for `SYN`, `4312` for UDP).
 - An ICMP **`REJECT`** is the fastest and most informative: the ICMP *code*
   tells us *why* the probe was blocked. This is exactly what
@@ -319,6 +320,8 @@ sudo ./ft_nmap [options] (--ip <target> | --file <file>)
 | `--ports` | `22`, `22-32`, `22,80,443` | Ports to scan (default: `1-1024`, **max 1024 ports**) |
 | `--scan` | `SYN,ACK,NULL,FIN,XMAS,UDP` | Scan type(s), comma-separated (default: all) |
 | `--speedup` | `0-250` | Number of threads |
+| `--timeout` | `0-10000` (ms) | How long to wait for a reply before a probe is considered lost (default: `1000`) (bonus) |
+| `--max-retries` | `0-5` | Maximum number of times a probe is sent before giving up (default: `3`) (bonus) |
 | `--packet-trace` | — | Show every packet sent and received (bonus) |
 | `--reason` | — | Show the reason a port is in a given state (bonus) |
 | `--verbose` | — | Show all port states (no state ignored) (bonus) |
@@ -365,6 +368,44 @@ Speed it up with several threads:
 ```bash
 sudo ./ft_nmap --ip 192.168.100.20 --ports 1-1024 --speedup 50 --scan SYN
 ```
+
+### Timeout and retries
+
+When a probe gets no answer, ft_nmap waits `--timeout` milliseconds, then sends
+it again. Once the probe has been sent `--max-retries` times without any
+reply, ft_nmap stops and marks the port as `filtered` or `open|filtered`
+depending on the scan type, with the reason `no-response`:
+
+| Scan type | State when nothing comes back |
+| --- | --- |
+| `SYN`, `ACK` | `filtered` |
+| `NULL`, `FIN`, `XMAS`, `UDP` | `open\|filtered` |
+
+| Option | Range | Default | Notes |
+| --- | --- | --- | --- |
+| `--timeout` | `0`–`10000` | `1000` | Always in **milliseconds**, without a unit (`500`, not `500ms`). Decimals are allowed (`250.5`). |
+| `--max-retries` | `0`–`5` | `3` | Counts **sends**, not re-sends: `3` means the original probe plus 2 re-sends. `0` and `1` both mean a single send. |
+
+A port that never answers therefore costs about `max-retries × timeout`
+(3 × 1 s = **3 s** with the defaults). Ports that do answer, including with an
+ICMP error, are resolved as soon as the reply arrives, so these options only
+change how long *silent* ports take (for example ports behind a `DROP` rule,
+see [Types of filtering](#types-of-filtering)).
+
+Fast scan of a local network, with less patience for silent ports:
+
+```bash
+sudo ./ft_nmap --ip 192.168.100.20 --scan SYN --timeout 200 --max-retries 1
+```
+
+Slow or lossy link, where replies can arrive late or get lost:
+
+```bash
+sudo ./ft_nmap --ip 192.168.100.20 --scan UDP --timeout 3000 --max-retries 5
+```
+
+Values outside the range, negative values, an explicit `+` sign, or trailing
+characters are rejected with an error.
 
 ### Combining several TCP scans (and UDP)
 

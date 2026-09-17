@@ -519,6 +519,306 @@ TEST parse_args_decoy_invalid_ip(void)
 }
 
 /* ------------------------------------------------------------------ */
+/*  parse_args: --max-retries / --timeout                              */
+/* ------------------------------------------------------------------ */
+
+TEST parse_args_max_retries_valid(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "2", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT(HAS(args.flags, F_MAX_RETRIES));
+	ASSERT_EQ(2, args.max_retries);
+	PASS();
+}
+
+TEST parse_args_max_retries_zero(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "0", NULL };
+	int    argc = 3;
+
+	/* MAX_RETRIES_MIN (0) is accepted and must not be replaced by the default */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_EQ(0, args.max_retries);
+	PASS();
+}
+
+TEST parse_args_max_retries_max(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "5", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_EQ(MAX_RETRIES_MAX, args.max_retries);
+	PASS();
+}
+
+TEST parse_args_max_retries_exceeds_max(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "6", NULL };
+	int    argc = 3;
+
+	/* MAX_RETRIES_MAX + 1 must be rejected */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_overflow(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "99999999999999999999", NULL };
+	int    argc = 3;
+
+	/* Out of unsigned long range (strtoul sets ERANGE) */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_negative(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "-1", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_explicit_plus(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "+1", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_invalid_string(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "abc", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_trailing_garbage(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "3x", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_empty(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_max_retries_default(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--ports", "80", NULL };
+	int    argc = 3;
+
+	/* No --max-retries: DEFAULT_SCAN_RETRIES is used */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_FALSE(HAS(args.flags, F_MAX_RETRIES));
+	ASSERT_EQ(DEFAULT_SCAN_RETRIES, args.max_retries);
+	PASS();
+}
+
+TEST parse_args_timeout_valid(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "500", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT(HAS(args.flags, F_TIMEOUT_MS));
+	ASSERT_IN_RANGE(500.0, args.timeout_ms, 1e-9);
+	/* timeout_s is what the capture thread compares against */
+	ASSERT_IN_RANGE(0.5, args.timeout_s, 1e-9);
+	PASS();
+}
+
+TEST parse_args_timeout_decimal(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "1500.5", NULL };
+	int    argc = 3;
+
+	/* The value is parsed with strtod, so fractional milliseconds are allowed */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_IN_RANGE(1500.5, args.timeout_ms, 1e-9);
+	ASSERT_IN_RANGE(1.5005, args.timeout_s, 1e-9);
+	PASS();
+}
+
+TEST parse_args_timeout_zero(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "0", NULL };
+	int    argc = 3;
+
+	/* TIMEOUT_MS_MIN (0) is accepted and must not be replaced by the default */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT(HAS(args.flags, F_TIMEOUT_MS));
+	ASSERT_IN_RANGE(0.0, args.timeout_s, 1e-9);
+	PASS();
+}
+
+TEST parse_args_timeout_max(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "10000", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_IN_RANGE((double)TIMEOUT_MS_MAX, args.timeout_ms, 1e-9);
+	ASSERT_IN_RANGE(10.0, args.timeout_s, 1e-9);
+	PASS();
+}
+
+TEST parse_args_timeout_exceeds_max(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "10001", NULL };
+	int    argc = 3;
+
+	/* TIMEOUT_MS_MAX + 1 must be rejected */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_overflow(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "1e400", NULL };
+	int    argc = 3;
+
+	/* Out of double range (strtod sets ERANGE) */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_negative(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "-5", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_explicit_plus(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "+5", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_invalid_string(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "abc", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_trailing_garbage(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "100ms", NULL };
+	int    argc = 3;
+
+	/* Units are not accepted: the value is always in milliseconds */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_empty(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--timeout", "", NULL };
+	int    argc = 3;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
+	PASS();
+}
+
+TEST parse_args_timeout_default(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--ports", "80", NULL };
+	int    argc = 3;
+
+	/* No --timeout: DEFAULT_TIMEOUT_DELAY_S is used */
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT_FALSE(HAS(args.flags, F_TIMEOUT_MS));
+	ASSERT_IN_RANGE((double)DEFAULT_TIMEOUT_DELAY_S, args.timeout_s, 1e-9);
+	PASS();
+}
+
+TEST parse_args_max_retries_and_timeout_together(void)
+{
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--max-retries", "1", "--timeout", "250", NULL };
+	int    argc = 5;
+
+	optind = 1;
+	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
+	ASSERT(HAS(args.flags, F_MAX_RETRIES));
+	ASSERT(HAS(args.flags, F_TIMEOUT_MS));
+	ASSERT_EQ(1, args.max_retries);
+	ASSERT_IN_RANGE(0.25, args.timeout_s, 1e-9);
+	PASS();
+}
+
+/* ------------------------------------------------------------------ */
 /*  parse_args: default values                                          */
 /* ------------------------------------------------------------------ */
 
@@ -708,6 +1008,32 @@ SUITE(parse_args_suite)
 	RUN_TEST(parse_args_decoy_me_sentinel);
 	RUN_TEST(parse_args_decoy_too_many);
 	RUN_TEST(parse_args_decoy_invalid_ip);
+
+	/* --max-retries / --timeout */
+	RUN_TEST(parse_args_max_retries_valid);
+	RUN_TEST(parse_args_max_retries_zero);
+	RUN_TEST(parse_args_max_retries_max);
+	RUN_TEST(parse_args_max_retries_exceeds_max);
+	RUN_TEST(parse_args_max_retries_overflow);
+	RUN_TEST(parse_args_max_retries_negative);
+	RUN_TEST(parse_args_max_retries_explicit_plus);
+	RUN_TEST(parse_args_max_retries_invalid_string);
+	RUN_TEST(parse_args_max_retries_trailing_garbage);
+	RUN_TEST(parse_args_max_retries_empty);
+	RUN_TEST(parse_args_max_retries_default);
+	RUN_TEST(parse_args_timeout_valid);
+	RUN_TEST(parse_args_timeout_decimal);
+	RUN_TEST(parse_args_timeout_zero);
+	RUN_TEST(parse_args_timeout_max);
+	RUN_TEST(parse_args_timeout_exceeds_max);
+	RUN_TEST(parse_args_timeout_overflow);
+	RUN_TEST(parse_args_timeout_negative);
+	RUN_TEST(parse_args_timeout_explicit_plus);
+	RUN_TEST(parse_args_timeout_invalid_string);
+	RUN_TEST(parse_args_timeout_trailing_garbage);
+	RUN_TEST(parse_args_timeout_empty);
+	RUN_TEST(parse_args_timeout_default);
+	RUN_TEST(parse_args_max_retries_and_timeout_together);
 
 	/* default values */
 	RUN_TEST(parse_args_default_ports_fills_1_to_1024);

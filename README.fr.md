@@ -271,8 +271,8 @@ détecte, ainsi que la raison rapportée. Deux axes indépendants.
 À retenir :
 
 - Un **`DROP`** silencieux est le plus lent à détecter : aucune réponse, on ne
-  peut conclure `filtered` qu'après avoir attendu chaque retry (ports
-  `4302`/`4303` en `SYN`, `4312` en UDP).
+  peut conclure `filtered` qu'après avoir attendu chaque retry (voir
+  [Timeout et retries](#timeout-et-retries) ; ports `4302`/`4303` en `SYN`, `4312` en UDP).
 - Un **`REJECT`** ICMP est le plus rapide et le plus informatif : le *code* ICMP
   nous dit *pourquoi* la sonde a été bloquée. C'est exactement ce que
   `icmp_code_to_reason()` décode dans la colonne raison (ports `4304`, `4313`).
@@ -321,6 +321,8 @@ sudo ./ft_nmap [options] (--ip <cible> | --file <fichier>)
 | `--ports` | `22`, `22-32`, `22,80,443` | Ports à scanner (défaut : `1-1024`, **max 1024 ports**) |
 | `--scan` | `SYN,ACK,NULL,FIN,XMAS,UDP` | Type(s) de scan, séparés par des virgules (défaut : tous) |
 | `--speedup` | `0-250` | Nombre de threads |
+| `--timeout` | `0-10000` (ms) | Temps d'attente d'une réponse avant de considérer une sonde comme perdue (défaut : `1000`) (bonus) |
+| `--max-retries` | `0-5` | Nombre maximum d'envois d'une sonde avant d'abandonner (défaut : `3`) (bonus) |
 | `--packet-trace` | — | Affiche tous les paquets envoyés et reçus (bonus) |
 | `--reason` | — | Affiche la raison de l'état d'un port (bonus) |
 | `--verbose` | — | Affiche tous les états de port (aucun état ignoré) (bonus) |
@@ -368,6 +370,44 @@ Accélérer avec plusieurs threads :
 ```bash
 sudo ./ft_nmap --ip 192.168.100.20 --ports 1-1024 --speedup 50 --scan SYN
 ```
+
+### Timeout et retries
+
+Quand une sonde reste sans réponse, ft_nmap attend `--timeout` millisecondes,
+puis la renvoie. Une fois la sonde envoyée `--max-retries` fois sans aucune
+réponse, ft_nmap abandonne et donne au port l'état `filtered` ou `open|filtered`
+en fonction du type de scan, avec la raison `no-response` :
+
+| Type de scan | État quand rien ne revient |
+| --- | --- |
+| `SYN`, `ACK` | `filtered` |
+| `NULL`, `FIN`, `XMAS`, `UDP` | `open\|filtered` |
+
+| Option | Plage | Défaut | Remarques |
+| --- | --- | --- | --- |
+| `--timeout` | `0`–`10000` | `1000` | Toujours en **millisecondes**, sans unité (`500`, pas `500ms`). Les décimales sont acceptées (`250.5`). |
+| `--max-retries` | `0`–`5` | `3` | Compte les **envois**, pas les renvois : `3` = la sonde d'origine + 2 renvois. `0` et `1` donnent tous les deux un seul envoi. |
+
+Un port qui ne répond jamais coûte donc environ `max-retries × timeout`
+(3 × 1 s = **3 s** avec les valeurs par défaut). Les ports qui répondent, y
+compris par une erreur ICMP, sont résolus dès l'arrivée de la réponse : ces
+options ne changent que la durée de traitement des ports *silencieux* (par
+exemple derrière une règle `DROP`, voir [Les types de filtrage](#les-types-de-filtrage)).
+
+Scan rapide d'un réseau local, avec moins de patience pour les ports silencieux :
+
+```bash
+sudo ./ft_nmap --ip 192.168.100.20 --scan SYN --timeout 200 --max-retries 1
+```
+
+Lien lent ou avec des pertes, où les réponses peuvent arriver en retard ou se perdre :
+
+```bash
+sudo ./ft_nmap --ip 192.168.100.20 --scan UDP --timeout 3000 --max-retries 5
+```
+
+Les valeurs hors plage, négatives, avec un signe `+` explicite ou suivies
+d'autres caractères sont refusées avec une erreur.
 
 ### Combiner plusieurs scans TCP (et UDP)
 
