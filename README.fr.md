@@ -25,6 +25,7 @@ et **UDP**. Plusieurs techniques peuvent être combinées dans une même exécut
 - [États des ports et signification des réponses](#états-des-ports-et-signification-des-réponses)
 - [Architecture : libpcap et netfilter dans le noyau](#architecture--libpcap-et-netfilter-dans-le-noyau)
 - [Tests](#tests)
+- [Licence et crédits](#licence-et-crédits)
 
 ---
 
@@ -205,8 +206,8 @@ hôte : il suffit de l'ouvrir dans Wireshark.
 
 Chaque technique de scan a un **ensemble fini d'états possibles**, et ils sont
 **tous reproductibles** sur les cibles, à une exception près : l'état UDP
-`open` (voir [Note UDP : pourquoi `open` n'est jamais
-rapporté](#note-udp--pourquoi-open-nest-jamais-rapporté)). Les ports ci-dessous
+`open` (voir [Note UDP : pourquoi `open` est hors d'atteinte sur le
+banc](#note-udp--pourquoi-open-est-hors-datteinte-sur-le-banc)). Les ports ci-dessous
 sont **pré-configurés automatiquement** au démarrage du conteneur cible
 (écouteurs + règles `iptables` posés dans le `CMD` de `Dockerfile.target` ; les
 règles netfilter vivent dans le noyau et ne peuvent pas persister via un
@@ -217,8 +218,9 @@ règles netfilter vivent dans le noyau et ne peuvent pas persister via un
 - **SYN** : `open`, `closed`, `filtered`
 - **ACK** : `unfiltered`, `filtered`
 - **NULL / FIN / XMAS** : `open|filtered`, `closed`, `filtered`
-- **UDP** : `open|filtered`, `closed`, `filtered` (`open` est implémenté mais
-  hors d'atteinte avec une sonde sans charge utile, voir la note plus bas)
+- **UDP** : `open|filtered`, `closed`, `filtered` (`open` est implémenté et
+  rapporté face à de vrais services, mais aucune charge utile n'est enregistrée
+  pour les ports du banc, voir la note plus bas)
 
 #### Ports du banc et états attendus
 
@@ -240,9 +242,9 @@ règles netfilter vivent dans le noyau et ne peuvent pas persister via un
 | `4313` | `iptables -p udp -j REJECT --reject-with icmp-host-prohibited` | `UDP` | `filtered` |
 
 > Le port `4310` fait bien tourner un service d'écho UDP, et il est pourtant
-> rapporté `open|filtered` et non `open` : notre sonde ne porte aucune charge
-> utile, le service n'a donc rien à renvoyer. Voir
-> [Note UDP : pourquoi `open` n'est jamais rapporté](#note-udp--pourquoi-open-nest-jamais-rapporté).
+> rapporté `open|filtered` et non `open` : aucune charge utile n'est enregistrée
+> pour ce port, la sonde part donc vide et le service n'a rien à renvoyer. Voir
+> [Note UDP : pourquoi `open` est hors d'atteinte sur le banc](#note-udp--pourquoi-open-est-hors-datteinte-sur-le-banc).
 
 #### Lancer le banc
 
@@ -304,22 +306,28 @@ section [scan ACK](#tcp--ack-scan---scan-ack)) :
 - `4303` (pare-feu **à état**) → `SYN(filtered)` **et** `ACK(filtered)` : le
   `SYN` (NEW) comme l'`ACK` isolé (INVALID) sont jetés.
 
-#### Note UDP : pourquoi `open` n'est jamais rapporté
+#### Note UDP : pourquoi `open` est hors d'atteinte sur le banc
 
-ft_nmap envoie un datagramme UDP **vide** (en-tête seul, sans charge utile).
-Quasiment aucun service ne répond à une telle sonde : DNS, SNMP ou NTP ne
-répondent qu'à une requête bien formée de leur propre protocole, et même un
-écouteur d'écho générique n'a rien à renvoyer lorsqu'il reçoit zéro octet. Un
-port UDP ouvert reste donc muet, et ft_nmap le rapporte en `open|filtered` —
-exactement comme un port derrière une règle `DROP`.
+ft_nmap sonde un port UDP avec une **charge utile spécifique au protocole** dès
+qu'il en connaît une pour ce port : une requête `version.bind` pour le `53`, un
+SNMP get pour le `161`, une requête client pour le `123`… Ces définitions
+viennent de Nmap, voir [Licence et crédits](#licence-et-crédits). Un service
+ouvert reconnaît la requête et y répond, ce qui permet à ft_nmap de rapporter
+`open` (raison `udp-response`) au lieu de `open|filtered`. Plusieurs charges
+utiles peuvent exister pour un même port ; elles sont envoyées tour à tour
+jusqu'à ce que l'une obtienne une réponse.
 
-L'état `open` reste implémenté : il est rapporté (avec la raison
-`udp-response`) dès qu'un datagramme revient du port cible. Mais le banc ne
-peut pas produire ce cas — le port `4310` ne répond pas à une sonde sans charge
-utile — donc `open` est le seul état de la matrice qui n'est **pas
-reproductible** ici. Le rapporter de façon fiable demanderait des charges
-utiles spécifiques par protocole (une requête DNS pour le `53`, un SNMP get
-pour le `161`…), comme le fait `nmap` avec son fichier `nmap-payloads`.
+Quand aucune charge utile n'est enregistrée pour le port, le datagramme part
+**vide** (en-tête seul). Quasiment rien ne répond à une telle sonde — même un
+écouteur d'écho générique n'a rien à renvoyer lorsqu'il reçoit zéro octet — le
+port reste donc muet et est rapporté `open|filtered`, exactement comme un port
+derrière une règle `DROP`.
+
+C'est le cas du banc : les ports `4310`-`4313` tombent en dehors de toutes les
+plages de la table de charges utiles, l'écho du `4310` ne reçoit donc jamais
+rien à renvoyer. `open` est ainsi le seul état de la matrice qui n'est **pas
+reproductible** ici, alors qu'il est rapporté normalement face à un vrai
+serveur DNS, NTP ou SNMP.
 
 #### Note UDP : limitation ICMP du noyau
 
@@ -640,11 +648,14 @@ est filtré (et donc à cartographier les règles de pare-feu).
 
 #### UDP scan (`--scan UDP`)
 
-Envoie un datagramme UDP **sans charge utile** (en-tête seul) sur le port ciblé.
+Envoie un datagramme UDP sur le port ciblé, porteur de la **charge utile du
+protocole** enregistrée pour ce port lorsqu'il en existe une (vide, en-tête
+seul, sinon). Ces définitions viennent de Nmap, voir
+[Licence et crédits](#licence-et-crédits).
 
 | État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| `open` | n'importe quel **datagramme UDP** renvoyé par le port cible — implémenté, mais en pratique rien ne répond à une sonde sans charge utile, donc cet état n'est jamais rapporté ([pourquoi](#note-udp--pourquoi-open-nest-jamais-rapporté)) |
+| `open` | n'importe quel **datagramme UDP** renvoyé par le port cible — atteignable quand une charge utile est enregistrée pour le port et que le service y répond ; une sonde sans charge utile n'obtient quasiment jamais de réponse ([détails](#note-udp--pourquoi-open-est-hors-datteinte-sur-le-banc)) |
 | `open\|filtered` | **aucune réponse** (même après retransmission) |
 | `closed` | une erreur ICMP **port unreachable** (type 3, code 3) |
 | `filtered` | une autre erreur ICMP *unreachable* (type 3, code 0, 1, 2, 9, 10 ou 13) |
@@ -757,3 +768,36 @@ ctest --test-dir build --output-on-failure
 
 La suite de scan envoie des paquets bruts : elle **nécessite root** à
 l'exécution.
+
+
+---
+
+## Licence et crédits
+
+ft_nmap est distribué sous la **Nmap Public Source License Version 0.95**. Le
+texte complet, Exhibit A (la GNU GPL Version 2) inclus, se trouve dans le
+fichier [`LICENSE`](LICENSE) à la racine du dépôt, et il couvre l'intégralité
+du dépôt et non une partie.
+
+La raison est [`src/payloads/`](src/payloads). Deux de ses fichiers
+contiennent des données issues du **Nmap Security Scanner**, Copyright (c)
+1996-2026 Nmap Software LLC (« The Nmap Project »), <https://nmap.org> :
+
+- [`payloads.c`](src/payloads/payloads.c) — les définitions de charges utiles
+  UDP, tirées de `nmap-payloads` / `nmap-service-probes` (Nmap 7.98).
+- [`port_services.c`](src/payloads/port_services.c) — les tables port → nom de
+  service TCP et UDP, tirées de `nmap-services`.
+
+La section 3 de la NPSL considère un programme qui inclut ces fichiers de
+données comme une œuvre dérivée, et la section 2 impose que l'ensemble soit
+distribué sous cette même licence.
+
+Ce dossier est volontairement le seul endroit du projet qui contienne quoi que
+ce soit venant de Nmap. Le reste du code y accède par les trois fonctions
+déclarées dans [`src/payloads/payloads.h`](src/payloads/payloads.h) —
+`get_udp_payloads()`, `get_tcp_service()` et `get_udp_service()` — et par rien
+d'autre.
+
+ft_nmap n'est ni affilié au projet Nmap, ni approuvé par lui, ni un produit de
+celui-ci. « Nmap » est une marque de Nmap Software LLC, utilisée ici uniquement
+pour décrire l'origine de ces données.

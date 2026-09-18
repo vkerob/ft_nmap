@@ -25,6 +25,7 @@ Six scan techniques are available: **SYN, ACK, NULL, FIN, XMAS** (TCP) and
 - [Port states and what the responses mean](#port-states-and-what-the-responses-mean)
 - [Architecture: libpcap and netfilter in the kernel](#architecture-libpcap-and-netfilter-in-the-kernel)
 - [Tests](#tests)
+- [License and credits](#license-and-credits)
 
 ---
 
@@ -203,8 +204,8 @@ Wireshark.
 
 Each scan technique has a **finite set of possible states**, and they are **all
 reproducible** on the targets, with a single exception: the UDP `open` state
-(see [UDP note: why `open` is never
-reported](#udp-note-why-open-is-never-reported)). The ports below are
+(see [UDP note: why `open` is not reachable on the
+bench](#udp-note-why-open-is-not-reachable-on-the-bench)). The ports below are
 **pre-configured automatically** when the target container starts (listeners +
 `iptables` rules set in the `CMD` of `Dockerfile.target`; netfilter rules live
 in the kernel and cannot persist via a `RUN`).
@@ -214,8 +215,9 @@ Possible states per technique:
 - **SYN**: `open`, `closed`, `filtered`
 - **ACK**: `unfiltered`, `filtered`
 - **NULL / FIN / XMAS**: `open|filtered`, `closed`, `filtered`
-- **UDP**: `open|filtered`, `closed`, `filtered` (`open` is implemented but
-  not reachable with a payload-less probe, see the note below)
+- **UDP**: `open|filtered`, `closed`, `filtered` (`open` is implemented and
+  reported against real services, but no probe payload is registered for the
+  bench's ports, see the note below)
 
 #### Bench ports and expected states
 
@@ -237,9 +239,9 @@ Possible states per technique:
 | `4313` | `iptables -p udp -j REJECT --reject-with icmp-host-prohibited` | `UDP` | `filtered` |
 
 > Port `4310` does run a UDP echo service, yet it is reported `open|filtered`
-> and not `open`: our probe carries no payload, so the service has nothing to
-> echo back. See
-> [UDP note: why `open` is never reported](#udp-note-why-open-is-never-reported).
+> and not `open`: no probe payload is registered for that port, so the probe
+> goes out empty and the service has nothing to echo back. See
+> [UDP note: why `open` is not reachable on the bench](#udp-note-why-open-is-not-reachable-on-the-bench).
 
 #### Running the bench
 
@@ -302,22 +304,27 @@ Ports `4302` and `4303` illustrate the SYN/ACK complementarity (see the
 - `4303` (**stateful** firewall) → `SYN(filtered)` **and** `ACK(filtered)`: both
   the `SYN` (NEW) and the lone `ACK` (INVALID) are dropped.
 
-#### UDP note: why `open` is never reported
+#### UDP note: why `open` is not reachable on the bench
 
-ft_nmap sends an **empty** UDP datagram (header only, no payload). Almost no
-service answers such a probe: DNS, SNMP or NTP only reply to a well-formed
-request of their own protocol, and even a generic echo listener has nothing to
-send back when it receives zero bytes. An open UDP port therefore stays silent,
-and ft_nmap reports it as `open|filtered` — exactly like a port behind a `DROP`
-rule.
+ft_nmap probes a UDP port with a **protocol-specific payload** whenever one is
+registered for that port: a `version.bind` query for `53`, an SNMP get for
+`161`, a client request for `123`… Those definitions come from Nmap, see
+[License and credits](#license-and-credits). An open service recognizes the
+request and answers, which is what lets ft_nmap report `open` (reason
+`udp-response`) rather than `open|filtered`. Several payloads may exist for a
+single port; they are sent in turn until one gets an answer.
 
-The `open` state is still implemented: it is reported (with the reason
-`udp-response`) as soon as a datagram comes back from the target port. But the
-bench cannot produce that case — port `4310` does not answer a payload-less
-probe — so `open` is the one state of the matrix that is **not reproducible**
-here. Reporting it reliably would require protocol-specific payloads per port
-(a DNS query for `53`, an SNMP get for `161`…), as `nmap` does with its
-`nmap-payloads` file.
+When no payload is registered for the port, the datagram goes out **empty**
+(header only). Almost nothing answers such a probe — even a generic echo
+listener has nothing to send back when it receives zero bytes — so the port
+stays silent and is reported `open|filtered`, exactly like a port behind a
+`DROP` rule.
+
+That is the bench's situation: ports `4310`-`4313` fall outside every range of
+the payload table, so the echo service on `4310` never receives anything to
+echo. `open` is therefore the one state of the matrix that is **not
+reproducible** here, even though it is reported normally against a real DNS,
+NTP or SNMP server.
 
 #### UDP note: kernel ICMP rate limit
 
@@ -631,11 +638,14 @@ filtered (and thus to map firewall rules).
 
 #### UDP scan (`--scan UDP`)
 
-Sends a UDP datagram with **no payload** (header only) to the target port.
+Sends a UDP datagram to the target port, carrying the **protocol payload**
+registered for that port when there is one (empty, header only, otherwise). The
+payload definitions come from Nmap, see
+[License and credits](#license-and-credits).
 
 | Resulting state | …because we received |
 | --- | --- |
-| `open` | any **UDP datagram** sent back from the target port — implemented, but in practice nothing answers a payload-less probe, so this state is never reported ([why](#udp-note-why-open-is-never-reported)) |
+| `open` | any **UDP datagram** sent back from the target port — reachable when a payload is registered for the port and the service answers it; a payload-less probe almost never gets a reply ([details](#udp-note-why-open-is-not-reachable-on-the-bench)) |
 | `open\|filtered` | **no response** (even after retransmission) |
 | `closed` | an ICMP **port unreachable** error (type 3, code 3) |
 | `filtered` | another ICMP *unreachable* error (type 3, code 0, 1, 2, 9, 10 or 13) |
@@ -744,3 +754,36 @@ ctest --test-dir build --output-on-failure
 ```
 
 The scan suite sends raw packets: it **requires root** at runtime.
+
+
+---
+
+## License and credits
+
+ft_nmap is distributed under the **Nmap Public Source License Version 0.95**.
+The complete text, Exhibit A (the GNU GPL Version 2) included, is in the
+[`LICENSE`](LICENSE) file at the root of this repository, and it covers the
+whole repository rather than part of it.
+
+The reason is [`src/payloads/`](src/payloads). Two of its files hold data
+taken from the **Nmap Security Scanner**, Copyright (c) 1996-2026 Nmap
+Software LLC ("The Nmap Project"), <https://nmap.org>:
+
+- [`payloads.c`](src/payloads/payloads.c) — the UDP probe payload
+  definitions, from `nmap-payloads` / `nmap-service-probes` (Nmap 7.98).
+- [`port_services.c`](src/payloads/port_services.c) — the TCP and UDP
+  port-to-service name tables, from `nmap-services`.
+
+Section 3 of the NPSL treats a program that includes those data files as a
+derivative work, and section 2 requires the result to be distributed under
+this same license.
+
+That directory is deliberately the only place in the project that holds
+anything coming from Nmap. The rest of the code reaches it through the three
+functions declared in
+[`src/payloads/payloads.h`](src/payloads/payloads.h) — `get_udp_payloads()`,
+`get_tcp_service()` and `get_udp_service()` — and through nothing else.
+
+ft_nmap is not affiliated with, endorsed by, or a product of the Nmap Project.
+"Nmap" is a trademark of Nmap Software LLC and is used here only to describe
+the origin of that data.

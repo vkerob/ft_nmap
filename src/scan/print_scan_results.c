@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "parsing.h"
+#include "payloads.h"
 #include "scan.h"
 #include "traceroute.h"
 #include "utils.h"
@@ -7,7 +8,6 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -483,20 +483,6 @@ int find_or_update_state_and_reason_combination(
 	return SUCCESS;
 }
 
-/* Service name for a port, from the system database (/etc/services).
- * getservbyport() returns a pointer to a static struct that the next call
- * overwrites, so the name is copied out straight away. */
-static const char *service_name(u16 port, const char *proto, char *buf,
-								size_t buf_size)
-{
-	const struct servent *entry = getservbyport(htons(port), proto);
-
-	if (entry == NULL || entry->s_name == NULL)
-		return "unknown";
-	snprintf(buf, buf_size, "%s", entry->s_name);
-	return buf;
-}
-
 static bool is_ignored_state(const bool	 *ignored_states_by_idx,
 							 t_port_state port_state)
 {
@@ -615,7 +601,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 		printf(" %-*s", col_reason, "REASON");
 	printf("\n");
 
-	setservent(1);
 	// For each port we check that his state is not among the "ignored states"
 	// which are all the state with more than 25 ports in If thats not the case
 	// we add a row to the table
@@ -639,9 +624,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 
-			char		svc_buf[64];
-			const char *svc
-				= service_name(port, "udp", svc_buf, sizeof(svc_buf));
+			const char *svc = get_udp_service(port);
 
 			const char *state = port_state_to_str(final_port_state.port_state);
 
@@ -671,9 +654,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 					== false
 				|| HAS(args->flags, F_VERBOSE)))
 		{
-			char		svc_buf[64];
-			const char *svc
-				= service_name(port, "tcp", svc_buf, sizeof(svc_buf));
+			const char *svc = get_tcp_service(port);
 
 			t_port_output final_port_state
 				= target->port_list.port_final_state[TCP_INDEX][idx];
@@ -749,7 +730,6 @@ static void print_port_states(const t_target *target, const t_args *args,
 			}
 		}
 	}
-	endservent();
 }
 
 static int print_target_results(t_target *target, const t_args *args)

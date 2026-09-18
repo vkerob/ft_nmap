@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "ip.h"
 #include "my_signal.h"
+#include "payloads.h"
 #include "protocols.h"
 #include "send.h"
 #include "shared.h"
@@ -20,7 +21,8 @@
 static int build_scan_packets(struct in_addr dst_addr, u16 port,
 							  t_scan_type type, u_char *packet,
 							  struct in_addr src_ip, _Atomic u16 *id,
-							  u32 *packet_len)
+							  u32 *packet_len, const u8 *udp_payload,
+							  size_t udp_payload_len)
 {
 	t_ip_pseudo_hdr ip_pseudo_hdr;
 	t_datalink_hdr	hdr = { 0 };
@@ -49,10 +51,12 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 	}
 	else if (type == SCAN_UDP)
 	{
-		ip_pseudo_hdr.length = htons((u16)sizeof(t_udp_hdr));
-		build_udp_header(&hdr.udp_hdr, port, 0);
-		calculate_udp_checksum(&ip_pseudo_hdr, &hdr.udp_hdr, NULL, 0);
-		ip_hdr.ip_len += sizeof(t_udp_hdr);
+		ip_pseudo_hdr.length
+			= htons((u16)(sizeof(t_udp_hdr) + udp_payload_len));
+		build_udp_header(&hdr.udp_hdr, port, (u16)udp_payload_len);
+		calculate_udp_checksum(&ip_pseudo_hdr, &hdr.udp_hdr, udp_payload,
+							   (u16)udp_payload_len);
+		ip_hdr.ip_len += sizeof(t_udp_hdr) + udp_payload_len;
 	}
 	*packet_len = ip_hdr.ip_len;
 	ip_hdr.ip_len = htons(ip_hdr.ip_len);
@@ -64,7 +68,12 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 
 	memcpy(packet, &ip_hdr, sizeof(ip_hdr));
 	if (type == SCAN_UDP)
+	{
 		memcpy(packet + sizeof(ip_hdr), &hdr.udp_hdr, sizeof(hdr.udp_hdr));
+		if (udp_payload != NULL && udp_payload_len > 0)
+			memcpy(packet + sizeof(ip_hdr) + sizeof(hdr.udp_hdr), udp_payload,
+				   udp_payload_len);
+	}
 	else
 		memcpy(packet + sizeof(ip_hdr), &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
 	return SUCCESS;
@@ -239,13 +248,13 @@ void *send_routine(void *arg)
 		}
 
 		struct in_addr source_ips_list[MAX_DECOYS + 1];
-		u8			   send_count = 0;
+		u8			   sender_count = 0;
 		bool		   has_me = false;
 		if (shared_data->args && HAS(shared_data->args->flags, F_DECOY))
 		{
 			for (u8 i = 0; i < shared_data->args->decoy_count; i++)
 			{
-				source_ips_list[send_count++] = shared_data->args->decoys[i];
+				source_ips_list[sender_count++] = shared_data->args->decoys[i];
 				if (shared_data->args->decoys[i].s_addr == INADDR_ANY)
 					has_me = true;
 			}
@@ -253,7 +262,7 @@ void *send_routine(void *arg)
 		if (!has_me)
 		{
 			// Place holder in decoy list for our own IP
-			source_ips_list[send_count++]
+			source_ips_list[sender_count++]
 				= (struct in_addr){ .s_addr = INADDR_ANY };
 		}
 
@@ -266,7 +275,23 @@ void *send_routine(void *arg)
 			= false; // true once the real probe lives in the sent queue
 		bool transmitted = false;
 
-		for (u8 i = 0; i < send_count; i++)
+		/* Empty datagram by default. A UDP port that has a protocol payload
+		 * registered is probed with it instead, so an open service has a
+		 * request to answer and can be reported open rather than
+		 * open|filtered. */
+		t_udp_probe_payload payloads[MAX_UDP_PAYLOADS_PER_PORT];
+		size_t				payload_count = 1;
+		payloads[0].data = NULL;
+		payloads[0].len = 0;
+		if (req_type == SCAN_UDP)
+		{
+			size_t n = get_udp_payloads(req_port, payloads,
+										MAX_UDP_PAYLOADS_PER_PORT);
+			if (n > 0)
+				payload_count = n;
+		}
+
+		for (u8 i = 0; i < sender_count; i++)
 		{
 			bool		   is_me = (source_ips_list[i].s_addr == INADDR_ANY);
 			struct in_addr src
@@ -296,53 +321,82 @@ void *send_routine(void *arg)
 					&shared_data->sent[iface_idx].safe_mut.mutex);
 			}
 
-			if (req_type == SCAN_UDP)
-				udp_rate_limit(target);
-
-			memset(packet, 0, sizeof(packet));
-			u32 packet_len = 0;
-			if (build_scan_packets(target->addr, req_port, req_type, packet,
-								   src, &shared_data->id, &packet_len))
-				continue; // header build failed: skip this packet
-
-			t_datalink_hdr datalink_hdr = { 0 };
-			const u8	  *l4_hdr = packet + ((t_ip *)packet)->ip_hl * 4;
-			if (req_type == SCAN_UDP)
-				datalink_hdr.udp_hdr = *(t_udp_hdr *)l4_hdr;
-			else
-				datalink_hdr.tcp_hdr = *(t_tcp_hdr *)l4_hdr;
-
-			if (send_packet(&used_socket, packet, &sent_timestamp, packet_len)
-					== FAILURE
-				&& is_me)
+			for (size_t p = 0; p < payload_count; p++)
 			{
-				char *ip = inet_ntoa(target->addr);
-				if (ip == NULL)
+				/* The first payload is always sent. Before sending another
+				 * one, check that our probe is still in the sent list: if it
+				 * is gone the target already answered, and the remaining
+				 * variants would only burn its ICMP budget. Only valid
+				 * without decoys, where the cover traffic must mirror the
+				 * real probe packet for packet. */
+				if (sender_count == 1 && p > 0 && req_type == SCAN_UDP)
 				{
-					ip = target->input;
+					pthread_mutex_lock(
+						&shared_data->sent[iface_idx].safe_mut.mutex);
+					bool pending
+						= probe_in_queue(shared_data->sent[iface_idx].head,
+										 req_port, req_type, target->addr);
+					pthread_mutex_unlock(
+						&shared_data->sent[iface_idx].safe_mut.mutex);
+					if (!pending)
+						break;
 				}
-				LOG("ft_nmap: failed to send packet to %s\n", ip);
-			}
 
-			if (is_me && tracked)
-			{
-				mark_probe_transmitted(&shared_data->sent[iface_idx], req_port,
-									   req_type, target->addr, &sent_timestamp);
-				transmitted = true;
-			}
+				if (req_type == SCAN_UDP)
+					udp_rate_limit(target);
 
-			if (shared_data->args
-				&& HAS(shared_data->args->flags, F_PACKET_TRACE))
-			{
-				compute_relative_timestamp(&relative_sent_timestamp,
-										   &sent_timestamp,
-										   &shared_data->program_info->start);
-				if (print_debug_packet_send(
-						target->addr, req_type, &relative_sent_timestamp,
-						&datalink_hdr, (t_ip *)packet, !is_me))
+				memset(packet, 0, sizeof(packet));
+				u32 packet_len = 0;
+				if (build_scan_packets(target->addr, req_port, req_type, packet,
+									   src, &shared_data->id, &packet_len,
+									   payloads[p].data, payloads[p].len))
+					continue; // header build failed: skip this packet
+
+				t_datalink_hdr datalink_hdr = { 0 };
+				const u8	  *l4_hdr = packet + ((t_ip *)packet)->ip_hl * 4;
+				if (req_type == SCAN_UDP)
+					datalink_hdr.udp_hdr = *(t_udp_hdr *)l4_hdr;
+				else
+					datalink_hdr.tcp_hdr = *(t_tcp_hdr *)l4_hdr;
+
+				if (send_packet(&used_socket, packet, &sent_timestamp,
+								packet_len)
+						== FAILURE
+					&& is_me)
 				{
-					close_sockets(&udp_socket, &tcp_socket);
-					return NULL;
+					char *ip = inet_ntoa(target->addr);
+					if (ip == NULL)
+					{
+						ip = target->input;
+					}
+					LOG("ft_nmap: failed to send packet to %s\n", ip);
+				}
+
+				/* Re-stamped after every payload: the UDP rate limit can hold
+				 * the last variant back by several hundred milliseconds, and
+				 * the timeout must run from the datagram actually sent last,
+				 * not from the first one. */
+				if (is_me && tracked)
+				{
+					mark_probe_transmitted(&shared_data->sent[iface_idx],
+										   req_port, req_type, target->addr,
+										   &sent_timestamp);
+					transmitted = true;
+				}
+
+				if (shared_data->args
+					&& HAS(shared_data->args->flags, F_PACKET_TRACE))
+				{
+					compute_relative_timestamp(
+						&relative_sent_timestamp, &sent_timestamp,
+						&shared_data->program_info->start);
+					if (print_debug_packet_send(
+							target->addr, req_type, &relative_sent_timestamp,
+							&datalink_hdr, (t_ip *)packet, !is_me))
+					{
+						close_sockets(&udp_socket, &tcp_socket);
+						return NULL;
+					}
 				}
 			}
 		}
