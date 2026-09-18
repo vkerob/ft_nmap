@@ -212,6 +212,11 @@ int main(const int argc, char **argv)
 {
 	t_ctx ctx = { 0 };
 
+	if (argc == 1)
+	{
+		print_usage();
+		return EXIT_SUCCESS;
+	}
 	if (gettimeofday(&ctx.program_info.start, NULL) == -1)
 	{
 		LOG("ft_nmap: gettimeofday failed: %s\n", strerror(errno));

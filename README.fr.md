@@ -204,17 +204,21 @@ hôte : il suffit de l'ouvrir dans Wireshark.
 ### Banc de test : reproduire chaque état
 
 Chaque technique de scan a un **ensemble fini d'états possibles**, et ils sont
-**tous reproductibles** sur les cibles. Les ports ci-dessous sont
-**pré-configurés automatiquement** au démarrage du conteneur cible (écouteurs +
-règles `iptables` posés dans le `CMD` de `Dockerfile.target` ; les règles
-netfilter vivent dans le noyau et ne peuvent pas persister via un `RUN`).
+**tous reproductibles** sur les cibles, à une exception près : l'état UDP
+`open` (voir [Note UDP : pourquoi `open` n'est jamais
+rapporté](#note-udp--pourquoi-open-nest-jamais-rapporté)). Les ports ci-dessous
+sont **pré-configurés automatiquement** au démarrage du conteneur cible
+(écouteurs + règles `iptables` posés dans le `CMD` de `Dockerfile.target` ; les
+règles netfilter vivent dans le noyau et ne peuvent pas persister via un
+`RUN`).
 
 États possibles par technique :
 
 - **SYN** : `open`, `closed`, `filtered`
 - **ACK** : `unfiltered`, `filtered`
 - **NULL / FIN / XMAS** : `open|filtered`, `closed`, `filtered`
-- **UDP** : `open`, `open|filtered`, `closed`, `filtered`
+- **UDP** : `open|filtered`, `closed`, `filtered` (`open` est implémenté mais
+  hors d'atteinte avec une sonde sans charge utile, voir la note plus bas)
 
 #### Ports du banc et états attendus
 
@@ -230,10 +234,15 @@ netfilter vivent dans le noyau et ne peuvent pas persister via un `RUN`).
 | `4303` | `iptables --ctstate NEW,INVALID -j DROP` (à état) | `SYN` | `filtered` |
 | `4303` | `iptables --ctstate NEW,INVALID -j DROP` | `ACK` | `filtered` |
 | `4304` | `iptables -j REJECT --reject-with icmp-host-prohibited` | `SYN`/`ACK`/`NULL`/`FIN`/`XMAS` | `filtered` |
-| `4310` | écho UDP (répond à tout datagramme) | `UDP` | `open` |
+| `4310` | écho UDP (ne répond qu'à un datagramme porteur d'une charge utile) | `UDP` | `open\|filtered` |
 | `4311` | libre (aucun service, aucune règle) | `UDP` | `closed` |
 | `4312` | `iptables -p udp -j DROP` | `UDP` | `open\|filtered` |
 | `4313` | `iptables -p udp -j REJECT --reject-with icmp-host-prohibited` | `UDP` | `filtered` |
+
+> Le port `4310` fait bien tourner un service d'écho UDP, et il est pourtant
+> rapporté `open|filtered` et non `open` : notre sonde ne porte aucune charge
+> utile, le service n'a donc rien à renvoyer. Voir
+> [Note UDP : pourquoi `open` n'est jamais rapporté](#note-udp--pourquoi-open-nest-jamais-rapporté).
 
 #### Lancer le banc
 
@@ -294,6 +303,23 @@ section [scan ACK](#tcp--ack-scan---scan-ack)) :
   vise que les nouvelles connexions.
 - `4303` (pare-feu **à état**) → `SYN(filtered)` **et** `ACK(filtered)` : le
   `SYN` (NEW) comme l'`ACK` isolé (INVALID) sont jetés.
+
+#### Note UDP : pourquoi `open` n'est jamais rapporté
+
+ft_nmap envoie un datagramme UDP **vide** (en-tête seul, sans charge utile).
+Quasiment aucun service ne répond à une telle sonde : DNS, SNMP ou NTP ne
+répondent qu'à une requête bien formée de leur propre protocole, et même un
+écouteur d'écho générique n'a rien à renvoyer lorsqu'il reçoit zéro octet. Un
+port UDP ouvert reste donc muet, et ft_nmap le rapporte en `open|filtered` —
+exactement comme un port derrière une règle `DROP`.
+
+L'état `open` reste implémenté : il est rapporté (avec la raison
+`udp-response`) dès qu'un datagramme revient du port cible. Mais le banc ne
+peut pas produire ce cas — le port `4310` ne répond pas à une sonde sans charge
+utile — donc `open` est le seul état de la matrice qui n'est **pas
+reproductible** ici. Le rapporter de façon fiable demanderait des charges
+utiles spécifiques par protocole (une requête DNS pour le `53`, un SNMP get
+pour le `161`…), comme le fait `nmap` avec son fichier `nmap-payloads`.
 
 #### Note UDP : limitation ICMP du noyau
 
@@ -517,7 +543,6 @@ propres au projet :
    - plage de ports par défaut **1-1024** ;
    - **IPv4 uniquement**.
 
-
 4. **`--traceroute` (bonus) : marche avant classique.** ft_nmap parcourt les
    TTL 1, 2, 3… comme `traceroute(8)`, en envoyant des datagrammes UDP vers des
    ports hauts inutilisés (33434 et suivants) pour que la destination réponde
@@ -615,11 +640,11 @@ est filtré (et donc à cartographier les règles de pare-feu).
 
 #### UDP scan (`--scan UDP`)
 
-Envoie un datagramme UDP (vide) sur le port ciblé.
+Envoie un datagramme UDP **sans charge utile** (en-tête seul) sur le port ciblé.
 
 | État obtenu | …parce qu'on a reçu |
 | --- | --- |
-| `open` | n'importe quel **datagramme UDP** renvoyé par le port cible |
+| `open` | n'importe quel **datagramme UDP** renvoyé par le port cible — implémenté, mais en pratique rien ne répond à une sonde sans charge utile, donc cet état n'est jamais rapporté ([pourquoi](#note-udp--pourquoi-open-nest-jamais-rapporté)) |
 | `open\|filtered` | **aucune réponse** (même après retransmission) |
 | `closed` | une erreur ICMP **port unreachable** (type 3, code 3) |
 | `filtered` | une autre erreur ICMP *unreachable* (type 3, code 0, 1, 2, 9, 10 ou 13) |

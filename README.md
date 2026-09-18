@@ -202,17 +202,20 @@ Wireshark.
 ### Test bench: reproduce every state
 
 Each scan technique has a **finite set of possible states**, and they are **all
-reproducible** on the targets. The ports below are **pre-configured
-automatically** when the target container starts (listeners + `iptables` rules
-set in the `CMD` of `Dockerfile.target`; netfilter rules live in the kernel and
-cannot persist via a `RUN`).
+reproducible** on the targets, with a single exception: the UDP `open` state
+(see [UDP note: why `open` is never
+reported](#udp-note-why-open-is-never-reported)). The ports below are
+**pre-configured automatically** when the target container starts (listeners +
+`iptables` rules set in the `CMD` of `Dockerfile.target`; netfilter rules live
+in the kernel and cannot persist via a `RUN`).
 
 Possible states per technique:
 
 - **SYN**: `open`, `closed`, `filtered`
 - **ACK**: `unfiltered`, `filtered`
 - **NULL / FIN / XMAS**: `open|filtered`, `closed`, `filtered`
-- **UDP**: `open`, `open|filtered`, `closed`, `filtered`
+- **UDP**: `open|filtered`, `closed`, `filtered` (`open` is implemented but
+  not reachable with a payload-less probe, see the note below)
 
 #### Bench ports and expected states
 
@@ -228,10 +231,15 @@ Possible states per technique:
 | `4303` | `iptables --ctstate NEW,INVALID -j DROP` (stateful) | `SYN` | `filtered` |
 | `4303` | `iptables --ctstate NEW,INVALID -j DROP` | `ACK` | `filtered` |
 | `4304` | `iptables -j REJECT --reject-with icmp-host-prohibited` | `SYN`/`ACK`/`NULL`/`FIN`/`XMAS` | `filtered` |
-| `4310` | UDP echo (replies to any datagram) | `UDP` | `open` |
+| `4310` | UDP echo (only answers a datagram that carries a payload) | `UDP` | `open\|filtered` |
 | `4311` | free (no service, no rule) | `UDP` | `closed` |
 | `4312` | `iptables -p udp -j DROP` | `UDP` | `open\|filtered` |
 | `4313` | `iptables -p udp -j REJECT --reject-with icmp-host-prohibited` | `UDP` | `filtered` |
+
+> Port `4310` does run a UDP echo service, yet it is reported `open|filtered`
+> and not `open`: our probe carries no payload, so the service has nothing to
+> echo back. See
+> [UDP note: why `open` is never reported](#udp-note-why-open-is-never-reported).
 
 #### Running the bench
 
@@ -293,6 +301,23 @@ Ports `4302` and `4303` illustrate the SYN/ACK complementarity (see the
   only targets new connections.
 - `4303` (**stateful** firewall) → `SYN(filtered)` **and** `ACK(filtered)`: both
   the `SYN` (NEW) and the lone `ACK` (INVALID) are dropped.
+
+#### UDP note: why `open` is never reported
+
+ft_nmap sends an **empty** UDP datagram (header only, no payload). Almost no
+service answers such a probe: DNS, SNMP or NTP only reply to a well-formed
+request of their own protocol, and even a generic echo listener has nothing to
+send back when it receives zero bytes. An open UDP port therefore stays silent,
+and ft_nmap reports it as `open|filtered` — exactly like a port behind a `DROP`
+rule.
+
+The `open` state is still implemented: it is reported (with the reason
+`udp-response`) as soon as a datagram comes back from the target port. But the
+bench cannot produce that case — port `4310` does not answer a payload-less
+probe — so `open` is the one state of the matrix that is **not reproducible**
+here. Reporting it reliably would require protocol-specific payloads per port
+(a DNS query for `53`, an SNMP get for `161`…), as `nmap` does with its
+`nmap-payloads` file.
 
 #### UDP note: kernel ICMP rate limit
 
@@ -606,11 +631,11 @@ filtered (and thus to map firewall rules).
 
 #### UDP scan (`--scan UDP`)
 
-Sends an (empty) UDP datagram to the target port.
+Sends a UDP datagram with **no payload** (header only) to the target port.
 
 | Resulting state | …because we received |
 | --- | --- |
-| `open` | any **UDP datagram** sent back from the target port |
+| `open` | any **UDP datagram** sent back from the target port — implemented, but in practice nothing answers a payload-less probe, so this state is never reported ([why](#udp-note-why-open-is-never-reported)) |
 | `open\|filtered` | **no response** (even after retransmission) |
 | `closed` | an ICMP **port unreachable** error (type 3, code 3) |
 | `filtered` | another ICMP *unreachable* error (type 3, code 0, 1, 2, 9, 10 or 13) |
