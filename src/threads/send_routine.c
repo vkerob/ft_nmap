@@ -148,16 +148,14 @@ static void udp_rate_limit(t_target *target)
 		nanosleep(&ts, NULL);
 	}
 }
-static void mark_probe_transmitted(t_probe_queue *sent, const u16 port,
-								   const t_scan_type	 type,
-								   const struct in_addr	 ip,
+
+static void mark_probe_transmitted(t_probe_queue *sent, const t_probe *request,
 								   const struct timeval *sent_timestamp)
 {
 	pthread_mutex_lock(&sent->safe_mut.mutex);
 	for (t_probe *probe = sent->head; probe; probe = probe->next)
 	{
-		if (probe->port == port && probe->type == type
-			&& probe->target->addr.s_addr == ip.s_addr)
+		if (probe == request)
 		{
 			probe->timestamp = *sent_timestamp;
 			break;
@@ -379,8 +377,7 @@ void *send_routine(void *arg)
 				if (is_me && tracked)
 				{
 					mark_probe_transmitted(&shared_data->sent[iface_idx],
-										   req_port, req_type, target->addr,
-										   &sent_timestamp);
+										   request, &sent_timestamp);
 					transmitted = true;
 				}
 
@@ -405,8 +402,8 @@ void *send_routine(void *arg)
 		{
 			struct timeval now;
 			if (gettimeofday(&now, NULL) == 0)
-				mark_probe_transmitted(&shared_data->sent[iface_idx], req_port,
-									   req_type, target->addr, &now);
+				mark_probe_transmitted(&shared_data->sent[iface_idx], request,
+									   &now);
 		}
 
 		if (!tracked)
