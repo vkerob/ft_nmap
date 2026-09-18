@@ -5,12 +5,12 @@
 
 #include <netinet/in.h>
 
-typedef struct	s_socket
+typedef struct s_socket
 {
-	int									sfd;
-	struct sockaddr_in	sin;
-}	t_socket;
+	int				   sfd;
+	struct sockaddr_in sin;
+} t_socket;
 
-int	init_socket(t_socket *sock, int proto);
+int init_socket(t_socket *sock, int proto);
 
 #endif

@@ -47,6 +47,7 @@ void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
 	tcp_hdr->th_win = htons(65535);
 	/* Checksum */
 	tcp_hdr->th_sum = 0;
-	/* Set with URG flag to indicate the index where the urgent data is located*/
+	/* Set with URG flag to indicate the index where the urgent data is
+	 * located*/
 	tcp_hdr->th_urp = 0;
 }

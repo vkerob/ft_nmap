@@ -3,7 +3,7 @@
 
 #include "typesdef.h"
 
-#include <netinet/if_ether.h>
 #include <net/ethernet.h>
+#include <netinet/if_ether.h>
 
 #endif

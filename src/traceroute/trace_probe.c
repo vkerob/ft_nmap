@@ -308,8 +308,7 @@ static int send_icmp_probe(t_trace_ctx *ctx, const t_trace_opts *opts, int ttl,
 	icmp_write_u16(packet, ICMP_OFF_ID, ctx->echo_id);
 	icmp_write_u16(packet, ICMP_OFF_SEQ, probe_seq(opts, ttl, probe));
 
-	fill_payload(packet + ICMP_HDR_LEN, packet_len - ICMP_HDR_LEN,
-				 ttl, probe);
+	fill_payload(packet + ICMP_HDR_LEN, packet_len - ICMP_HDR_LEN, ttl, probe);
 
 	/* Checksum covers header + payload, and is computed with the field
 	 * zeroed (memset above). No pseudo-header, unlike TCP and UDP. */

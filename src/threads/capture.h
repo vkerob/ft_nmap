@@ -12,7 +12,7 @@ typedef struct s_pcap_user_data
 } t_pcap_user_data;
 
 int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, const t_target *targets,
-				size_t target_count);
+			   size_t target_count);
 
 void handle_packet(u_char *args, const struct pcap_pkthdr *header,
 				   const u_char *packet);

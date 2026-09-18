@@ -22,7 +22,8 @@ static void print_usage()
 {
 	printf("Usage:\n");
 	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --ip IP_ADDRESS "
-		   "[--speedup [NUMBER]] [--scan [TYPE]] [--max-retries [NUMBER]] [--timeout [NUMBER]]\n");
+		   "[--speedup [NUMBER]] [--scan [TYPE]] [--max-retries [NUMBER]] "
+		   "[--timeout [NUMBER]]\n");
 	printf("or\n");
 	printf("./ft_nmap [--help] [--ports [NUMBER/RANGED]] --file FILE "
 		   "[--speedup [NUMBER]] [--scan [TYPE]]\n");
@@ -41,9 +42,10 @@ static void print_usage()
 	printf(" --file <source file containing list of ip>\n");
 	printf("\nSCAN SPECIFICATION: \n");
 	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
-	printf(" --max-retries <0-5>: Number of times we send a probe after" \
-		" we didn't have any answer\n Default value is 3 sends\n");
-	printf(" --timeout <0-10000>: Delay in milliseconds after which we consider" \
+	printf(" --max-retries <0-5>: Number of times we send a probe after"
+		   " we didn't have any answer\n Default value is 3 sends\n");
+	printf(
+		" --timeout <0-10000>: Delay in milliseconds after which we consider"
 		" that a probe didn't get any answer\n Default value is 1 seconds\n");
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
@@ -177,7 +179,7 @@ static void display_program_header(const t_ctx *ctx)
 	for (size_t i = 0; i < ctx->target_count; i++)
 	{
 		t_target target = ctx->targets[i];
-		char *ip = inet_ntoa(target.addr);
+		char	*ip = inet_ntoa(target.addr);
 		if (ip == NULL)
 		{
 			ip = target.input;
@@ -194,7 +196,7 @@ static void display_program_header(const t_ctx *ctx)
 	}
 	printf("Number of ports to scan: %hu\n", ctx->args.port_count);
 	printf("Scans to be performed: ");
-	char   scan_name[16];
+	char scan_name[16];
 
 	for (u8 i = 0; i < ctx->args.nb_scan_types; i++)
 	{

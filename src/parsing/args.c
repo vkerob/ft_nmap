@@ -242,7 +242,8 @@ static int parse_token_and_push(char *token, u16 *ports, u16 *count,
 
 	if (port_left > port_right)
 	{
-		LOG("ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d ?\n",
+		LOG("ft_nmap: Your port range %d-%d is backwards. Did you mean %d-%d "
+			"?\n",
 			port_left, port_right, port_left, port_right);
 		return FAILURE;
 	}
@@ -541,7 +542,8 @@ int parse_max_retries(const char *str, u8 *out)
 
 	if (value > MAX_RETRIES_MAX)
 	{
-		LOG("ft_nmap: max-retries must be between %d and %d\n", MAX_RETRIES_MIN, MAX_RETRIES_MAX);
+		LOG("ft_nmap: max-retries must be between %d and %d\n", MAX_RETRIES_MIN,
+			MAX_RETRIES_MAX);
 		return FAILURE;
 	}
 
@@ -551,7 +553,7 @@ int parse_max_retries(const char *str, u8 *out)
 
 int parse_timeout_ms(const char *str, double *out)
 {
-		while (isspace((unsigned char)*str))
+	while (isspace((unsigned char)*str))
 		str++;
 
 	if (*str == '\0' || *str == '-' || *str == '+')
@@ -561,7 +563,7 @@ int parse_timeout_ms(const char *str, double *out)
 	}
 
 	errno = 0;
-	char		 *end = NULL;
+	char  *end = NULL;
 	double value = strtod(str, &end);
 
 	if (errno != 0 || end == str)
@@ -581,14 +583,14 @@ int parse_timeout_ms(const char *str, double *out)
 
 	if (value > TIMEOUT_MS_MAX)
 	{
-		LOG("ft_nmap: timeout must be between %d ms and %d ms\n", TIMEOUT_MS_MIN, TIMEOUT_MS_MAX);
+		LOG("ft_nmap: timeout must be between %d ms and %d ms\n",
+			TIMEOUT_MS_MIN, TIMEOUT_MS_MAX);
 		return FAILURE;
 	}
 
 	*out = value;
 	return SUCCESS;
 }
-
 
 int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 			   size_t *target_count)
@@ -736,7 +738,7 @@ int parse_args(int argc, char **argv, t_args *args, char ***targets_input,
 
 	if (HAS(args->flags, F_TIMEOUT_MS))
 	{
-		 args->timeout_s = (args->timeout_ms / 1000);
+		args->timeout_s = (args->timeout_ms / 1000);
 	}
 	else
 	{

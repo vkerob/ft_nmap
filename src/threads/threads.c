@@ -11,9 +11,9 @@
 #include <string.h>
 
 int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
-								   pthread_t		   **send_threads,
-								   t_shared_data_sender *shared_data_probe,
-								   t_receiver_data		*pcap_ctxs)
+								  pthread_t			  **send_threads,
+								  t_shared_data_sender *shared_data_probe,
+								  t_receiver_data	   *pcap_ctxs)
 {
 	*pcap_threads = calloc(ctx->iface_count, sizeof(pthread_t));
 	if (*pcap_threads == NULL)

@@ -3,11 +3,12 @@
 
 #include <string.h>
 
-void	calculate_udp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
-	struct udphdr *udp_hdr, const u8 *payload, u16 payload_len)
+void calculate_udp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
+							struct udphdr *udp_hdr, const u8 *payload,
+							u16 payload_len)
 {
-	char	buffer[2048] = { 0 };
-	size_t	off = 0;
+	char   buffer[2048] = { 0 };
+	size_t off = 0;
 
 	memcpy(buffer, ip_pseudo_hdr, sizeof(t_ip_pseudo_hdr));
 	off += sizeof(t_ip_pseudo_hdr);

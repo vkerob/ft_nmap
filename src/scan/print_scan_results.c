@@ -1,6 +1,5 @@
 #include "debug.h"
 #include "parsing.h"
-#include "port_services.h"
 #include "scan.h"
 #include "traceroute.h"
 #include "utils.h"
@@ -8,6 +7,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -222,7 +222,7 @@ append_not_shown_segment(char *buf, size_t buf_size, size_t buf_len,
 
 /* Decide, per protocol, which states should be grouped into a "Not shown"
  * line. A state is grouped when it has strictly more than PRINT_LIMIT ports
- * in that protocol excep for open state. TCP and UDP are treated independently, 
+ * in that protocol excep for open state. TCP and UDP are treated independently,
  * so we can group e.g. closed-TCP without forcing the same on UDP.
  *
  * ignored_tcp / ignored_udp are output arrays indexed by t_port_state value
@@ -346,10 +346,10 @@ static void build_results_str(const t_target *target, const t_args *args,
 }
 
 static int compute_scan_result_col_width(const t_target *target,
-											   const t_args *args, u8 protocol)
+										 const t_args *args, u8 protocol)
 {
 	char results_buf[256];
-	int  max = (int)strlen("SCAN RESULTS");
+	int	 max = (int)strlen("SCAN RESULTS");
 
 	for (u16 i = 0; i < args->port_count; i++)
 	{
@@ -483,6 +483,20 @@ int find_or_update_state_and_reason_combination(
 	return SUCCESS;
 }
 
+/* Service name for a port, from the system database (/etc/services).
+ * getservbyport() returns a pointer to a static struct that the next call
+ * overwrites, so the name is copied out straight away. */
+static const char *service_name(u16 port, const char *proto, char *buf,
+								size_t buf_size)
+{
+	const struct servent *entry = getservbyport(htons(port), proto);
+
+	if (entry == NULL || entry->s_name == NULL)
+		return "unknown";
+	snprintf(buf, buf_size, "%s", entry->s_name);
+	return buf;
+}
+
 static bool is_ignored_state(const bool	 *ignored_states_by_idx,
 							 t_port_state port_state)
 {
@@ -506,10 +520,12 @@ static int resolve_final_port_state(const t_args *args, t_target *target)
 
 			/* Update the conclusion of a port state based off what each scan
 				type gave us, also keep track of the reasons associated
-				port_final_state store the port state for each ports and foreach protocol (TCP AND UDP)
-				this function is useful mostly for TCP scans where we have multiple port_map_rev array
-				and need to decide which is the conclusion we take on port state
-				If we change the update the port state with a more conclusive state we also update the reasons
+				port_final_state store the port state for each ports and foreach
+			   protocol (TCP AND UDP) this function is useful mostly for TCP
+			   scans where we have multiple port_map_rev array and need to
+			   decide which is the conclusion we take on port state If we change
+			   the update the port state with a more conclusive state we also
+			   update the reasons
 				*/
 			update_definitive_port_state_and_reason(
 				&target->port_list.port_final_state[protocol_index][idx],
@@ -599,6 +615,7 @@ static void print_port_states(const t_target *target, const t_args *args,
 		printf(" %-*s", col_reason, "REASON");
 	printf("\n");
 
+	setservent(1);
 	// For each port we check that his state is not among the "ignored states"
 	// which are all the state with more than 25 ports in If thats not the case
 	// we add a row to the table
@@ -622,27 +639,27 @@ static void print_port_states(const t_target *target, const t_args *args,
 			char port_str[16];
 			snprintf(port_str, sizeof(port_str), "%u/udp", port);
 
+			char		svc_buf[64];
 			const char *svc
-				= port_services_udp[port] ? port_services_udp[port] : "unknown";
+				= service_name(port, "udp", svc_buf, sizeof(svc_buf));
 
 			const char *state = port_state_to_str(final_port_state.port_state);
 
 			char results_buf[256];
 			snprintf(results_buf, sizeof(results_buf), "%s(%s)", "UDP", state);
 
-			printf("%-*s %-*s %-*s",
-					 col_port, port_str, col_state, state, col_svc,
-					 svc ? svc : "unknown");
+			printf("%-*s %-*s %-*s", col_port, port_str, col_state, state,
+				   col_svc, svc ? svc : "unknown");
 			if (multi_scan_tcp)
 			{
-				printf(
-						 " %-*s", col_scan_result, "");
+				printf(" %-*s", col_scan_result, "");
 			}
 
 			if (HAS(args->flags, F_REASON))
 			{
 				printf(" %-*s", col_reason,
-						 final_port_state.reasons[0] ? final_port_state.reasons[0] : "");
+					   final_port_state.reasons[0] ? final_port_state.reasons[0]
+												   : "");
 			}
 			printf("\n");
 		}
@@ -654,8 +671,9 @@ static void print_port_states(const t_target *target, const t_args *args,
 					== false
 				|| HAS(args->flags, F_VERBOSE)))
 		{
+			char		svc_buf[64];
 			const char *svc
-				= port_services_tcp[port] ? port_services_tcp[port] : "unknown";
+				= service_name(port, "tcp", svc_buf, sizeof(svc_buf));
 
 			t_port_output final_port_state
 				= target->port_list.port_final_state[TCP_INDEX][idx];
@@ -669,10 +687,9 @@ static void print_port_states(const t_target *target, const t_args *args,
 				char results_buf[256];
 				build_results_str(target, args, port, results_buf,
 								  sizeof(results_buf), IPPROTO_TCP);
-				printf("%-*s %-*s %-*s %-*s", col_port, port_str,
-						 col_state, state, col_svc, svc ? svc : "unknown",
-						 col_scan_result, results_buf);
-
+				printf("%-*s %-*s %-*s %-*s", col_port, port_str, col_state,
+					   state, col_svc, svc ? svc : "unknown", col_scan_result,
+					   results_buf);
 
 				// Print reason for each type of scan ran
 				if (HAS(args->flags, F_REASON))
@@ -720,19 +737,19 @@ static void print_port_states(const t_target *target, const t_args *args,
 			else
 			{
 				printf("%-*s %-*s %-*s", col_port, port_str, col_state, state,
-						 col_svc, svc ? svc : "unknown");
+					   col_svc, svc ? svc : "unknown");
 				if (HAS(args->flags, F_REASON))
 				{
-					printf(
-							 " %-*s", col_reason,
-							 final_port_state.reasons[0]
-								 ? final_port_state.reasons[0]
-								 : "");
+					printf(" %-*s", col_reason,
+						   final_port_state.reasons[0]
+							   ? final_port_state.reasons[0]
+							   : "");
 				}
 				printf("\n");
 			}
 		}
 	}
+	endservent();
 }
 
 static int print_target_results(t_target *target, const t_args *args)
@@ -769,8 +786,8 @@ static int print_target_results(t_target *target, const t_args *args)
 	if (HAS(args->flags, F_VERBOSE) == false)
 	{
 		all_ignored = print_ignored_port_states(
-			target, args->tcp_scan, args->udp_scan, args->port_count, ignored_tcp,
-			ignored_udp, HAS(args->flags, F_VERBOSE));
+			target, args->tcp_scan, args->udp_scan, args->port_count,
+			ignored_tcp, ignored_udp, HAS(args->flags, F_VERBOSE));
 	}
 
 	if (all_ignored == false)

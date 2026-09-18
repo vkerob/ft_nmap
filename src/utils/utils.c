@@ -1,14 +1,14 @@
 #include "utils.h"
 
-#include <string.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 int substr(const char *str, int start, int end, char **ptr)
 {
-	int	  len = end - start;
+	int len = end - start;
 
 	*ptr = calloc(len + 1, sizeof(char));
 	if (*ptr == NULL)
@@ -33,4 +33,3 @@ u16 get_max_port_number(const u16 ports[MAX_PORT_COUNT])
 	}
 	return max_port_val;
 }
-

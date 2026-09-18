@@ -86,11 +86,21 @@ target_link_libraries(ft_nmap PRIVATE ${LIBPCAP})
 
 target_link_libraries(tests_ft_nmap ${LIBPCAP} ${LIBPCRE2})
 
-list(APPEND TEST_SUITES parsing scan)
+# Suite names must match the SUITE(...) identifiers registered in tests/tests.c,
+# because greatest's -s flag matches on the suite name. A name that matches
+# nothing runs zero tests and still exits 0, so a typo here passes silently.
+list(APPEND TEST_SUITES
+        parse_ports_suite
+        parse_scan_types_suite
+        parse_args_suite
+        scan_udp_suite
+        scan_syn_suite
+        scan_ack_suite
+        scan_stealth_suite)
 
 foreach (TEST_SUITE ${TEST_SUITES})
     add_test(
-            NAME "${TEST_SUITE}_suite"
+            NAME ${TEST_SUITE}
             COMMAND tests_ft_nmap -s ${TEST_SUITE}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach ()

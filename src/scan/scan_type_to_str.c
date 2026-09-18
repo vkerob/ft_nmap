@@ -23,7 +23,7 @@ void scan_type_to_str(const t_scan_type scan_type, char buf[16])
 		break;
 	case SCAN_XMAS:
 		strcpy(buf, "XMAS");
-		break ;
+		break;
 	default:
 		break;
 	}

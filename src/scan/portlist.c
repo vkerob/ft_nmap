@@ -91,7 +91,8 @@ int init_port_lists(t_ctx *ctx)
 						  ctx->args.ports, ctx->args.scan_types,
 						  ctx->args.nb_scan_types, ctx->args.tcp_scan,
 						  ctx->args.udp_scan, &ctx->args.max_port_nb,
-						  ctx->args.port_map) == FAILURE)
+						  ctx->args.port_map)
+			== FAILURE)
 		{
 			return FAILURE;
 		}
@@ -100,9 +101,10 @@ int init_port_lists(t_ctx *ctx)
 }
 
 int init_portlist(t_port_list *port_list, const u16 port_count,
-				  const u16 ports[MAX_PORT_COUNT], const u8 scan_types[MAX_NB_SCAN_TYPE],
-				  const u8 nb_scan_type, const bool tcp_scan,
-				  const bool udp_scan, u16 *max_port_nb, int *port_map)
+				  const u16 ports[MAX_PORT_COUNT],
+				  const u8 scan_types[MAX_NB_SCAN_TYPE], const u8 nb_scan_type,
+				  const bool tcp_scan, const bool udp_scan, u16 *max_port_nb,
+				  int *port_map)
 {
 	*max_port_nb = get_max_port_number(ports);
 

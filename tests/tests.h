@@ -21,10 +21,10 @@ typedef struct s_server
 
 typedef struct s_port
 {
-	char 			*port;
+	char		  *port;
 	char		  *port_state;
 	char		  *service;
-	char			*protocol;
+	char		  *protocol;
 	struct s_port *next;
 } t_port;
 

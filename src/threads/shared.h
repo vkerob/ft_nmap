@@ -7,28 +7,27 @@
 
 #include <pcap/pcap.h>
 
-typedef struct s_safe_mutex {
-	pthread_mutex_t	mutex;
-	bool initialize;
-}	t_safe_mutex;
-
+typedef struct s_safe_mutex
+{
+	pthread_mutex_t mutex;
+	bool			initialize;
+} t_safe_mutex;
 
 typedef struct s_probe_queue
 {
-	t_probe		   *head;
-	t_probe		   *tail;
-	t_safe_mutex	safe_mut;
-	u16				nb_probe;
+	t_probe		*head;
+	t_probe		*tail;
+	t_safe_mutex safe_mut;
+	u16			 nb_probe;
 	/* Signalled when work is added to (or should be re-checked on) the queue,
 	 * so senders can sleep instead of busy-waiting on an empty queue. */
-	pthread_cond_t	cond;
+	pthread_cond_t cond;
 	/* Shared probe-resolution counter (points to s_shared_data_sender.
 	 * outstanding). Drives capture-thread termination: a probe is counted
 	 * once when queued and decremented once when definitively resolved
 	 * (response handled or dropped after max retries). */
-	_Atomic int	   *outstanding;
+	_Atomic int *outstanding;
 } t_probe_queue;
-
 
 typedef struct s_shared_data_sender
 {
@@ -47,7 +46,6 @@ typedef struct s_shared_data_sender
 	const t_args   *args;
 } t_shared_data_sender;
 
-
 typedef struct s_receiver_data
 {
 	pcap_t *handle;
@@ -55,10 +53,11 @@ typedef struct s_receiver_data
 	t_iface_info *iface_info;
 	/* reference to the list used accrosed */
 	t_probe_queue *to_send;
-	/* reference to the list used accross all receiver threads and where are store all probe request
- 	sent to target(s), since there is one thread per interface (pcap thread safety limitation), each
-	have a reference to a different to_send list but that is shared with the sender thread (thread responsible
-	to send probe the the targets)*/ 
+	/* reference to the list used accross all receiver threads and where are
+	store all probe request sent to target(s), since there is one thread per
+	interface (pcap thread safety limitation), each have a reference to a
+	different to_send list but that is shared with the sender thread (thread
+	responsible to send probe the the targets)*/
 	t_probe_queue *sent;
 
 	const t_args   *args;
@@ -67,20 +66,20 @@ typedef struct s_receiver_data
 } t_receiver_data;
 
 int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
-								  t_ctx				   *ctx);
+								 t_ctx				  *ctx);
 
 int initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
-							  t_shared_data_sender *shared_data_probe,
-							  t_iface_info		   *ifaces,
-							  t_program_info	   *program_info);
+							 t_shared_data_sender *shared_data_probe,
+							 t_iface_info		  *ifaces,
+							 t_program_info		  *program_info);
 
 void deinitialize_shared_data(t_shared_data_sender *shared_data_probe,
 							  const t_ctx		   *ctx);
 
 int initialize_and_launch_threads(t_ctx *ctx, pthread_t **pcap_threads,
-								   pthread_t		   **send_threads,
-								   t_shared_data_sender *shared_data_probe,
-								   t_receiver_data		*pcap_ctxs);
+								  pthread_t			  **send_threads,
+								  t_shared_data_sender *shared_data_probe,
+								  t_receiver_data	   *pcap_ctxs);
 
 void join_and_free_threads(pthread_t **pcap_threads, pthread_t **send_threads,
 						   u8 nb_send_threads, size_t nb_pcap_threads);

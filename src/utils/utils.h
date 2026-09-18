@@ -1,9 +1,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdbool.h>
 #include "defines.h"
 #include "typesdef.h"
+#include <stdbool.h>
 
 int substr(const char *str, int start, int end, char **ptr);
 

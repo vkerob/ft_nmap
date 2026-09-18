@@ -13,7 +13,7 @@
 #define PCAP_IMMEDIATE_MODE true
 
 static int pcap_configure(pcap_t *handle, int snaplen, int promisc,
-						   int buffer_size_bytes, bool immediate_mode)
+						  int buffer_size_bytes, bool immediate_mode)
 {
 	if (pcap_set_snaplen(handle, snaplen) != 0)
 	{
@@ -38,8 +38,9 @@ static int pcap_configure(pcap_t *handle, int snaplen, int promisc,
 	return SUCCESS;
 }
 
-static char *build_filter_expr(const char *ip_src_interface, const t_target *targets,
-							   size_t target_count, int iface_index)
+static char *build_filter_expr(const char	  *ip_src_interface,
+							   const t_target *targets, size_t target_count,
+							   int iface_index)
 {
 	/* Guard against overflow: each target IP needs at most 30 chars.
 	 * On 32-bit builds, SIZE_MAX/30 is the safe upper bound. */
@@ -120,7 +121,7 @@ static int pcap_apply_filter(pcap_t *handle, const char *filter_expr)
 }
 
 int pcap_setup(t_receiver_data *pcap_ctx, char *errbuf, const t_target *targets,
-				size_t target_count)
+			   size_t target_count)
 {
 	const char *ip_src_interface = inet_ntoa(pcap_ctx->iface_info->ip_addr);
 	if (ip_src_interface == NULL)

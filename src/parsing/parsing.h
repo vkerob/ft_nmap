@@ -18,7 +18,7 @@ enum e_flags
 	F_PACKET_TRACE = 1u << 6,
 	F_REASON = 1u << 7,
 	F_VERBOSE = 1u << 8,
-	F_DECOY     = 1u << 9,
+	F_DECOY = 1u << 9,
 	F_TRACEROUTE = 1u << 10,
 	F_TRACEROUTE_ICMP = 1u << 11,
 	F_MAX_RETRIES = 1u << 12,

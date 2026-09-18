@@ -53,7 +53,8 @@ static t_port_state_reason icmp_code_to_reason(const u8 code)
 /* Can either be from a UDP or TCP probe so we pass the scan type as argument */
 void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 						  const struct in_addr ip_src, t_icmp_hdr icmp_hdr,
-						  const t_scan_type scan_type, const u8 protocol, t_eth_hdr *eth_hdr)
+						  const t_scan_type scan_type, const u8 protocol,
+						  t_eth_hdr *eth_hdr)
 {
 	if (ICMP_TYPE(icmp_hdr) != 3)
 	{
@@ -71,7 +72,8 @@ void handle_icmp_response(t_probe_queue *sent_list, const u16 source_port,
 	}
 	if (eth_hdr != NULL && probe->target->mac_address == false)
 	{
-		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETHER_ADDR_LEN);
+		memcpy(probe->target->mac, eth_hdr->ether_shost,
+			   sizeof(u8) * ETHER_ADDR_LEN);
 		probe->target->mac_address = true;
 	}
 	const int idx = probe->target->port_list.port_map[source_port];

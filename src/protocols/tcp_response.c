@@ -10,7 +10,8 @@
 
 void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 						 const t_scan_type scan_type, const u16 source_port,
-						 const struct in_addr ip_src, const u8 ttl, t_eth_hdr *eth_hdr)
+						 const struct in_addr ip_src, const u8 ttl,
+						 t_eth_hdr *eth_hdr)
 {
 
 	pthread_mutex_lock(&sent_list->safe_mut.mutex);
@@ -26,7 +27,8 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 
 	if (eth_hdr != NULL && probe->target->mac_address == false)
 	{
-		memcpy(probe->target->mac, eth_hdr->ether_shost, sizeof(u8) * ETHER_ADDR_LEN);
+		memcpy(probe->target->mac, eth_hdr->ether_shost,
+			   sizeof(u8) * ETHER_ADDR_LEN);
 		probe->target->mac_address = true;
 	}
 
@@ -37,8 +39,9 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 	 * (unexpected/unsolicited packet), we must NOT resolve the port — otherwise
 	 * it would stay stuck in DEFAULT. We re-queue the probe (keeping its
 	 * original timestamp) so purge_timedout_probe_request classifies it later.
-	 * This can happen if we scan TCP SYN 127.0.0.1 we will receive also the probe we send with
-	 * only the SYN flag set, the matched boolean help us dodge this edge case */
+	 * This can happen if we scan TCP SYN 127.0.0.1 we will receive also the
+	 * probe we send with only the SYN flag set, the matched boolean help us
+	 * dodge this edge case */
 	bool matched = false;
 	switch (scan_type)
 	{
@@ -76,7 +79,8 @@ void handle_tcp_response(t_probe_queue *sent_list, const u8 flags,
 			matched = true;
 		}
 		break;
-	// SCAN UDP (nothing to do because handle in udp_response but compiler complain if not handle)
+	// SCAN UDP (nothing to do because handle in udp_response but compiler
+	// complain if not handle)
 	default:
 		break;
 	}

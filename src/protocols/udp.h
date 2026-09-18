@@ -10,21 +10,13 @@
 #include <netinet/udp.h>
 #include <stddef.h>
 
-void	build_udp_header(struct udphdr *udp_hdr, u16 dest_port, u16 payload_len);
+void build_udp_header(struct udphdr *udp_hdr, u16 dest_port, u16 payload_len);
 
-void	calculate_udp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
-	struct udphdr *udp_hdr, const u8 *payload, u16 payload_len);
+void calculate_udp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
+							struct udphdr *udp_hdr, const u8 *payload,
+							u16 payload_len);
 
-typedef struct s_udp_probe_payload
-{
-	const u8 *data;
-	size_t	  len;
-} t_udp_probe_payload;
-
-#define MAX_UDP_PAYLOADS_PER_PORT 8
-
-size_t	get_udp_payloads(u16 dest_port, t_udp_probe_payload *out, size_t max);
-
-void	handle_udp_response(t_probe_queue *sent_list, u16 source_port, struct in_addr ip_src, t_eth_hdr *eth_hdr);
+void handle_udp_response(t_probe_queue *sent_list, u16 source_port,
+						 struct in_addr ip_src, t_eth_hdr *eth_hdr);
 
 #endif

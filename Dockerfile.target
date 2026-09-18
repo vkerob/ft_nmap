@@ -41,13 +41,15 @@ RUN mkdir -p /run/nginx
 #     21   ftp          110  pop3         587  submission   3389 ms-wbt-server
 #     23   telnet       119  nntp         631  ipp          5432 postgresql
 #     25   smtp         143  imap         993  imaps        5900 vnc
-#     53   domain       194  irc          995  pop3s        6379 redis
-#     70   gopher       443  https        1194 openvpn      6667 irc
-#     79   finger       445  microsoft-ds 1433 ms-sql-s     8080 http-alt
-#     88   kerberos     465  smtps        3306 mysql        27017 mongod
-EXPOSE 21 22 23 25 26 28 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 53 70 79 80 88 110 119 143 194 443 445 \
-       465 587 631 993 995 1194 1433 3306 3389 5432 5900 \
-       6379 6667 8080 27017
+#     26-46 (contiguous, assorted names)  995  pop3s        6379 redis
+#     53   domain       194  irc          1194 openvpn      6667 irc
+#     70   gopher       443  https        1433 ms-sql-s     8080 http-alt
+#     79   finger       445  microsoft-ds 3306 mysql        27017 mongod
+#     88   kerberos     465  smtps
+#   Test-bench range : 4300-4313 (see the CMD block below)
+EXPOSE 21-23 25-46 53 70 79-80 88 110 119 143 194 443 445 465 587 631 \
+       993 995 1194 1433 3306 3389 5432 5900 6379 6667 8080 27017 \
+       4300-4313
 
 # Test-bench: reproduce every possible port state, per scan type (see README
 # section "Banc de test : reproduire chaque état").
@@ -64,6 +66,9 @@ EXPOSE 21 22 23 25 26 28 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 4
 #     4304 tcp  REJECT host-prohibited   -> SYN/ACK/NULL/FIN/XMAS filtered (via ICMP)
 #     4312 udp  DROP                     -> UDP open|filtered
 #     4313 udp  REJECT host-prohibited   -> UDP filtered (via ICMP)
+#
+# The socat listener list uses `seq` for contiguous runs; 22 (sshd) and 80
+# (nginx) are deliberately absent since real services own them.
 CMD ["/bin/sh", "-c", "\
   iptables -A INPUT -p tcp --syn --dport 4302 -j DROP || true; \
   iptables -A INPUT -p tcp --dport 4303 -m conntrack --ctstate NEW,INVALID -j DROP || true; \
@@ -75,7 +80,7 @@ CMD ["/bin/sh", "-c", "\
   socat TCP-LISTEN:4300,fork,reuseaddr /dev/null & \
   socat -T1 UDP4-RECVFROM:4310,fork EXEC:'/bin/echo o' & \
   for port in \
-    21 23 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 53 70 79 88 \
+    21 23 25 $(seq 26 46) 53 70 79 88 \
     110 119 143 194 \
     443 445 465 587 631 \
     993 995 1194 1433 \
@@ -87,4 +92,4 @@ CMD ["/bin/sh", "-c", "\
   wait \
 "]
 
-# ./ft_nmap --ip 192.168.100.20 --port 21,22,23,25,53,70,79,80,88,110,119,143,194,443,445,465,587,631,993,995,1194,1433,3306,3389,5432,5900,6379,6667,8080,27017 --scan SYN | grep "open" | wc -l
+# ./ft_nmap --ip 192.168.100.20 --port 21-46,53,70,79,80,88,110,119,143,194,443,445,465,587,631,993,995,1194,1433,3306,3389,5432,5900,6379,6667,8080,27017 --scan SYN | grep "open" | wc -l

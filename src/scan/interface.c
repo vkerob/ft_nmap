@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 static int add_unique_dev(t_iface_info **ifaces, struct in_addr local_addr,
-						   size_t *iface_count, const char *ifname,
-						   u8 *iface_index)
+						  size_t *iface_count, const char *ifname,
+						  u8 *iface_index)
 {
 
 	for (size_t i = 0; i < *iface_count; i++)
@@ -151,7 +151,8 @@ int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 		ifname_from_ipv4(local_addr.sin_addr, ifname_buf);
 
 		if (add_unique_dev(ifaces, local_addr.sin_addr, iface_count, ifname_buf,
-						   &iface_index) == FAILURE)
+						   &iface_index)
+			== FAILURE)
 		{
 			LOG("ft_nmap: Failed to add interface name\n");
 			free(target_iface_idx);

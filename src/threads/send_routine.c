@@ -20,8 +20,7 @@
 static int build_scan_packets(struct in_addr dst_addr, u16 port,
 							  t_scan_type type, u_char *packet,
 							  struct in_addr src_ip, _Atomic u16 *id,
-							  u32 *packet_len, const u8 *udp_payload,
-							  size_t udp_payload_len)
+							  u32 *packet_len)
 {
 	t_ip_pseudo_hdr ip_pseudo_hdr;
 	t_datalink_hdr	hdr = { 0 };
@@ -38,7 +37,8 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 	build_ip_header(&ip_hdr, type, dst_addr, src_ip, id);
 
 	if (build_pseudo_ip_header(&ip_pseudo_hdr, dst_ip_buf, src_ip_buf,
-							   ip_hdr.ip_p) == FAILURE)
+							   ip_hdr.ip_p)
+		== FAILURE)
 		return FAILURE;
 	if (type == SCAN_SYN || type == SCAN_ACK || type == SCAN_FIN
 		|| type == SCAN_XMAS || type == SCAN_NULL)
@@ -49,12 +49,10 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 	}
 	else if (type == SCAN_UDP)
 	{
-		ip_pseudo_hdr.length
-			= htons((u16)(sizeof(t_udp_hdr) + udp_payload_len));
-		build_udp_header(&hdr.udp_hdr, port, (u16)udp_payload_len);
-		calculate_udp_checksum(&ip_pseudo_hdr, &hdr.udp_hdr, udp_payload,
-							   (u16)udp_payload_len);
-		ip_hdr.ip_len += sizeof(t_udp_hdr) + udp_payload_len;
+		ip_pseudo_hdr.length = htons((u16)sizeof(t_udp_hdr));
+		build_udp_header(&hdr.udp_hdr, port, 0);
+		calculate_udp_checksum(&ip_pseudo_hdr, &hdr.udp_hdr, NULL, 0);
+		ip_hdr.ip_len += sizeof(t_udp_hdr);
 	}
 	*packet_len = ip_hdr.ip_len;
 	ip_hdr.ip_len = htons(ip_hdr.ip_len);
@@ -66,12 +64,7 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 
 	memcpy(packet, &ip_hdr, sizeof(ip_hdr));
 	if (type == SCAN_UDP)
-	{
 		memcpy(packet + sizeof(ip_hdr), &hdr.udp_hdr, sizeof(hdr.udp_hdr));
-		if (udp_payload != NULL && udp_payload_len > 0)
-			memcpy(packet + sizeof(ip_hdr) + sizeof(hdr.udp_hdr), udp_payload,
-				   udp_payload_len);
-	}
 	else
 		memcpy(packet + sizeof(ip_hdr), &hdr.tcp_hdr, sizeof(hdr.tcp_hdr));
 	return SUCCESS;
@@ -80,9 +73,9 @@ static int build_scan_packets(struct in_addr dst_addr, u16 port,
 static int send_packet(const t_socket *socket, const u8 *packet,
 					   struct timeval *sent_timestamp, u32 packet_len)
 {
-	const ssize_t res
-		= sendto(socket->sfd, packet, packet_len, 0,
-				 (const struct sockaddr *)&socket->sin, sizeof(struct sockaddr));
+	const ssize_t res = sendto(socket->sfd, packet, packet_len, 0,
+							   (const struct sockaddr *)&socket->sin,
+							   sizeof(struct sockaddr));
 
 	if (res < 0)
 	{
@@ -146,21 +139,38 @@ static void udp_rate_limit(t_target *target)
 		nanosleep(&ts, NULL);
 	}
 }
-static void 	compute_relative_timestamp(struct timeval *relative_ts, 
-	struct timeval *ts_end, struct timeval *ts_start)
+static void mark_probe_transmitted(t_probe_queue *sent, const u16 port,
+								   const t_scan_type	 type,
+								   const struct in_addr	 ip,
+								   const struct timeval *sent_timestamp)
+{
+	pthread_mutex_lock(&sent->safe_mut.mutex);
+	for (t_probe *probe = sent->head; probe; probe = probe->next)
+	{
+		if (probe->port == port && probe->type == type
+			&& probe->target->addr.s_addr == ip.s_addr)
+		{
+			probe->timestamp = *sent_timestamp;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&sent->safe_mut.mutex);
+}
+
+static void compute_relative_timestamp(struct timeval *relative_ts,
+									   struct timeval *ts_end,
+									   struct timeval *ts_start)
 {
 
-		long seconds_elapsed
-			= ts_end->tv_sec - ts_start->tv_sec;
-		long microseconds_elapsed
-			= ts_end->tv_usec - ts_start->tv_usec;
-		if (microseconds_elapsed < 0)
-		{
-			seconds_elapsed--;
-			microseconds_elapsed += 1000000;
-		}
-		relative_ts->tv_sec = seconds_elapsed;
-		relative_ts->tv_usec = microseconds_elapsed;
+	long seconds_elapsed = ts_end->tv_sec - ts_start->tv_sec;
+	long microseconds_elapsed = ts_end->tv_usec - ts_start->tv_usec;
+	if (microseconds_elapsed < 0)
+	{
+		seconds_elapsed--;
+		microseconds_elapsed += 1000000;
+	}
+	relative_ts->tv_sec = seconds_elapsed;
+	relative_ts->tv_usec = microseconds_elapsed;
 }
 
 void *send_routine(void *arg)
@@ -171,9 +181,8 @@ void *send_routine(void *arg)
 	t_socket			  udp_socket;
 	t_socket			  used_socket;
 	t_probe				 *request = NULL;
-	struct timeval sent_timestamp = { 0 };
-	struct timeval relative_sent_timestamp = { 0 };
-
+	struct timeval		  sent_timestamp = { 0 };
+	struct timeval		  relative_sent_timestamp = { 0 };
 
 	if (init_socket(&tcp_socket, IPPROTO_TCP) == FAILURE)
 		return NULL;
@@ -204,11 +213,12 @@ void *send_routine(void *arg)
 				ts.tv_sec += 1;
 				ts.tv_nsec -= 1000000000L;
 			}
-			/* Right before the sleep the mutex is unlock, right before the threads 
-			 * wakes up pthread_cond_timedwait re-lock the mutex.
-			 * The sleeping threads will either be woke up when pthread_cond_signal is called 
-			 * in the capture routine when a probe is added back or if it reach the final time.
-			*/
+			/* Right before the sleep the mutex is unlock, right before the
+			 * threads wakes up pthread_cond_timedwait re-lock the mutex. The
+			 * sleeping threads will either be woke up when pthread_cond_signal
+			 * is called in the capture routine when a probe is added back or if
+			 * it reach the final time.
+			 */
 			pthread_cond_timedwait(&shared_data->to_send.cond,
 								   &shared_data->to_send.safe_mut.mutex, &ts);
 			pthread_mutex_unlock(&shared_data->to_send.safe_mut.mutex);
@@ -228,14 +238,9 @@ void *send_routine(void *arg)
 			continue;
 		}
 
-		// Compute relative timestamp once for the whole probe (decoys + real)
-		compute_relative_timestamp(&relative_sent_timestamp, &sent_timestamp, 
-			&shared_data->program_info->start);
-
-
 		struct in_addr source_ips_list[MAX_DECOYS + 1];
 		u8			   send_count = 0;
-			bool has_me = false;
+		bool		   has_me = false;
 		if (shared_data->args && HAS(shared_data->args->flags, F_DECOY))
 		{
 			for (u8 i = 0; i < shared_data->args->decoy_count; i++)
@@ -248,7 +253,8 @@ void *send_routine(void *arg)
 		if (!has_me)
 		{
 			// Place holder in decoy list for our own IP
-			source_ips_list[send_count++] = (struct in_addr){ .s_addr = INADDR_ANY };
+			source_ips_list[send_count++]
+				= (struct in_addr){ .s_addr = INADDR_ANY };
 		}
 
 		t_target		 *target = request->target;
@@ -258,19 +264,7 @@ void *send_routine(void *arg)
 		u8	 iface_idx = target->iface_info->iface_index;
 		bool tracked
 			= false; // true once the real probe lives in the sent queue
-
-		t_udp_probe_payload payloads[MAX_UDP_PAYLOADS_PER_PORT];
-		size_t				payload_count = 1;
-		payloads[0].data = NULL;
-		payloads[0].len = 0;
-		if (req_type == SCAN_UDP)
-		{
-			// Used to identify which service run on port
-			size_t n = get_udp_payloads(req_port, payloads,
-										MAX_UDP_PAYLOADS_PER_PORT);
-			if (n > 0)
-				payload_count = n;
-		}
+		bool transmitted = false;
 
 		for (u8 i = 0; i < send_count; i++)
 		{
@@ -284,21 +278,10 @@ void *send_routine(void *arg)
 
 			if (is_me)
 			{
-				struct timeval probe_ts = sent_timestamp;
-				if (req_type == SCAN_UDP && payload_count > 1)
-				{
-					double off
-						= (double)(payload_count - 1) / MAX_SENT_RATE_UDP_PER_SEC;
-					probe_ts.tv_sec += (time_t)off;
-					probe_ts.tv_usec += (long)((off - (time_t)off) * 1e6);
-					if (probe_ts.tv_usec >= 1000000)
-					{
-						probe_ts.tv_sec += 1;
-						probe_ts.tv_usec -= 1000000;
-					}
-				}
+				struct timeval probe_ts = { 0, 0 };
 
-				pthread_mutex_lock(&shared_data->sent[iface_idx].safe_mut.mutex);
+				pthread_mutex_lock(
+					&shared_data->sent[iface_idx].safe_mut.mutex);
 				if (add_to_probe_queue(&shared_data->sent[iface_idx].head,
 									   &shared_data->sent[iface_idx].tail,
 									   request, probe_ts))
@@ -313,67 +296,63 @@ void *send_routine(void *arg)
 					&shared_data->sent[iface_idx].safe_mut.mutex);
 			}
 
-			for (size_t p = 0; p < payload_count; p++)
+			if (req_type == SCAN_UDP)
+				udp_rate_limit(target);
+
+			memset(packet, 0, sizeof(packet));
+			u32 packet_len = 0;
+			if (build_scan_packets(target->addr, req_port, req_type, packet,
+								   src, &shared_data->id, &packet_len))
+				continue; // header build failed: skip this packet
+
+			t_datalink_hdr datalink_hdr = { 0 };
+			const u8	  *l4_hdr = packet + ((t_ip *)packet)->ip_hl * 4;
+			if (req_type == SCAN_UDP)
+				datalink_hdr.udp_hdr = *(t_udp_hdr *)l4_hdr;
+			else
+				datalink_hdr.tcp_hdr = *(t_tcp_hdr *)l4_hdr;
+
+			if (send_packet(&used_socket, packet, &sent_timestamp, packet_len)
+					== FAILURE
+				&& is_me)
 			{
-				if (req_type == SCAN_UDP)
-					udp_rate_limit(target);
-
-				/* The first probe is sent unconditionaly
-				 * So for the next ones we check if we can find the first one
-				 * in sent list, if thats not the case then it means the target answered
-				 * us already so we do not need to send more payload for this source ip */
-				if (send_count == 1 && p > 0 && req_type == SCAN_UDP)
+				char *ip = inet_ntoa(target->addr);
+				if (ip == NULL)
 				{
-					pthread_mutex_lock(
-						&shared_data->sent[iface_idx].safe_mut.mutex);
-					bool pending
-						= probe_in_queue(shared_data->sent[iface_idx].head,
-										 req_port, req_type, target->addr);
-					pthread_mutex_unlock(
-						&shared_data->sent[iface_idx].safe_mut.mutex);
-					if (!pending)
-						break;
+					ip = target->input;
 				}
-
-				memset(packet, 0, sizeof(packet));
-				u32 packet_len = 0;
-				if (build_scan_packets(target->addr, req_port, req_type, packet,
-									   src, &shared_data->id, &packet_len,
-									   payloads[p].data, payloads[p].len))
-					continue; // header build failed: skip this packet
-
-				t_datalink_hdr datalink_hdr = { 0 };
-				const u8	  *l4_hdr = packet + ((t_ip *)packet)->ip_hl * 4;
-				if (req_type == SCAN_UDP)
-					datalink_hdr.udp_hdr = *(t_udp_hdr *)l4_hdr;
-				else
-					datalink_hdr.tcp_hdr = *(t_tcp_hdr *)l4_hdr;
-
-				if (shared_data->args
-					&& HAS(shared_data->args->flags, F_PACKET_TRACE))
-				{
-					if (print_debug_packet_send(target->addr, req_type,
-												&relative_sent_timestamp,
-												&datalink_hdr, (t_ip *)packet,
-												!is_me))
-					{
-						close_sockets(&udp_socket, &tcp_socket);
-						return NULL;
-					}
-				}
-
-				if (send_packet(&used_socket, packet, &sent_timestamp,
-								packet_len) == FAILURE
-					&& is_me)
-					{
-						char *ip = inet_ntoa(target->addr);
-						if (ip == NULL)
-						{
-							ip = target->input;
-						}
-						LOG("ft_nmap: failed to send packet to %s\n", ip);
-					}
+				LOG("ft_nmap: failed to send packet to %s\n", ip);
 			}
+
+			if (is_me && tracked)
+			{
+				mark_probe_transmitted(&shared_data->sent[iface_idx], req_port,
+									   req_type, target->addr, &sent_timestamp);
+				transmitted = true;
+			}
+
+			if (shared_data->args
+				&& HAS(shared_data->args->flags, F_PACKET_TRACE))
+			{
+				compute_relative_timestamp(&relative_sent_timestamp,
+										   &sent_timestamp,
+										   &shared_data->program_info->start);
+				if (print_debug_packet_send(
+						target->addr, req_type, &relative_sent_timestamp,
+						&datalink_hdr, (t_ip *)packet, !is_me))
+				{
+					close_sockets(&udp_socket, &tcp_socket);
+					return NULL;
+				}
+			}
+		}
+
+		if (tracked && !transmitted)
+		{
+			struct timeval now;
+			if (gettimeofday(&now, NULL) == 0)
+				mark_probe_transmitted(&shared_data->sent[iface_idx], req_port,
+									   req_type, target->addr, &now);
 		}
 
 		if (!tracked)

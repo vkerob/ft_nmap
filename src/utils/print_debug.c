@@ -307,8 +307,7 @@ void print_debug_sender_thread_proceed_probe(pthread_t			   phid,
 	{
 		ip = request->target->input;
 	}
-	printf(ANSI_COLOR_RED "  • Destination IP: %s\n" ANSI_COLOR_RESET,
-	ip);
+	printf(ANSI_COLOR_RED "  • Destination IP: %s\n" ANSI_COLOR_RESET, ip);
 	printf(ANSI_COLOR_CYAN
 		   "============================================\n\n" ANSI_COLOR_RESET);
 	pthread_mutex_unlock(&printf_mutex);
@@ -500,8 +499,8 @@ void print_debug_probe_request(const t_probe *request)
 	{
 		ip = request->target->input;
 	}
-	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET,
-		 ip, request->port);
+	printf(ANSI_COLOR_GREEN "  • Target: %s:%u\n" ANSI_COLOR_RESET, ip,
+		   request->port);
 	scan_type_to_str(request->type, buf);
 	printf(ANSI_COLOR_YELLOW "  • Scan type: %s\n", buf);
 

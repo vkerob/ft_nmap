@@ -56,7 +56,6 @@ typedef struct s_port_output
 	const char	*reasons[MAX_REASONS_NUMBER];
 	u16			 port_number;
 	t_port_state port_state;
-	char		 version[128]; // banner grabbed via version detection
 } t_port_output;
 
 typedef struct s_port_state_and_reason
@@ -118,10 +117,6 @@ typedef struct s_target
 	 * hop-distance estimate of --traceroute. 0 = nothing received. */
 	u8 reply_ttl;
 
-	/* How much ICMP errors (icmp_kernel_throttle[0]) the target returns in some
-	 amount of time (icmp_kernel_throttle[1]) */
-	double icmp_kernel_throttle[2];
-
 	struct timeval
 		last_udp_sent; // zero = no UDP probe sent yet for this target
 	pthread_mutex_t mutex;
@@ -174,7 +169,5 @@ int get_iface_info(t_iface_info **ifaces, size_t *iface_count,
 int print_scan_results(t_ctx *ctx);
 
 void set_port_state_reason(t_port *port, t_port_state_reason reason);
-
-void grab_versions(t_target *target, const t_args *args);
 
 #endif

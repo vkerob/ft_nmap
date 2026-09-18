@@ -23,9 +23,9 @@
 #include <unistd.h>
 
 static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
-							  bpf_u_int32		  l3_caplen,
-							  const struct timeval *relative_recv_time, u16 flags,
-								t_eth_hdr *eth_hdr)
+							  bpf_u_int32			l3_caplen,
+							  const struct timeval *relative_recv_time,
+							  u16 flags, t_eth_hdr *eth_hdr)
 {
 	const u8	  *protocol_hdr;
 	t_datalink_hdr datalink_hdr = { 0 };
@@ -42,9 +42,9 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 	protocol_hdr = (const u8 *)ip_hdr + ip_hlen;
 	l4_len = l3_caplen - ip_hlen;
 
-	u16				source_port;
-	t_datalink_hdr	nested_datalink_header = { 0 };
-	const t_ip	   *nested_ip_header = NULL;
+	u16			   source_port;
+	t_datalink_hdr nested_datalink_header = { 0 };
+	const t_ip	  *nested_ip_header = NULL;
 
 	switch (ip_hdr->ip_p)
 	{
@@ -58,7 +58,8 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		t_scan_type scan_type
 			= determine_tcp_scan_type(ntohs(datalink_hdr.tcp_hdr.th_dport));
 		handle_tcp_response(sent_list, datalink_hdr.tcp_hdr.th_flags, scan_type,
-							source_port, ip_hdr->ip_src, ip_hdr->ip_ttl, eth_hdr);
+							source_port, ip_hdr->ip_src, ip_hdr->ip_ttl,
+							eth_hdr);
 		break;
 
 	case IPPROTO_UDP:
@@ -87,8 +88,7 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 			return FAILURE;
 
 		const size_t ip2_hlen = (size_t)nested_ip_header->ip_hl * 4;
-		if (ip2_hlen < sizeof(struct ip)
-			|| l4_len < ICMP_HDR_LEN + ip2_hlen)
+		if (ip2_hlen < sizeof(struct ip) || l4_len < ICMP_HDR_LEN + ip2_hlen)
 			return FAILURE;
 
 		const u8	*datalink_header = (const u8 *)nested_ip_header + ip2_hlen;
@@ -99,7 +99,8 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		case IPPROTO_TCP:
 			if (nested_l4_len < sizeof(struct tcphdr))
 				return FAILURE;
-			nested_datalink_header.tcp_hdr = *(const t_tcp_hdr *)datalink_header;
+			nested_datalink_header.tcp_hdr
+				= *(const t_tcp_hdr *)datalink_header;
 			/* The ICMP payload echoes our original (non-swapped) probe:
 			 * th_dport = target port (identifies the port), th_sport = our
 			 * source port which encodes the scan type. */
@@ -113,10 +114,12 @@ static int handle_ip_protocol(t_probe_queue *sent_list, const t_ip *ip_hdr,
 		case IPPROTO_UDP:
 			if (nested_l4_len < sizeof(struct udphdr))
 				return FAILURE;
-			nested_datalink_header.udp_hdr = *(const t_udp_hdr *)datalink_header;
+			nested_datalink_header.udp_hdr
+				= *(const t_udp_hdr *)datalink_header;
 			source_port = ntohs(nested_datalink_header.udp_hdr.uh_dport);
 			handle_icmp_response(sent_list, source_port, ip_hdr->ip_src,
-								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP, eth_hdr);
+								 datalink_hdr.icmp_hdr, SCAN_UDP, IPPROTO_UDP,
+								 eth_hdr);
 			break;
 		default:
 			return FAILURE;
@@ -148,7 +151,7 @@ static int parse_datalink_layer(pcap_t *handle, t_probe_queue *sent_list,
 	const int	  datalink_type = pcap_datalink(handle);
 	const u_char *ip_start = NULL;
 	bpf_u_int32	  l3_caplen = 0;
-	t_eth_hdr *eth_header = NULL;
+	t_eth_hdr	 *eth_header = NULL;
 
 	switch (datalink_type)
 	{
@@ -233,7 +236,8 @@ void handle_packet(u8 *args, const struct pcap_pkthdr *header,
 						 &relative_recv_time, receiver_data->args->flags);
 }
 
-int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send, const t_args *args)
+int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send,
+								 const t_args *args)
 {
 	t_probe *next = NULL;
 
@@ -241,6 +245,14 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send, co
 	t_probe *tmp = sent->head;
 	while (tmp)
 	{
+		next = tmp->next;
+
+		if (tmp->timestamp.tv_sec == 0 && tmp->timestamp.tv_usec == 0)
+		{
+			tmp = next;
+			continue;
+		}
+
 		struct timeval current_time;
 		if (gettimeofday(&current_time, NULL) == -1)
 		{
@@ -258,9 +270,8 @@ int purge_timedout_probe_request(t_probe_queue *sent, t_probe_queue *to_send, co
 			seconds_elapsed--;
 			microseconds_elapsed += 1000000;
 		}
-		const double time_elapsed = seconds_elapsed + (microseconds_elapsed / 1e6);
-
-		next = tmp->next;
+		const double time_elapsed
+			= seconds_elapsed + (microseconds_elapsed / 1e6);
 
 		if (time_elapsed > args->timeout_s)
 		{
@@ -353,7 +364,8 @@ void *capture_routine(void *arg)
 		if (pcap_dispatch(handle, -1, handle_packet, (u_char *)&user_data) == 0)
 		{
 			purge_timedout_probe_request(receiver_data->sent,
-										 receiver_data->to_send, receiver_data->args);
+										 receiver_data->to_send,
+										 receiver_data->args);
 		}
 	}
 	return NULL;

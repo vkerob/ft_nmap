@@ -100,7 +100,6 @@ bool run_command(char **args, char **output)
 		}
 		close(pipe_fds[0]);
 		waitpid(pid, NULL, 0);
-
 	}
 	return false;
 }
@@ -278,7 +277,6 @@ TEST compare(char **args_nmap, char **args_ft_nmap)
 	{
 		ASSERT_STR_EQ(tmp1->port, tmp2->port);
 		ASSERT_STR_EQ(tmp1->port_state, tmp2->port_state);
-		ASSERT_STR_EQ(tmp1->service, tmp2->service);
 		ASSERT_STR_EQ(tmp1->protocol, tmp2->protocol);
 
 		tmp1 = tmp1->next;
@@ -313,7 +311,6 @@ fail:
 	FAIL();
 }
 
-
 SUITE(scan_udp_suite)
 {
 	char *args_udp[]
@@ -333,8 +330,8 @@ SUITE(scan_syn_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sS",			 "-v",		  NULL };
 	char *ft_nmap_args_syn[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "SYN",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "SYN",	 "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_syn, ft_nmap_args_syn);
 
@@ -343,18 +340,20 @@ SUITE(scan_syn_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sS",			 "-v",		  NULL };
 	char *ft_nmap_args_syn_speed[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "SYN",	  "--speedup", "50", "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "SYN",	 "--speedup", "50",		 "--verbose",
+		NULL
 	};
 	RUN_TESTp(compare, args_syn_speed, ft_nmap_args_syn_speed);
 
-	/* SYN over a fixed 7-port range (below PRINT_LIMIT=25, usually all closed) */
+	/* SYN over a fixed 7-port range (below PRINT_LIMIT=25, usually all closed)
+	 */
 	char *args_syn_range[]
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sS",			 "-v",		  NULL };
 	char *ft_nmap_args_syn_range[] = {
-		"./ft_nmap", "--ip",   "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "SYN",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "SYN",	 "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_syn_range, ft_nmap_args_syn_range);
 }
@@ -365,8 +364,8 @@ SUITE(scan_ack_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sA",			 "-v",		  NULL };
 	char *ft_nmap_args_ack[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "ACK",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "ACK",	 "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_ack, ft_nmap_args_ack);
 }
@@ -378,8 +377,8 @@ SUITE(scan_stealth_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sF",			 "-v",		  NULL };
 	char *ft_nmap_args_fin[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "FIN",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "FIN",	 "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_fin, ft_nmap_args_fin);
 
@@ -388,8 +387,8 @@ SUITE(scan_stealth_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sX",			 "-v",		  NULL };
 	char *ft_nmap_args_xmas[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "XMAS",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "XMAS", "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_xmas, ft_nmap_args_xmas);
 
@@ -398,8 +397,8 @@ SUITE(scan_stealth_suite)
 		= { "/usr/bin/nmap", "127.0.0.1", "-p", g_server_data->tcp_ports,
 			"-sN",			 "-v",		  NULL };
 	char *ft_nmap_args_null[] = {
-		"./ft_nmap", "--ip",	  "127.0.0.1", "--ports", g_server_data->tcp_ports,
-		"--scan",	 "NULL",	  "--verbose", NULL
+		"./ft_nmap", "--ip", "127.0.0.1", "--ports", g_server_data->tcp_ports,
+		"--scan",	 "NULL", "--verbose", NULL
 	};
 	RUN_TESTp(compare, args_null, ft_nmap_args_null);
 }

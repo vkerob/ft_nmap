@@ -10,7 +10,7 @@
 #include <stdatomic.h>
 
 void calculate_tcp_checksum(const t_ip_pseudo_hdr *ip_pseudo_hdr,
-							struct tcphdr	*tcp_hdr);
+							struct tcphdr		  *tcp_hdr);
 
 void build_tcp_header(struct tcphdr *tcp_hdr, uint16_t destination_port,
 					  t_scan_type scan_type);

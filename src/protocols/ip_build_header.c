@@ -26,4 +26,3 @@ void build_ip_header(t_ip *ip_hdr, t_scan_type type, struct in_addr dst_addr,
 	// In linux the checksum is filled by the kernel when using socket raw
 	ip_hdr->ip_sum = 0;
 }
-

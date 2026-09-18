@@ -14,7 +14,7 @@ static void destroy_sent_mutexes(t_probe_queue *sent, size_t count)
 }
 
 int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
-								  t_ctx				   *ctx)
+								 t_ctx				  *ctx)
 {
 	// init the sent request list for each interface
 	shared_data_probe->sent = calloc(ctx->iface_count, sizeof(t_probe_queue));
@@ -28,7 +28,8 @@ int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 
 	for (size_t i = 0; i < ctx->iface_count; i++)
 	{
-		int res = pthread_mutex_init(&shared_data_probe->sent[i].safe_mut.mutex, NULL);
+		int res = pthread_mutex_init(&shared_data_probe->sent[i].safe_mut.mutex,
+									 NULL);
 		if (res != 0)
 		{
 			LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
@@ -39,7 +40,8 @@ int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 		shared_data_probe->sent[i].nb_probe = 0;
 		shared_data_probe->sent[i].head = NULL;
 		shared_data_probe->sent[i].tail = NULL;
-		shared_data_probe->sent[i].outstanding = &shared_data_probe->outstanding;
+		shared_data_probe->sent[i].outstanding
+			= &shared_data_probe->outstanding;
 	}
 
 	// init the probe request list
@@ -54,7 +56,8 @@ int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 	atomic_init(&shared_data_probe->id, 1);
 	atomic_init(&shared_data_probe->base_seq, rand());
 
-	int res = pthread_mutex_init(&shared_data_probe->to_send.safe_mut.mutex, NULL);
+	int res
+		= pthread_mutex_init(&shared_data_probe->to_send.safe_mut.mutex, NULL);
 	if (res != 0)
 	{
 		LOG("ft_nmap: pthread_mutex_init: %s\n", strerror(res));
@@ -77,9 +80,8 @@ int initialize_shared_data_probe(t_shared_data_sender *shared_data_probe,
 }
 
 int initialize_receiver_data(t_receiver_data **pcap_ctxs, size_t iface_count,
-							  t_shared_data_sender *shared_data_probe,
-							  t_iface_info		   *ifaces,
-							  t_program_info	   *program_info)
+							 t_shared_data_sender *shared_data_probe,
+							 t_iface_info *ifaces, t_program_info *program_info)
 {
 	*pcap_ctxs = calloc(iface_count, sizeof(t_receiver_data));
 	if (!*pcap_ctxs)
@@ -112,7 +114,6 @@ static void free_probes(t_probe *head)
 		tmp = next;
 	}
 }
-
 
 void safe_destroy_mutex(t_safe_mutex *safe_mutex)
 {

@@ -65,7 +65,8 @@ TEST parse_ports_rejects_invalid_range(void)
 	u16 ports[1024];
 	u16 port_count = 0;
 
-	/* Non-numeric end: "80-abc" — different from the reversed-range check below */
+	/* Non-numeric end: "80-abc" — different from the reversed-range check below
+	 */
 	ASSERT(parse_ports("80-abc", ports, &port_count));
 	PASS();
 }
@@ -182,21 +183,21 @@ TEST parse_ports_rejects_double_dash(void)
 	PASS();
 }
 
-
 /* ------------------------------------------------------------------ */
 /*  parse_scan_types                                                    */
 /* ------------------------------------------------------------------ */
 
 TEST parse_args_parses_scan_types(void)
 {
-	u8	 scan_types[6] = { 0 };
-	u8	 nb_scan_type = 0;
-	bool tcp_scan = false;
-	bool udp_scan = false;
+	u8	  scan_types[6] = { 0 };
+	u8	  nb_scan_type = 0;
+	bool  tcp_scan = false;
+	bool  udp_scan = false;
 	char *arg = strdup("SYN,ACK,UDP");
-	
-	ASSERT(parse_scan_types(arg, &scan_types,
-								  &nb_scan_type, &tcp_scan, &udp_scan) == SUCCESS);
+
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_type, &tcp_scan, &udp_scan)
+		== SUCCESS);
 	free(arg);
 	ASSERT_EQ(nb_scan_type, 3);
 	ASSERT_EQ(tcp_scan, true);
@@ -209,52 +210,54 @@ TEST parse_args_parses_scan_types(void)
 
 TEST parse_scan_types_all_types(void)
 {
-	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
-	u8   nb_scan_type = 0;
-	bool tcp_scan = false;
-	bool udp_scan = false;
+	u8	  scan_types[MAX_NB_SCAN_TYPE] = { 0 };
+	u8	  nb_scan_type = 0;
+	bool  tcp_scan = false;
+	bool  udp_scan = false;
 	char *arg = strdup("SYN,NULL,ACK,FIN,XMAS,UDP");
 
-	ASSERT(parse_scan_types(arg,
-								  &scan_types, &nb_scan_type, &tcp_scan,
-								  &udp_scan) == SUCCESS);
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_type, &tcp_scan, &udp_scan)
+		== SUCCESS);
 	free(arg);
 	ASSERT_EQ(6, nb_scan_type);
 	ASSERT_EQ(true, tcp_scan);
 	ASSERT_EQ(true, udp_scan);
-	ASSERT_EQ(SCAN_SYN,  scan_types[0]);
+	ASSERT_EQ(SCAN_SYN, scan_types[0]);
 	ASSERT_EQ(SCAN_NULL, scan_types[1]);
-	ASSERT_EQ(SCAN_ACK,  scan_types[2]);
-	ASSERT_EQ(SCAN_FIN,  scan_types[3]);
+	ASSERT_EQ(SCAN_ACK, scan_types[2]);
+	ASSERT_EQ(SCAN_FIN, scan_types[3]);
 	ASSERT_EQ(SCAN_XMAS, scan_types[4]);
-	ASSERT_EQ(SCAN_UDP,  scan_types[5]);
+	ASSERT_EQ(SCAN_UDP, scan_types[5]);
 	PASS();
 }
 
 TEST parse_scan_types_rejects_duplicate(void)
 {
-	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
-	u8   nb_scan_type = 0;
-	bool tcp_scan = false;
-	bool udp_scan = false;
+	u8	  scan_types[MAX_NB_SCAN_TYPE] = { 0 };
+	u8	  nb_scan_type = 0;
+	bool  tcp_scan = false;
+	bool  udp_scan = false;
 	char *arg = strdup("SYN,SYN");
 
-	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_type,
-							&tcp_scan, &udp_scan) == FAILURE);
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_type, &tcp_scan, &udp_scan)
+		== FAILURE);
 	free(arg);
 	PASS();
 }
 
 TEST parse_scan_types_case_insensitive(void)
 {
-	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
-	u8   nb_scan_type = 0;
-	bool tcp_scan = false;
-	bool udp_scan = false;
+	u8	  scan_types[MAX_NB_SCAN_TYPE] = { 0 };
+	u8	  nb_scan_type = 0;
+	bool  tcp_scan = false;
+	bool  udp_scan = false;
 	char *arg = strdup("syn,udp");
 
-	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_type,
-								  &tcp_scan, &udp_scan) == SUCCESS);
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_type, &tcp_scan, &udp_scan)
+		== SUCCESS);
 	free(arg);
 	ASSERT_EQ(2, nb_scan_type);
 	ASSERT_EQ(SCAN_SYN, scan_types[0]);
@@ -264,36 +267,39 @@ TEST parse_scan_types_case_insensitive(void)
 
 TEST parse_scan_types_rejects_empty_string(void)
 {
-	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
-	u8   nb_scan_types = 0;
-	bool tcp_scan = false, udp_scan = false;
+	u8	  scan_types[MAX_NB_SCAN_TYPE] = { 0 };
+	u8	  nb_scan_types = 0;
+	bool  tcp_scan = false, udp_scan = false;
 	char *arg = strdup("");
 
 	/* An empty scan string must fail (no type selected) */
-	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan) == FAILURE);
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan)
+		== FAILURE);
 	free(arg);
 	PASS();
 }
 
 TEST parse_scan_types_accepts_trailing_comma(void)
 {
-	u8   scan_types[MAX_NB_SCAN_TYPE] = { 0 };
-	u8   nb_scan_types = 0;
-	bool tcp_scan = false, udp_scan = false;
+	u8	  scan_types[MAX_NB_SCAN_TYPE] = { 0 };
+	u8	  nb_scan_types = 0;
+	bool  tcp_scan = false, udp_scan = false;
 	char *arg = strdup("SYN,");
 
-	//TODO: comment on justifie ca ?
+	// TODO: comment on justifie ca ?
 	/* strtok_r silently drops the trailing comma so "SYN," parses as
 	 * "SYN".  This is intentionally different from parse_ports which
 	 * rejects "80," (empty token).  The inconsistency is a known quirk
 	 * of the two parsers; this test documents the current behaviour. */
-	ASSERT(parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan) == SUCCESS);
+	ASSERT(
+		parse_scan_types(arg, &scan_types, &nb_scan_types, &tcp_scan, &udp_scan)
+		== SUCCESS);
 	ASSERT_EQ(1, nb_scan_types);
 	ASSERT_EQ(SCAN_SYN, scan_types[0]);
 	free(arg);
 	PASS();
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  parse_args: invalid inputs (existing)                               */
@@ -329,7 +335,7 @@ TEST parse_args_sets_verbose_flag(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--verbose", NULL };
-	int    argc = 2;
+	int	   argc = 2;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -341,7 +347,7 @@ TEST parse_args_sets_reason_flag(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--reason", NULL };
-	int    argc = 2;
+	int	   argc = 2;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -353,7 +359,7 @@ TEST parse_args_sets_packet_trace_flag(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--packet-trace", NULL };
-	int    argc = 2;
+	int	   argc = 2;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -369,7 +375,7 @@ TEST parse_args_speedup_valid(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "10", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -382,7 +388,7 @@ TEST parse_args_speedup_zero(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "0", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -395,7 +401,7 @@ TEST parse_args_speedup_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "250", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -408,7 +414,7 @@ TEST parse_args_speedup_exceeds_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "251", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -419,7 +425,7 @@ TEST parse_args_speedup_invalid_string(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "abc", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -430,7 +436,7 @@ TEST parse_args_speedup_overflow(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--speedup", "99999", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* Values far above SPEED_MAX must be rejected */
 	optind = 1;
@@ -442,14 +448,13 @@ TEST parse_args_rejects_positional_argument(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "unexpected_arg", NULL };
-	int    argc = 2;
+	int	   argc = 2;
 
 	/* Non-option arguments after options must be rejected */
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
 	PASS();
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  parse_args: --decoy                                                */
@@ -459,7 +464,7 @@ TEST parse_args_decoy_single_ip(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--decoy", "127.0.0.1", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -472,7 +477,7 @@ TEST parse_args_decoy_multiple(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--decoy", "127.0.0.1,127.0.0.2", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -484,7 +489,7 @@ TEST parse_args_decoy_me_sentinel(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--decoy", "ME", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -498,9 +503,9 @@ TEST parse_args_decoy_too_many(void)
 {
 	t_args args = { 0 };
 	/* MAX_DECOYS = 3, so 4 entries must be rejected */
-	char  *argv[] = { "ft_nmap", "--decoy",
-					  "127.0.0.1,127.0.0.2,127.0.0.3,127.0.0.4", NULL };
-	int    argc = 3;
+	char *argv[] = { "ft_nmap", "--decoy",
+					 "127.0.0.1,127.0.0.2,127.0.0.3,127.0.0.4", NULL };
+	int	  argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -511,7 +516,7 @@ TEST parse_args_decoy_invalid_ip(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--decoy", "not_an_ip_address", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -526,7 +531,7 @@ TEST parse_args_max_retries_valid(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "2", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -539,9 +544,10 @@ TEST parse_args_max_retries_zero(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "0", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
-	/* MAX_RETRIES_MIN (0) is accepted and must not be replaced by the default */
+	/* MAX_RETRIES_MIN (0) is accepted and must not be replaced by the default
+	 */
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(0, args.max_retries);
@@ -552,7 +558,7 @@ TEST parse_args_max_retries_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "5", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -564,7 +570,7 @@ TEST parse_args_max_retries_exceeds_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "6", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* MAX_RETRIES_MAX + 1 must be rejected */
 	optind = 1;
@@ -575,8 +581,8 @@ TEST parse_args_max_retries_exceeds_max(void)
 TEST parse_args_max_retries_overflow(void)
 {
 	t_args args = { 0 };
-	char  *argv[] = { "ft_nmap", "--max-retries", "99999999999999999999", NULL };
-	int    argc = 3;
+	char *argv[] = { "ft_nmap", "--max-retries", "99999999999999999999", NULL };
+	int	  argc = 3;
 
 	/* Out of unsigned long range (strtoul sets ERANGE) */
 	optind = 1;
@@ -588,7 +594,7 @@ TEST parse_args_max_retries_negative(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "-1", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -599,7 +605,7 @@ TEST parse_args_max_retries_explicit_plus(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "+1", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -610,7 +616,7 @@ TEST parse_args_max_retries_invalid_string(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "abc", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -621,7 +627,7 @@ TEST parse_args_max_retries_trailing_garbage(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "3x", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -632,7 +638,7 @@ TEST parse_args_max_retries_empty(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--max-retries", "", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -643,7 +649,7 @@ TEST parse_args_max_retries_default(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--ports", "80", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* No --max-retries: DEFAULT_SCAN_RETRIES is used */
 	optind = 1;
@@ -657,7 +663,7 @@ TEST parse_args_timeout_valid(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "500", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -672,9 +678,10 @@ TEST parse_args_timeout_decimal(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "1500.5", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
-	/* The value is parsed with strtod, so fractional milliseconds are allowed */
+	/* The value is parsed with strtod, so fractional milliseconds are allowed
+	 */
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_IN_RANGE(1500.5, args.timeout_ms, 1e-9);
@@ -686,7 +693,7 @@ TEST parse_args_timeout_zero(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "0", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* TIMEOUT_MS_MIN (0) is accepted and must not be replaced by the default */
 	optind = 1;
@@ -700,7 +707,7 @@ TEST parse_args_timeout_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "10000", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -713,7 +720,7 @@ TEST parse_args_timeout_exceeds_max(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "10001", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* TIMEOUT_MS_MAX + 1 must be rejected */
 	optind = 1;
@@ -725,7 +732,7 @@ TEST parse_args_timeout_overflow(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "1e400", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* Out of double range (strtod sets ERANGE) */
 	optind = 1;
@@ -737,7 +744,7 @@ TEST parse_args_timeout_negative(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "-5", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -748,7 +755,7 @@ TEST parse_args_timeout_explicit_plus(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "+5", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -759,7 +766,7 @@ TEST parse_args_timeout_invalid_string(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "abc", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -770,7 +777,7 @@ TEST parse_args_timeout_trailing_garbage(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "100ms", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* Units are not accepted: the value is always in milliseconds */
 	optind = 1;
@@ -782,7 +789,7 @@ TEST parse_args_timeout_empty(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--timeout", "", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -793,7 +800,7 @@ TEST parse_args_timeout_default(void)
 {
 	t_args args = { 0 };
 	char  *argv[] = { "ft_nmap", "--ports", "80", NULL };
-	int    argc = 3;
+	int	   argc = 3;
 
 	/* No --timeout: DEFAULT_TIMEOUT_DELAY_S is used */
 	optind = 1;
@@ -806,8 +813,9 @@ TEST parse_args_timeout_default(void)
 TEST parse_args_max_retries_and_timeout_together(void)
 {
 	t_args args = { 0 };
-	char  *argv[] = { "ft_nmap", "--max-retries", "1", "--timeout", "250", NULL };
-	int    argc = 5;
+	char  *argv[]
+		= { "ft_nmap", "--max-retries", "1", "--timeout", "250", NULL };
+	int argc = 5;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
@@ -826,13 +834,13 @@ TEST parse_args_default_ports_fills_1_to_1024(void)
 {
 	t_args args = { 0 };
 	/* No --ports: should auto-fill ports 1..1024 */
-	char  *argv[] = { "ft_nmap", "--scan", "SYN", NULL };
-	int    argc = 3;
+	char *argv[] = { "ft_nmap", "--scan", "SYN", NULL };
+	int	  argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(MAX_PORT_COUNT, args.port_count);
-	ASSERT_EQ(1,    args.ports[0]);
+	ASSERT_EQ(1, args.ports[0]);
 	ASSERT_EQ(1024, args.ports[MAX_PORT_COUNT - 1]);
 	PASS();
 }
@@ -841,19 +849,19 @@ TEST parse_args_default_scan_uses_all_types(void)
 {
 	t_args args = { 0 };
 	/* No --scan: should enable all 6 scan types */
-	char  *argv[] = { "ft_nmap", "--ports", "80", NULL };
-	int    argc = 3;
+	char *argv[] = { "ft_nmap", "--ports", "80", NULL };
+	int	  argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == SUCCESS);
 	ASSERT_EQ(MAX_NB_SCAN_TYPE, args.nb_scan_types);
 	/* Verify each scan type value is present in the default set */
-	ASSERT_EQ(SCAN_SYN,  args.scan_types[0]);
+	ASSERT_EQ(SCAN_SYN, args.scan_types[0]);
 	ASSERT_EQ(SCAN_NULL, args.scan_types[1]);
-	ASSERT_EQ(SCAN_ACK,  args.scan_types[2]);
-	ASSERT_EQ(SCAN_FIN,  args.scan_types[3]);
+	ASSERT_EQ(SCAN_ACK, args.scan_types[2]);
+	ASSERT_EQ(SCAN_FIN, args.scan_types[3]);
 	ASSERT_EQ(SCAN_XMAS, args.scan_types[4]);
-	ASSERT_EQ(SCAN_UDP,  args.scan_types[5]);
+	ASSERT_EQ(SCAN_UDP, args.scan_types[5]);
 	PASS();
 }
 
@@ -863,12 +871,12 @@ TEST parse_args_default_scan_uses_all_types(void)
 
 TEST parse_args_file_valid(void)
 {
-	t_args  args = { 0 };
-	char   *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_test_targets.txt",
-					  NULL };
-	int     argc = 3;
-	char  **targets = NULL;
-	size_t  target_count = 0;
+	t_args args = { 0 };
+	char  *argv[]
+		= { "ft_nmap", "--file", "/tmp/ft_nmap_test_targets.txt", NULL };
+	int	   argc = 3;
+	char **targets = NULL;
+	size_t target_count = 0;
 
 	/* Write a file with two IPs, one comment and one blank line */
 	FILE *f = fopen("/tmp/ft_nmap_test_targets.txt", "w");
@@ -881,7 +889,7 @@ TEST parse_args_file_valid(void)
 	ASSERT(parse_args(argc, argv, &args, &targets, &target_count) == SUCCESS);
 	ASSERT(HAS(args.flags, F_FILE_MODE));
 	ASSERT_EQ(2, (int)target_count);
-	ASSERT_STR_EQ("127.0.0.1",   targets[0]);
+	ASSERT_STR_EQ("127.0.0.1", targets[0]);
 	ASSERT_STR_EQ("192.168.1.1", targets[1]);
 
 	for (size_t i = 0; i < target_count; i++)
@@ -893,10 +901,10 @@ TEST parse_args_file_valid(void)
 
 TEST parse_args_file_rejects_nonexistent(void)
 {
-	t_args  args = { 0 };
-	char   *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_no_such_file.txt",
-					  NULL };
-	int     argc = 3;
+	t_args args = { 0 };
+	char  *argv[]
+		= { "ft_nmap", "--file", "/tmp/ft_nmap_no_such_file.txt", NULL };
+	int argc = 3;
 
 	optind = 1;
 	ASSERT(parse_args(argc, argv, &args, NULL, NULL) == FAILURE);
@@ -905,9 +913,9 @@ TEST parse_args_file_rejects_nonexistent(void)
 
 TEST parse_args_file_rejects_empty(void)
 {
-	t_args  args = { 0 };
-	char   *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_empty.txt", NULL };
-	int     argc = 3;
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap", "--file", "/tmp/ft_nmap_empty.txt", NULL };
+	int	   argc = 3;
 
 	/* An empty file (or one with only comments/blanks) must be rejected */
 	FILE *f = fopen("/tmp/ft_nmap_empty.txt", "w");
@@ -923,12 +931,16 @@ TEST parse_args_file_rejects_empty(void)
 
 TEST parse_args_file_and_ip_conflict(void)
 {
-	t_args  args = { 0 };
-	char   *argv[] = { "ft_nmap", "--ip", "127.0.0.1",
-					  "--file", "/tmp/ft_nmap_test_targets.txt", NULL };
-	int     argc = 5;
-	char  **targets = NULL;
-	size_t  target_count = 0;
+	t_args args = { 0 };
+	char  *argv[] = { "ft_nmap",
+					  "--ip",
+					  "127.0.0.1",
+					  "--file",
+					  "/tmp/ft_nmap_test_targets.txt",
+					  NULL };
+	int	   argc = 5;
+	char **targets = NULL;
+	size_t target_count = 0;
 
 	/* Using --ip and --file together must be rejected */
 	FILE *f = fopen("/tmp/ft_nmap_test_targets.txt", "w");
@@ -948,7 +960,6 @@ TEST parse_args_file_and_ip_conflict(void)
 	remove("/tmp/ft_nmap_test_targets.txt");
 	PASS();
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  Suite                                                               */

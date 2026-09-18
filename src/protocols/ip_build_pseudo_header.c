@@ -5,9 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr,
-							const char *dst_addr, const char *src_addr,
-							u8 protocol)
+int build_pseudo_ip_header(t_ip_pseudo_hdr *ip_pseudo_hdr, const char *dst_addr,
+						   const char *src_addr, u8 protocol)
 {
 	if (inet_pton(AF_INET, src_addr, &ip_pseudo_hdr->ip_src) != 1)
 	{
