@@ -24,7 +24,7 @@
 #define SPEED_MIN 0
 #define MAX_RETRIES_MIN 0
 #define MAX_RETRIES_MAX 5
-#define DEFAULT_SCAN_RETRIES 3
+#define DEFAULT_SCAN_RETRIES 2
 #ifndef EXIT_FAILURE
 #define EXIT_FAILURE 1
 #endif
@@ -51,7 +51,7 @@
 /* Timeout after which we consider the server didn't responde us */
 #define TIMEOUT_MS_MIN 0
 #define TIMEOUT_MS_MAX 10000
-#define DEFAULT_TIMEOUT_DELAY_S 1
+#define DEFAULT_TIMEOUT_DELAY_S 0.3
 /* Index used in final_port_state */
 #define TCP_INDEX 0
 #define UDP_INDEX 1
