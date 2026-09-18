@@ -32,7 +32,8 @@ static void print_usage()
 	printf(" --scan <SYN, ACK, XMAS, NULL, FIN, UDP>\n");
 	printf(" Ex: --scan SYN --scan SYN,XMAS \n");
 	printf("\nPORT SPECIFICATION: \n");
-	printf(" The number of port specified cannot exceed 1024\n");
+	printf(" The number of ports specified cannot exceed %d\n",
+		   MAX_PORT_COUNT);
 	printf(" --ports <port ranges | port number>\n");
 	printf("  Ex: --ports 22-32 --ports 22\n");
 	printf("\nIP SPECIFICATION: \n");
@@ -41,12 +42,16 @@ static void print_usage()
 	printf("  Ex: --ip 192.168.100.20 --ip google.com\n");
 	printf(" --file <source file containing list of ip>\n");
 	printf("\nSCAN SPECIFICATION: \n");
-	printf(" --speed <0-250>: Number of threads to make the scan faster\n");
-	printf(" --max-retries <0-5>: Number of times we send a probe after"
-		   " we didn't have any answer\n Default value is 3 sends\n");
-	printf(
-		" --timeout <0-10000>: Delay in milliseconds after which we consider"
-		" that a probe didn't get any answer\n Default value is 1 seconds\n");
+	printf(" --speedup <%d-%d>: Number of threads used to send the probes\n",
+		   SPEED_MIN, SPEED_MAX);
+	printf("  0 and 1 both mean a single sending thread\n");
+	printf(" --max-retries <%d-%d>: Number of times we re-send a probe after"
+		   " we didn't have any answer\n  Default value is %d\n",
+		   MAX_RETRIES_MIN, MAX_RETRIES_MAX, DEFAULT_SCAN_RETRIES);
+	printf(" --timeout <%d-%d>: Delay in milliseconds after which we consider"
+		   " that a probe didn't get any answer\n  Default value is %d ms\n",
+		   TIMEOUT_MS_MIN, TIMEOUT_MS_MAX,
+		   (int)(DEFAULT_TIMEOUT_DELAY_S * 1000));
 	printf("\nOUTPUT: \n");
 	printf(" --packet-trace: Show all packets sent and received\n");
 	printf(" --verbose: No port states are ignored\n");
